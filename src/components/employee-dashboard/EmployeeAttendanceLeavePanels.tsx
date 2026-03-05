@@ -76,9 +76,11 @@ export type EmployeeAttendanceLeavePanelsProps = {
   leaveCalendarCells: LeaveCalendarDayCell[];
   leaveCalendarRows: Array<{
     id: string;
+    employeeName: string | null;
+    isMine: boolean;
     label: string;
     dateRange: string;
-    status: RequestStatusValue;
+    status: "PENDING" | "APPROVED" | "REJECTED";
   }>;
   pendingLabel: string | null;
   logs: ApiLog[];

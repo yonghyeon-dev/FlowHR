@@ -21,6 +21,7 @@ import {
 import type {
   ApiLog,
   AttendanceRecordDto,
+  EmployeeDepartmentLeaveCalendarEntryDto,
   LeaveBalanceDto,
   LeaveRequestDto
 } from "@/app/employee/page-types";
@@ -36,6 +37,7 @@ type UseEmployeeDashboardDerivedStateInput = {
   logs: ApiLog[];
   attendance: AttendanceRecordDto[];
   leaveRequests: LeaveRequestDto[];
+  departmentLeaveCalendarEntries: EmployeeDepartmentLeaveCalendarEntryDto[];
   leaveBalance: LeaveBalanceDto | null;
   selectedCorrectionRecordId: string;
   lastAttendanceId: string;
@@ -62,6 +64,7 @@ export function useEmployeeDashboardDerivedState(input: UseEmployeeDashboardDeri
     logs,
     attendance,
     leaveRequests,
+    departmentLeaveCalendarEntries,
     leaveBalance,
     selectedCorrectionRecordId,
     lastAttendanceId,
@@ -168,20 +171,20 @@ export function useEmployeeDashboardDerivedState(input: UseEmployeeDashboardDeri
   }, [periodStart, runtimeLocale]);
 
   const leaveCalendarCells = useMemo(
-    () => buildLeaveCalendarCells(leaveRequests, periodStart),
-    [leaveRequests, periodStart]
+    () => buildLeaveCalendarCells(departmentLeaveCalendarEntries, periodStart),
+    [departmentLeaveCalendarEntries, periodStart]
   );
 
   const leaveCalendarRows = useMemo(
     () =>
       buildLeaveCalendarRows({
-        leaveRequests,
+        entries: departmentLeaveCalendarEntries,
         toLeaveTypeLabel,
         leaveUnitCopy,
         formatDays,
         formatDateTime: formatDateTimeByLocale
       }),
-    [formatDateTimeByLocale, formatDays, leaveRequests, leaveUnitCopy, toLeaveTypeLabel]
+    [departmentLeaveCalendarEntries, formatDateTimeByLocale, formatDays, leaveUnitCopy, toLeaveTypeLabel]
   );
 
   const attendanceStatusSummary = useMemo(

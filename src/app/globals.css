@@ -1381,6 +1381,37 @@ button.queue-badge:hover {
   font-size: 0.72rem;
   color: #2258bf;
 }
+.leave-day-events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.leave-day-event {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.leave-day-event.state-pending {
+  background: #fff4bf;
+  color: #7a5600;
+}
+.leave-day-event.state-approved {
+  background: #dcf6e8;
+  color: #0f6f3d;
+}
+.leave-day-event.state-rejected {
+  background: #fde2e2;
+  color: #b32727;
+}
+.leave-day-event.event-more {
+  background: #ebf1ff;
+  color: #325897;
+}
 .leave-calendar-day p {
   margin: 0;
   font-size: 0.7rem;
@@ -1404,6 +1435,18 @@ button.queue-badge:hover {
 .leave-calendar-day.density-high {
   background: linear-gradient(180deg, #e9f2ff 0%, #dce9ff 100%);
 }
+.leave-calendar-day.tone-approved {
+  border-color: #7bcf99;
+  background: linear-gradient(180deg, #f4fcf7 0%, #e7f8ee 100%);
+}
+.leave-calendar-day.tone-pending {
+  border-color: #f0ce72;
+  background: linear-gradient(180deg, #fffaf0 0%, #fff1cd 100%);
+}
+.leave-calendar-day.tone-rejected {
+  border-color: #eb8f8f;
+  background: linear-gradient(180deg, #fff7f7 0%, #ffe4e4 100%);
+}
 .leave-calendar-day.tone-approved .leave-day-head strong {
   color: var(--ok);
 }
@@ -1419,6 +1462,56 @@ button.queue-badge:hover {
 .leave-calendar-list {
   max-height: 300px;
   overflow: auto;
+}
+.leave-calendar-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.leave-calendar-status-badge.state-pending {
+  background: #fff4bf;
+  color: #7a5600;
+}
+.leave-calendar-status-badge.state-approved {
+  background: #dcf6e8;
+  color: #0f6f3d;
+}
+.leave-calendar-status-badge.state-rejected {
+  background: #fde2e2;
+  color: #b32727;
+}
+.leave-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 4px 0 8px;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.leave-calendar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.leave-calendar-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  display: inline-block;
+}
+.leave-calendar-legend .status-pending i {
+  background: #f2c84b;
+}
+.leave-calendar-legend .status-approved i {
+  background: #1b9a56;
+}
+.leave-calendar-legend .status-rejected i {
+  background: #e04c4c;
 }
 .attendance-correction-insight-list,
 .leave-balance-forecast-list,

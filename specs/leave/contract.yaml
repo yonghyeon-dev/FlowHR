@@ -1,5 +1,5 @@
 owner: leave-agent
-version: 1.13.0
+version: 1.14.0
 scope:
   in:
     - leave request create/update/cancel flow
@@ -14,6 +14,7 @@ scope:
     - annual leave promotion delivery history list/detail and per-recipient retry
     - organization-level annual leave accrual auto-grant dry-run/apply workflow
     - organization-level leave calendar occupancy read model with department filter and overlap warnings
+    - employee self-service department leave calendar view (own + same department) with pending/approved/rejected status
     - leave policy list/archive workflow with statutory-protection and usage-protection guards
   out:
     - external calendar synchronization
@@ -35,7 +36,7 @@ entities:
 api:
   auth:
     - role: employee
-      permission: create/update and list own leave requests
+      permission: create/update and list own leave requests, read own+same-department leave calendar
     - role: manager
       permission: approve/reject leave requests and read leave policy within tenant scope
     - role: payroll_operator
@@ -67,6 +68,9 @@ api:
     - method: GET
       path: /leave/calendar
       description: Retrieve organization leave calendar occupancy, overlap warnings, and request entries by period.
+    - method: GET
+      path: /leave/calendar/employee
+      description: Retrieve employee self-service leave calendar entries for own and same-department employees by period.
     - method: GET
       path: /leave/policy
       description: Read leave policy for an organization (defaults when not configured).
@@ -153,6 +157,7 @@ invariants:
   - Leave calendar query period uses Asia/Seoul day boundaries and returns deterministic day-level occupancy.
   - Leave calendar warning days are computed by comparing occupancy count to `overlapWarningThreshold`.
   - Leave calendar department filter includes only employees assigned to the selected department.
+  - Employee leave calendar (`/leave/calendar/employee`) is restricted to actor self and same-department employees within tenant scope.
   - Employee leave list queries are restricted to own employeeId.
   - LeaveRequest.employeeId and LeaveBalanceProjection.employeeId must reference existing Employee.id (FK enforced).
   - Hourly leave requests must satisfy policy increment and maximum-hour rules.
@@ -217,6 +222,7 @@ test_plan:
     - leave calendar query returns approved entries and day summaries for organization/date range
     - leave calendar query with `departmentId` filters entries to the selected department employees
     - leave calendar query with `includePending=true` includes pending requests in day occupancy and entries
+    - employee leave calendar query returns own+same-department entries with `PENDING|APPROVED|REJECTED` states and excludes other departments
   regression:
     - overlap detection and boundary-date regressions
     - leave balance continuity after yearly settlement
@@ -232,6 +238,7 @@ test_plan:
     - payroll_operator/admin-only accrual settlement check
     - employee self-only list boundary check
     - payroll_operator/admin-only leave calendar read check (`leave.request.list.any`)
+    - employee leave calendar read check allows only own+same-department scope
   payroll_accuracy:
     - approved paid leave classification for payroll consumer compatibility
     - carry-over cap and yearly reset rules
@@ -259,6 +266,7 @@ observability:
     - leave.promotion_notice.retry_dispatched
     - leave.promotion_notice.retry_failed
     - leave.calendar_read
+    - leave.employee_calendar_read
   metrics:
     - leave_approval_latency_ms
     - leave_request_rejection_rate
@@ -286,7 +294,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.13.0 adds leave policy list/archive APIs (`GET /leave/policies`, `DELETE /leave/policies/{policyId}`) with statutory/usage deletion guards while preserving existing leave request/policy/promotion/accrual APIs."
+consumer_impact: "Contract v1.14.0 adds employee self-service department leave calendar API (`GET /leave/calendar/employee`) for own + same-department monthly visibility with pending/approved/rejected states, while preserving existing leave request/policy/promotion/accrual APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -301,6 +309,7 @@ references:
   - work-items/WI-0182-leave-accrual-auto-grant-engine-baseline.md
   - work-items/WI-0183-leave-calendar-integration-baseline.md
   - work-items/WI-0935-leave-policy-validation.md
+  - work-items/WI-0967-leave-calendar-employee.md
 approval:
   spec_owner: leave-agent
   qa_owner: qa-agent

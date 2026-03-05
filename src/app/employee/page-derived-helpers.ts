@@ -7,6 +7,7 @@ import {
 import type {
   ApiLog,
   AttendanceRecordDto,
+  EmployeeDepartmentLeaveCalendarEntryDto,
   IntegratedSummaryCard,
   LeaveBalanceDto,
   LeaveCalendarDayCell,
@@ -116,7 +117,7 @@ export function buildLeaveUsageProjectionLabel(
 }
 
 export function buildLeaveCalendarCells(
-  leaveRequests: LeaveRequestDto[],
+  entries: EmployeeDepartmentLeaveCalendarEntryDto[],
   periodStart: string
 ): LeaveCalendarDayCell[] {
   const parsedPeriodStart = new Date(periodStart);
@@ -126,25 +127,15 @@ export function buildLeaveCalendarCells(
   const gridStart = shiftDays(startOfLocalDay(monthStart), -monthStart.getDay());
   const gridEnd = shiftDays(startOfLocalDay(monthEnd), 6 - monthEnd.getDay());
 
-  const requestByDate = new Map<string, LeaveRequestDto[]>();
-  for (const request of leaveRequests) {
-    const parsedStartDate = new Date(request.startDate);
-    const parsedEndDate = new Date(request.endDate);
-    if (Number.isNaN(parsedStartDate.getTime()) || Number.isNaN(parsedEndDate.getTime())) {
-      continue;
-    }
-
-    let cursor = startOfLocalDay(parsedStartDate);
-    const requestEnd = startOfLocalDay(parsedEndDate);
-    while (cursor.getTime() <= requestEnd.getTime()) {
-      const dateKey = toLocalDateKey(cursor);
+  const requestByDate = new Map<string, EmployeeDepartmentLeaveCalendarEntryDto[]>();
+  for (const entry of entries) {
+    for (const dateKey of entry.coveredDates) {
       const bucket = requestByDate.get(dateKey);
       if (bucket) {
-        bucket.push(request);
+        bucket.push(entry);
       } else {
-        requestByDate.set(dateKey, [request]);
+        requestByDate.set(dateKey, [entry]);
       }
-      cursor = shiftDays(cursor, 1);
     }
   }
 
@@ -182,6 +173,20 @@ export function buildLeaveCalendarCells(
 
     const density: LeaveCalendarDayCell["density"] =
       requestCount >= 3 ? "high" : requestCount === 2 ? "mid" : requestCount === 1 ? "low" : "none";
+    const events = [...requestBucket].sort((left, right) => {
+      if (left.isMine !== right.isMine) {
+        return left.isMine ? -1 : 1;
+      }
+      const stateRank = (value: string) =>
+        value === "PENDING" ? 0 : value === "APPROVED" ? 1 : value === "REJECTED" ? 2 : 3;
+      const stateDiff = stateRank(left.state) - stateRank(right.state);
+      if (stateDiff !== 0) {
+        return stateDiff;
+      }
+      const leftLabel = left.employeeName ?? left.employeeId;
+      const rightLabel = right.employeeName ?? right.employeeId;
+      return leftLabel.localeCompare(rightLabel);
+    });
 
     cells.push({
       dateKey,
@@ -192,6 +197,7 @@ export function buildLeaveCalendarCells(
       approvedCount,
       pendingCount,
       rejectedCount,
+      events,
       density,
       tone
     });
@@ -201,7 +207,7 @@ export function buildLeaveCalendarCells(
 }
 
 type BuildLeaveCalendarRowsArgs = {
-  leaveRequests: LeaveRequestDto[];
+  entries: EmployeeDepartmentLeaveCalendarEntryDto[];
   toLeaveTypeLabel: (leaveType: string) => string;
   leaveUnitCopy: LeaveUnitCopyLike;
   formatDays: (value: number) => string;
@@ -209,24 +215,34 @@ type BuildLeaveCalendarRowsArgs = {
 };
 
 export function buildLeaveCalendarRows({
-  leaveRequests,
+  entries,
   toLeaveTypeLabel,
   leaveUnitCopy,
   formatDays,
   formatDateTime
 }: BuildLeaveCalendarRowsArgs) {
-  return [...leaveRequests]
-    .sort((lhs, rhs) => new Date(lhs.startDate).getTime() - new Date(rhs.startDate).getTime())
-    .map((request) => ({
-      id: request.id,
-      dateRange: `${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`,
-      status: request.state,
+  return [...entries]
+    .sort((lhs, rhs) => {
+      const startDiff = new Date(lhs.startDate).getTime() - new Date(rhs.startDate).getTime();
+      if (startDiff !== 0) {
+        return startDiff;
+      }
+      const leftLabel = lhs.employeeName ?? lhs.employeeId;
+      const rightLabel = rhs.employeeName ?? rhs.employeeId;
+      return leftLabel.localeCompare(rightLabel);
+    })
+    .map((entry) => ({
+      id: entry.requestId,
+      employeeName: entry.employeeName,
+      isMine: entry.isMine,
+      dateRange: `${formatDateTime(entry.startDate)} ~ ${formatDateTime(entry.endDate)}`,
+      status: entry.state,
       label:
-        request.unit === "HOUR" && request.hours !== null
-          ? `${toLeaveTypeLabel(request.leaveType)} / ${leaveUnitCopy.hourUnit(request.hours.toFixed(2))}`
-          : request.unit === "HALF_DAY"
-            ? `${toLeaveTypeLabel(request.leaveType)} / ${leaveUnitCopy.halfDay}`
-            : `${toLeaveTypeLabel(request.leaveType)} / ${leaveUnitCopy.dayUnit(formatDays(request.days))}`
+        entry.unit === "HOUR" && entry.hours !== null
+          ? `${toLeaveTypeLabel(entry.leaveType)} / ${leaveUnitCopy.hourUnit(entry.hours.toFixed(2))}`
+          : entry.unit === "HALF_DAY"
+            ? `${toLeaveTypeLabel(entry.leaveType)} / ${leaveUnitCopy.halfDay}`
+            : `${toLeaveTypeLabel(entry.leaveType)} / ${leaveUnitCopy.dayUnit(formatDays(entry.days))}`
     }));
 }
 

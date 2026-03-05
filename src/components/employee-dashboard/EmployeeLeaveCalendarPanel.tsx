@@ -18,6 +18,11 @@ export function EmployeeLeaveCalendarPanel({
   onMoveCalendarMonth,
   onResetCalendarToCurrentMonth
 }: EmployeeAttendanceLeavePanelsProps) {
+  const toStateClassName = (status: "PENDING" | "APPROVED" | "REJECTED") =>
+    status === "APPROVED" ? "approved" : status === "PENDING" ? "pending" : "rejected";
+  const toEventName = (input: { employeeName: string | null; isMine: boolean }) =>
+    input.isMine ? leaveCalendarCopy.mineShort : input.employeeName?.trim() || leaveCalendarCopy.coworkerFallback;
+
   return (
     <article className="panel" id="leave-calendar">
       <h2>{sectionTitles.leaveCalendar}</h2>
@@ -47,7 +52,19 @@ export function EmployeeLeaveCalendarPanel({
         </div>
       </div>
       <p className="small leave-projection">{leaveUsageProjectionLabel}</p>
+      <p className="small">{leaveCalendarCopy.teamScopeHint}</p>
       <p className="small muted">{leaveCalendarCopy.clickToPrefill}</p>
+      <div className="leave-calendar-legend" aria-label={leaveCalendarCopy.legendLabel}>
+        <span className="status-pending">
+          <i aria-hidden="true" /> {leaveCalendarCopy.pendingLabel}
+        </span>
+        <span className="status-approved">
+          <i aria-hidden="true" /> {leaveCalendarCopy.approvedLabel}
+        </span>
+        <span className="status-rejected">
+          <i aria-hidden="true" /> {leaveCalendarCopy.rejectedLabel}
+        </span>
+      </div>
       <div className="leave-calendar-toolbar">
         <strong>
           {leaveCalendarMonthLabel} {leaveCalendarCopy.densityViewLabel}
@@ -96,13 +113,25 @@ export function EmployeeLeaveCalendarPanel({
             title={
               cell.requestCount === 0
                 ? `${cell.dateKey}: ${leaveCalendarCopy.noScheduleInDateLabel}`
-                : `${cell.dateKey}: ${cell.requestCount}${leaveCalendarCopy.itemSuffix} (${leaveCalendarCopy.approvedLabel} ${cell.approvedCount}, ${leaveCalendarCopy.pendingLabel} ${cell.pendingCount}, ${leaveCalendarCopy.rejectedOrCanceledLabel} ${cell.rejectedCount})`
+                : `${cell.dateKey}: ${cell.requestCount}${leaveCalendarCopy.itemSuffix} (${leaveCalendarCopy.approvedLabel} ${cell.approvedCount}, ${leaveCalendarCopy.pendingLabel} ${cell.pendingCount}, ${leaveCalendarCopy.rejectedLabel} ${cell.rejectedCount})`
             }
           >
             <div className="leave-day-head">
               <span>{cell.dayOfMonth}</span>
               {cell.requestCount > 0 ? <strong>{`${cell.requestCount}${leaveCalendarCopy.itemSuffix}`}</strong> : null}
             </div>
+            {cell.events.length > 0 ? (
+              <div className="leave-day-events">
+                {cell.events.slice(0, 2).map((event) => (
+                  <span key={event.requestId} className={`leave-day-event state-${toStateClassName(event.state)}`}>
+                    {toEventName(event)}
+                  </span>
+                ))}
+                {cell.events.length > 2 ? (
+                  <span className="leave-day-event event-more">+{cell.events.length - 2}</span>
+                ) : null}
+              </div>
+            ) : null}
             <p>
               {cell.requestCount === 0
                 ? leaveCalendarCopy.noScheduleLabel
@@ -120,11 +149,11 @@ export function EmployeeLeaveCalendarPanel({
           {leaveCalendarRows.map((row) => (
             <li key={row.id}>
               <span>
-                <strong>{row.label}</strong>
+                <strong>{`${row.isMine ? leaveCalendarCopy.mineShort : row.employeeName?.trim() || leaveCalendarCopy.coworkerFallback} · ${row.label}`}</strong>
                 <br />
                 <span className="small">{row.dateRange}</span>
               </span>
-              <span className={row.status === "APPROVED" ? "ok" : row.status === "PENDING" ? "muted" : "fail"}>
+              <span className={`leave-calendar-status-badge state-${toStateClassName(row.status)}`}>
                 {toRequestStatusLabel(row.status)}
               </span>
             </li>

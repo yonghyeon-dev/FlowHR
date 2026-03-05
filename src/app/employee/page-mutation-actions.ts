@@ -12,6 +12,7 @@ import {
 } from "@/app/employee/page-action-helpers";
 import type {
   AttendanceRecordDto,
+  EmployeeDepartmentLeaveCalendarEntryDto,
   LeaveBalanceDto,
   LeaveRequestDto,
   WorkScheduleDto
@@ -34,6 +35,7 @@ export type BuildEmployeeMutationActionsInput = {
   setLastAttendanceId: StringSetter;
   setSelectedCorrectionRecordId: StringSetter;
   setLeaveRequests: Dispatch<SetStateAction<LeaveRequestDto[]>>;
+  setDepartmentLeaveCalendarEntries: Dispatch<SetStateAction<EmployeeDepartmentLeaveCalendarEntryDto[]>>;
   setLastLeaveRequestId: StringSetter;
   setSchedules: Dispatch<SetStateAction<WorkScheduleDto[]>>;
   setLeaveBalance: Dispatch<SetStateAction<LeaveBalanceDto | null>>;
@@ -79,6 +81,9 @@ export function buildEmployeeMutationActions(input: BuildEmployeeMutationActions
     }
     if (snapshot.leaveRequests) {
       input.setLeaveRequests(snapshot.leaveRequests);
+    }
+    if (snapshot.departmentLeaveCalendarEntries) {
+      input.setDepartmentLeaveCalendarEntries(snapshot.departmentLeaveCalendarEntries);
     }
     if (snapshot.nextLastLeaveRequestId) {
       input.setLastLeaveRequestId(snapshot.nextLastLeaveRequestId);

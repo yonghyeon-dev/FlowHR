@@ -105,6 +105,11 @@ export const listLeaveCalendarQuerySchema = z.object({
   overlapWarningThreshold: z.preprocess(parseIntegerLike, z.number().int().min(1).max(100).optional())
 });
 
+export const listEmployeeDepartmentLeaveCalendarQuerySchema = z.object({
+  from: isoDateTime,
+  to: isoDateTime
+});
+
 function parseBooleanLike(value: unknown) {
   if (typeof value !== "string") {
     return value;

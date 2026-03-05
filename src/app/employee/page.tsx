@@ -29,6 +29,7 @@ import { useApplyAttendanceSchedulePrefillEffect } from "@/app/employee/page-att
 import type {
   ApiLog,
   AttendanceRecordDto,
+  EmployeeDepartmentLeaveCalendarEntryDto,
   LeaveBalanceDto,
   LeaveRequestDto,
   RequestSearchScope,
@@ -75,6 +76,7 @@ export default function EmployeeSelfServicePage() {
   const [cancelReason, setCancelReason] = useState<string>(defaultCancelReason);
   const [attendance, setAttendance] = useState<AttendanceRecordDto[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequestDto[]>([]);
+  const [departmentLeaveCalendarEntries, setDepartmentLeaveCalendarEntries] = useState<EmployeeDepartmentLeaveCalendarEntryDto[]>([]);
   const [schedules, setSchedules] = useState<WorkScheduleDto[]>([]);
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalanceDto | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
@@ -136,6 +138,7 @@ export default function EmployeeSelfServicePage() {
     setLastAttendanceId,
     setSelectedCorrectionRecordId,
     setLeaveRequests,
+    setDepartmentLeaveCalendarEntries,
     setLastLeaveRequestId,
     setSchedules,
     setLeaveBalance,
@@ -178,6 +181,7 @@ export default function EmployeeSelfServicePage() {
     logs,
     attendance,
     leaveRequests,
+    departmentLeaveCalendarEntries,
     leaveBalance,
     selectedCorrectionRecordId,
     lastAttendanceId,
