@@ -14,6 +14,7 @@ import type {
   AttendanceRecordDto,
   EmployeeDepartmentLeaveCalendarEntryDto,
   LeaveBalanceDto,
+  LeaveTypeDto,
   LeaveRequestDto,
   WorkScheduleDto
 } from "@/app/employee/page-types";
@@ -45,7 +46,7 @@ export type BuildEmployeeMutationActionsInput = {
   isHoliday: boolean;
   attendanceNotes: string;
   correctionRequestNote: string;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: LeaveTypeDto;
   leaveUnit: "FULL_DAY" | "HALF_DAY" | "HOUR";
   leaveStartDate: string;
   leaveEndDate: string;

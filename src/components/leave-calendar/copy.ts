@@ -51,6 +51,8 @@ export type LeaveCalendarCopy = {
   annualLeaveTypeLabel: string;
   sickLeaveTypeLabel: string;
   unpaidLeaveTypeLabel: string;
+  maternityLeaveTypeLabel: string;
+  paternityLeaveTypeLabel: string;
   fullDayUnitLabel: string;
   halfDayUnitLabel: string;
   hourUnitLabel: string;
@@ -110,6 +112,8 @@ export const leaveCalendarCopyByLocale: Record<FlowLocale, LeaveCalendarCopy> = 
     annualLeaveTypeLabel: "연차",
     sickLeaveTypeLabel: "병가",
     unpaidLeaveTypeLabel: "무급",
+    maternityLeaveTypeLabel: "출산휴가",
+    paternityLeaveTypeLabel: "배우자출산휴가",
     fullDayUnitLabel: "종일",
     halfDayUnitLabel: "반차",
     hourUnitLabel: "시간",
@@ -167,6 +171,8 @@ export const leaveCalendarCopyByLocale: Record<FlowLocale, LeaveCalendarCopy> = 
     annualLeaveTypeLabel: "annual",
     sickLeaveTypeLabel: "sick",
     unpaidLeaveTypeLabel: "unpaid",
+    maternityLeaveTypeLabel: "maternity",
+    paternityLeaveTypeLabel: "paternity",
     fullDayUnitLabel: "full-day",
     halfDayUnitLabel: "half-day",
     hourUnitLabel: "hour",

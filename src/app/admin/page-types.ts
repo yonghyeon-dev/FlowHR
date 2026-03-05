@@ -56,10 +56,12 @@ export type InviteResultDto = {
   actionLink: string | null;
 };
 
+export type LeaveTypeDto = "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
+
 export type LeaveRequestDto = {
   id: string;
   employeeId: string;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: LeaveTypeDto;
   startDate: string;
   endDate: string;
   unit: "FULL_DAY" | "HALF_DAY" | "HOUR";

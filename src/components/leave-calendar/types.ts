@@ -37,7 +37,7 @@ export type LeaveCalendarResponse = {
     departmentId: string | null;
     departmentName: string | null;
     state: "APPROVED" | "PENDING";
-    leaveType: "ANNUAL" | "SICK" | "UNPAID";
+    leaveType: LeaveTypeCode;
     unit: "FULL_DAY" | "HALF_DAY" | "HOUR";
     hours: number | null;
     days: number;
@@ -54,6 +54,8 @@ export type ApiLog = {
   ok: boolean;
   at: string;
 };
+
+export type LeaveTypeCode = "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
 
 export function formatDateTime(value: string) {
   return new Date(value).toLocaleString("ko-KR");

@@ -2,6 +2,7 @@ import { coerceNumber } from "@/app/employee/page-helpers";
 import type {
   IntegratedSubmitChecklistCard,
   LeaveBalanceDto,
+  LeaveTypeDto,
   PreSubmitCheckItem,
   ResubmitCandidate
 } from "@/app/employee/page-types";
@@ -208,7 +209,7 @@ type BuildLeavePreSubmitChecksArgs = {
   leaveEndDate: string;
   leaveUnit: "FULL_DAY" | "HALF_DAY" | "HOUR";
   leaveHours: string;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: LeaveTypeDto;
   leaveBalance: LeaveBalanceDto | null;
   estimatedLeaveRequestedDays: number;
   leaveCheckCopy: LeaveCheckCopy;
