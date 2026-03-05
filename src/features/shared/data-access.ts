@@ -28,6 +28,7 @@ export type RecruitmentReferralStage =
   | "REJECTED"
   | "WITHDRAWN";
 export type PayrollState = "PREVIEWED" | "CONFIRMED";
+export type PayPeriod = "MONTHLY" | "BIWEEKLY";
 export type DeductionProfileMode = "manual" | "profile";
 export type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
 export type ApprovalStageResolution =
@@ -168,14 +169,20 @@ export type OrganizationEntity = {
   name: string;
   businessRegistrationNumber: string | null;
   fiscalYearStart: string;
+  fiscalYearStartMonth: number;
   workHoursPerDay: number;
+  standardWorkHoursPerDay: number;
+  standardWorkDaysPerWeek: number;
   overtimeThreshold: number;
+  overtimeThresholdHours: number;
+  payPeriod: PayPeriod;
   industry: string | null;
   representativeName: string | null;
   workStartTime: string | null;
   workEndTime: string | null;
   workDays: number[];
   timezone: string | null;
+  currency: string;
   insuranceRateNps: number | null;
   insuranceRateNhi: number | null;
   insuranceRateEi: number | null;
@@ -685,14 +692,20 @@ export type UpdateOrganizationInput = {
   name?: string;
   businessRegistrationNumber?: string | null;
   fiscalYearStart?: string;
+  fiscalYearStartMonth?: number;
   workHoursPerDay?: number;
+  standardWorkHoursPerDay?: number;
+  standardWorkDaysPerWeek?: number;
   overtimeThreshold?: number;
+  overtimeThresholdHours?: number;
+  payPeriod?: PayPeriod;
   industry?: string | null;
   representativeName?: string | null;
   workStartTime?: string | null;
   workEndTime?: string | null;
   workDays?: number[];
   timezone?: string | null;
+  currency?: string;
   insuranceRateNps?: number | null;
   insuranceRateNhi?: number | null;
   insuranceRateEi?: number | null;

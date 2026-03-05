@@ -511,6 +511,14 @@ function decimalToNumber(value: Prisma.Decimal | null): number | null {
   return Number(value);
 }
 
+function parseFiscalYearStartMonth(value: string): number | undefined {
+  const parsedMonth = Number.parseInt(value.slice(0, 2), 10);
+  if (!Number.isInteger(parsedMonth) || parsedMonth < 1 || parsedMonth > 12) {
+    return undefined;
+  }
+  return parsedMonth;
+}
+
 function toDeductionProfileEntity(record: {
   id: string;
   organizationId: string | null;
@@ -544,14 +552,20 @@ function toOrganizationEntity(record: {
   name: string;
   businessRegistrationNumber: string | null;
   fiscalYearStart: string;
+  fiscalYearStartMonth: number;
   workHoursPerDay: number;
+  standardWorkHoursPerDay: number;
+  standardWorkDaysPerWeek: number;
   overtimeThreshold: number;
+  overtimeThresholdHours: number;
+  payPeriod: "MONTHLY" | "BIWEEKLY";
   industry: string | null;
   representativeName: string | null;
   workStartTime: string | null;
   workEndTime: string | null;
   workDays: number[];
   timezone: string | null;
+  currency: string;
   insuranceRateNps: number | null;
   insuranceRateNhi: number | null;
   insuranceRateEi: number | null;
@@ -1059,8 +1073,14 @@ const organizations: OrganizationStore = {
       data: {
         name: input.name,
         fiscalYearStart: "01-01",
+        fiscalYearStartMonth: 1,
         workHoursPerDay: 8,
+        standardWorkHoursPerDay: 8,
+        standardWorkDaysPerWeek: 5,
         overtimeThreshold: 8,
+        overtimeThresholdHours: 8,
+        payPeriod: "MONTHLY",
+        currency: "KRW",
         insuranceRateNps: null,
         insuranceRateNhi: null,
         insuranceRateEi: null,
@@ -1079,6 +1099,45 @@ const organizations: OrganizationStore = {
   },
 
   async update(id: string, input: UpdateOrganizationInput) {
+    const fiscalYearStartMonthFromLegacy =
+      input.fiscalYearStart !== undefined
+        ? parseFiscalYearStartMonth(input.fiscalYearStart)
+        : undefined;
+    const fiscalYearStart =
+      input.fiscalYearStart !== undefined
+        ? input.fiscalYearStart
+        : input.fiscalYearStartMonth !== undefined
+          ? `${String(input.fiscalYearStartMonth).padStart(2, "0")}-01`
+          : undefined;
+    const fiscalYearStartMonth =
+      input.fiscalYearStartMonth !== undefined
+        ? input.fiscalYearStartMonth
+        : fiscalYearStartMonthFromLegacy;
+    const standardWorkHoursPerDay =
+      input.standardWorkHoursPerDay !== undefined
+        ? input.standardWorkHoursPerDay
+        : input.workHoursPerDay !== undefined
+          ? input.workHoursPerDay
+          : undefined;
+    const workHoursPerDay =
+      input.workHoursPerDay !== undefined
+        ? input.workHoursPerDay
+        : input.standardWorkHoursPerDay !== undefined
+          ? input.standardWorkHoursPerDay
+          : undefined;
+    const overtimeThresholdHours =
+      input.overtimeThresholdHours !== undefined
+        ? input.overtimeThresholdHours
+        : input.overtimeThreshold !== undefined
+          ? input.overtimeThreshold
+          : undefined;
+    const overtimeThreshold =
+      input.overtimeThreshold !== undefined
+        ? input.overtimeThreshold
+        : input.overtimeThresholdHours !== undefined
+          ? input.overtimeThresholdHours
+          : undefined;
+
     const record = await prisma.organization.update({
       where: { id },
       data: {
@@ -1086,11 +1145,16 @@ const organizations: OrganizationStore = {
         ...(input.businessRegistrationNumber !== undefined
           ? { businessRegistrationNumber: input.businessRegistrationNumber }
           : {}),
-        ...(input.fiscalYearStart !== undefined ? { fiscalYearStart: input.fiscalYearStart } : {}),
-        ...(input.workHoursPerDay !== undefined ? { workHoursPerDay: input.workHoursPerDay } : {}),
-        ...(input.overtimeThreshold !== undefined
-          ? { overtimeThreshold: input.overtimeThreshold }
+        ...(fiscalYearStart !== undefined ? { fiscalYearStart } : {}),
+        ...(fiscalYearStartMonth !== undefined ? { fiscalYearStartMonth } : {}),
+        ...(workHoursPerDay !== undefined ? { workHoursPerDay } : {}),
+        ...(standardWorkHoursPerDay !== undefined ? { standardWorkHoursPerDay } : {}),
+        ...(input.standardWorkDaysPerWeek !== undefined
+          ? { standardWorkDaysPerWeek: input.standardWorkDaysPerWeek }
           : {}),
+        ...(overtimeThreshold !== undefined ? { overtimeThreshold } : {}),
+        ...(overtimeThresholdHours !== undefined ? { overtimeThresholdHours } : {}),
+        ...(input.payPeriod !== undefined ? { payPeriod: input.payPeriod } : {}),
         ...(input.industry !== undefined ? { industry: input.industry } : {}),
         ...(input.representativeName !== undefined
           ? { representativeName: input.representativeName }
@@ -1099,6 +1163,7 @@ const organizations: OrganizationStore = {
         ...(input.workEndTime !== undefined ? { workEndTime: input.workEndTime } : {}),
         ...(input.workDays !== undefined ? { workDays: input.workDays } : {}),
         ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
+        ...(input.currency !== undefined ? { currency: input.currency } : {}),
         ...(input.insuranceRateNps !== undefined
           ? { insuranceRateNps: input.insuranceRateNps }
           : {}),
