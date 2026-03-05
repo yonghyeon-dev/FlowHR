@@ -336,6 +336,6 @@ jobs:
           END $$;
           SQL
           npm run prisma:validate --if-present
-          npm run prisma:migrate:deploy --if-present
+          DATABASE_URL="$DIRECT_URL" npm run prisma:migrate:deploy --if-present
           npm run test:e2e:prisma --if-present
           npm run test:e2e:prisma:phase2-flag --if-present
