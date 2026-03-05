@@ -1,9 +1,6 @@
-import type { Actor } from "@/lib/actor";
 import { requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions } from "@/lib/rbac";
 import type {
-  DataAccess,
-  EmployeeEntity,
   WorkScheduleTemplateEntity,
   WorkScheduleEntity
 } from "@/features/shared/data-access";
@@ -84,27 +81,16 @@ import {
 } from "@/features/scheduling/rotation-assignment-core-helpers";
 import {
   deriveRotationBalanceGrade,
-  evaluateRotationFairnessAdvancedScore,
   normalizeEmployeeIds,
   normalizeRotationFairnessAdvancedConstraints,
   normalizeRotationFairnessGlobalConstraints,
-  normalizeTemplateIds,
-  plannedMinutesForGeneratedWindow,
-  plannedMinutesForSchedule
+  normalizeTemplateIds
 } from "@/features/scheduling/rotation-fairness-core-helpers";
 import {
   buildRotationBalanceReportGeneratedAuditPayload,
   buildRotationBalanceReportResult,
   buildRotationBalanceSummary
 } from "@/features/scheduling/rotation-balance-report-helpers";
-import {
-  buildRotationOffsetEvaluation,
-  sortRotationOffsetEvaluations
-} from "@/features/scheduling/rotation-optimization-evaluation-helpers";
-import {
-  evaluateEmployeeRotationOptimization,
-  type EmployeeRotationOptimizationEvaluation as EmployeeRotationOptimizationEvaluationBase
-} from "@/features/scheduling/rotation-employee-optimization-helpers";
 import {
   buildScheduleListInPeriodQueryInput,
   resolveScheduleListEmployeeFilter
@@ -119,14 +105,12 @@ import {
 } from "@/features/scheduling/anomaly-incident-core-helpers";
 import {
   enumerateTemplateMatchedDates,
-  weekdayFromKstDate,
-  weekdayFromKstDateTime
+  weekdayFromKstDate
 } from "@/features/scheduling/template-date-helpers";
 import {
   buildRotationWindowsForTemplates,
   buildScheduleWindowFromTemplateDate,
   buildTemplateRangeWindows,
-  rotateTemplatesByOffset,
   type GeneratedScheduleWindow
 } from "@/features/scheduling/rotation-window-helpers";
 import {
@@ -204,7 +188,6 @@ import {
   toUpdateInput
 } from "@/features/scheduling/schedule-input-normalization-helpers";
 import { listStrictScheduleOverlaps } from "@/features/scheduling/schedule-overlap-helpers";
-import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
 import { ServiceError } from "@/features/shared/service-error";
 import {
@@ -212,6 +195,50 @@ import {
   requireTemplateEntityWithinTenant,
   requireTemplateTenantScope
 } from "@/features/scheduling/service-access-guards";
+import {
+  evaluateBestRotationForEmployee,
+  type EmployeeRotationOptimizationEvaluation
+} from "@/features/scheduling/helpers/rotation-evaluation-service-helper";
+
+import type {
+  CreateScheduleInput,
+  ListScheduleInput,
+  ListScheduleAnomaliesInput,
+  ListScheduleAnomalyCockpitInput,
+  ListRotationBalanceInput,
+  ListRotationFairnessInput,
+  UpdateScheduleInput,
+  CreateTemplateInput,
+  AssignTemplateInput,
+  AssignTemplateRangeInput,
+  TemplateRangeAssignmentResult,
+  AssignRotationInput,
+  AssignRotationOptimizeInput,
+  RotationAssignmentResult,
+  RotationOptimizationResult,
+  UpdateScheduleAnomalyIncidentLifecycleInput,
+  ScheduleAnomalyIncidentLifecycleResult,
+  ListScheduleAnomalyIncidentsInput,
+  ListScheduleAnomalyIncidentSlaInput,
+  TriggerScheduleAnomalyIncidentEscalationInput,
+  ExecuteScheduleAnomalyIncidentAutoActionInput,
+  ArchiveScheduleAnomalyIncidentsInput,
+  ReplayScheduleAnomalyIncidentStoreInput,
+  ReconcileScheduleAnomalyIncidentStoreInput,
+  ScheduleAnomalyIncidentReadModel,
+  ScheduleAnomalyIncidentListResult,
+  ScheduleAnomalyIncidentSlaReport,
+  ScheduleAnomalyIncidentEscalationResult,
+  ScheduleAnomalyIncidentAutoActionResult,
+  ScheduleAnomalyIncidentArchiveResult,
+  ScheduleAnomalyIncidentReplayResult,
+  ScheduleAnomalyIncidentReconcileResult,
+  RotationBalanceReport,
+  RotationFairnessEmployeeResult,
+  RotationFairnessReport,
+  RotationFairnessApplyResult,
+  ServiceContext
+} from "@/features/scheduling/helpers/service-types";
 
 export type {
   ScheduleAnomalyCockpitQueueEntry,
@@ -221,712 +248,7 @@ export type {
   ScheduleAttendanceAnomalyType
 } from "@/features/scheduling/anomaly-report-helpers";
 
-type CreateScheduleInput = {
-  employeeId: string;
-  startAt: Date;
-  endAt: Date;
-  breakMinutes: number;
-  isHoliday: boolean;
-  notes?: string;
-};
-
-type ListScheduleInput = {
-  periodStart: Date;
-  periodEnd: Date;
-  employeeId?: string;
-};
-
-type ListScheduleAnomaliesInput = {
-  periodStart: Date;
-  periodEnd: Date;
-  employeeId?: string;
-  lateThresholdMinutes?: number;
-};
-
-type ListScheduleAnomalyCockpitInput = {
-  periodStart: Date;
-  periodEnd: Date;
-  lateThresholdMinutes?: number;
-  topN?: number;
-  suppressAutomation?: boolean;
-};
-
-type ListRotationBalanceInput = {
-  periodStart: Date;
-  periodEnd: Date;
-  employeeId?: string;
-};
-
-type ListRotationFairnessInput = {
-  organizationId?: string;
-  fromDate: string;
-  toDate: string;
-  templateIds: string[];
-  employeeIds?: string[];
-  globalConstraints?: RotationFairnessGlobalConstraintsInput;
-  advancedConstraints?: RotationFairnessAdvancedConstraintsInput;
-};
-
-type UpdateScheduleInput = {
-  startAt?: Date;
-  endAt?: Date;
-  breakMinutes?: number;
-  isHoliday?: boolean;
-  notes?: string;
-};
-
-type CreateTemplateInput = {
-  name: string;
-  startMinute: number;
-  endMinute: number;
-  breakMinutes: number;
-  isHoliday: boolean;
-  weekdays: number[];
-  notes?: string;
-};
-
-type AssignTemplateInput = {
-  templateId: string;
-  employeeId: string;
-  date: string;
-};
-
-type AssignTemplateRangeInput = {
-  templateId: string;
-  employeeId: string;
-  fromDate: string;
-  toDate: string;
-};
-
-export type TemplateRangeAssignmentResult = {
-  templateId: string;
-  employeeId: string;
-  fromDate: string;
-  toDate: string;
-  matchedDates: string[];
-  createdScheduleIds: string[];
-};
-
-type AssignRotationInput = {
-  employeeId: string;
-  fromDate: string;
-  toDate: string;
-  templateIds: string[];
-};
-
-type AssignRotationOptimizeInput = {
-  employeeId: string;
-  fromDate: string;
-  toDate: string;
-  templateIds: string[];
-  apply: boolean;
-};
-
-export type RotationAssignmentResult = {
-  employeeId: string;
-  fromDate: string;
-  toDate: string;
-  templateIds: string[];
-  matchedDates: string[];
-  createdScheduleIds: string[];
-};
-
-export type RotationOptimizationResult = {
-  employeeId: string;
-  fromDate: string;
-  toDate: string;
-  dryRun: boolean;
-  recommendedStartOffset: number;
-  optimizedTemplateIds: string[];
-  matchedDates: string[];
-  score: {
-    weekdayGap: number;
-    plannedMinutesGap: number;
-    grade: RotationBalanceGrade;
-  };
-  createdScheduleIds: string[];
-};
-
-export type ScheduleAnomalyIncidentLifecycleAction = "ACKNOWLEDGE" | "ASSIGN" | "RESOLVE";
-export type ScheduleAnomalyIncidentLifecycleState = "ACKNOWLEDGED" | "ASSIGNED" | "RESOLVED";
-export type ScheduleAnomalyIncidentResolutionCode =
-  | "FALSE_POSITIVE"
-  | "ATTENDANCE_CORRECTED"
-  | "MANUAL_CONFIRMED"
-  | "OTHER";
-
-type UpdateScheduleAnomalyIncidentLifecycleInput = {
-  incidentId: string;
-  action: ScheduleAnomalyIncidentLifecycleAction;
-  assigneeId?: string;
-  note?: string;
-  resolutionCode?: ScheduleAnomalyIncidentResolutionCode;
-};
-
-export type ScheduleAnomalyIncidentLifecycleResult = {
-  incidentId: string;
-  action: ScheduleAnomalyIncidentLifecycleAction;
-  state: ScheduleAnomalyIncidentLifecycleState;
-  assigneeId: string | null;
-  resolutionCode: ScheduleAnomalyIncidentResolutionCode | null;
-  note: string | null;
-  updatedAt: string;
-  updatedBy: {
-    actorId: string | null;
-    actorRole: string;
-  };
-};
-
-export type ListScheduleAnomalyIncidentsInput = {
-  state?: ScheduleAnomalyIncidentLifecycleState;
-  assigneeId?: string;
-  topN?: number;
-};
-
-type ListScheduleAnomalyIncidentSlaInput = {
-  state?: ScheduleAnomalyIncidentLifecycleState;
-  assigneeId?: string;
-  topN?: number;
-  includeResolved?: boolean;
-  slaTargetMinutes?: number;
-  warningMinutes?: number;
-  asOf?: Date;
-};
-
-type TriggerScheduleAnomalyIncidentEscalationInput = {
-  state?: ScheduleAnomalyIncidentLifecycleState;
-  assigneeId?: string;
-  topN?: number;
-  includeResolved?: boolean;
-  includeWarning?: boolean;
-  slaTargetMinutes?: number;
-  warningMinutes?: number;
-  cooldownMinutes?: number;
-  asOf?: Date;
-  escalationChannel?: string;
-  dryRun?: boolean;
-};
-
-export type ScheduleAnomalyIncidentAutoAssignMode = "ASSIGN_IF_UNASSIGNED" | "FORCE_ASSIGN";
-
-type ExecuteScheduleAnomalyIncidentAutoActionInput = {
-  state?: ScheduleAnomalyIncidentLifecycleState;
-  assigneeId?: string;
-  topN?: number;
-  includeResolved?: boolean;
-  includeWarning?: boolean;
-  slaTargetMinutes?: number;
-  warningMinutes?: number;
-  cooldownMinutes?: number;
-  asOf?: Date;
-  escalationChannel?: string;
-  dryRun?: boolean;
-  autoAssigneeId: string;
-  autoAssignMode?: ScheduleAnomalyIncidentAutoAssignMode;
-  autoAssignNote?: string;
-};
-
-type ArchiveScheduleAnomalyIncidentsInput = {
-  state?: ScheduleAnomalyIncidentLifecycleState;
-  assigneeId?: string;
-  topN?: number;
-  includeNonResolved?: boolean;
-  olderThanMinutes?: number;
-  asOf?: Date;
-  dryRun?: boolean;
-  reason?: string;
-};
-
-type ReplayScheduleAnomalyIncidentStoreInput = {
-  incidentIds?: string[];
-  topN?: number;
-  from?: Date;
-  to?: Date;
-  dryRun?: boolean;
-  includeArchived?: boolean;
-};
-
-type ReconcileScheduleAnomalyIncidentStoreInput = {
-  topN?: number;
-  includeMatching?: boolean;
-};
-
-export type ScheduleAnomalyIncidentHistoryEntry = {
-  action: ScheduleAnomalyIncidentLifecycleAction;
-  state: ScheduleAnomalyIncidentLifecycleState;
-  assigneeId: string | null;
-  resolutionCode: ScheduleAnomalyIncidentResolutionCode | null;
-  note: string | null;
-  updatedAt: string;
-  updatedBy: {
-    actorId: string | null;
-    actorRole: string;
-  };
-};
-
-export type ScheduleAnomalyIncidentReadModel = {
-  incidentId: string;
-  organizationId: string | null;
-  state: ScheduleAnomalyIncidentLifecycleState;
-  assigneeId: string | null;
-  resolutionCode: ScheduleAnomalyIncidentResolutionCode | null;
-  note: string | null;
-  updatedAt: string;
-  updatedBy: {
-    actorId: string | null;
-    actorRole: string;
-  };
-  history: ScheduleAnomalyIncidentHistoryEntry[];
-};
-
-export type ScheduleAnomalyIncidentListResult = {
-  total: number;
-  items: ScheduleAnomalyIncidentReadModel[];
-};
-
-export type ScheduleAnomalyIncidentSlaStatus = "HEALTHY" | "WARNING" | "BREACHED" | "RESOLVED";
-
-export type ScheduleAnomalyIncidentSlaItem = {
-  incidentId: string;
-  state: ScheduleAnomalyIncidentLifecycleState;
-  assigneeId: string | null;
-  updatedAt: string;
-  elapsedMinutes: number;
-  slaTargetMinutes: number;
-  warningMinutes: number;
-  status: ScheduleAnomalyIncidentSlaStatus;
-  updatedBy: {
-    actorId: string | null;
-    actorRole: string;
-  };
-  historyCount: number;
-};
-
-export type ScheduleAnomalyIncidentSlaReport = {
-  generatedAt: string;
-  asOf: string;
-  policy: {
-    slaTargetMinutes: number;
-    warningMinutes: number;
-    includeResolved: boolean;
-  };
-  filters: {
-    state: ScheduleAnomalyIncidentLifecycleState | null;
-    assigneeId: string | null;
-    topN: number;
-  };
-  counts: {
-    total: number;
-    open: number;
-    healthy: number;
-    warning: number;
-    breached: number;
-    resolved: number;
-  };
-  items: ScheduleAnomalyIncidentSlaItem[];
-};
-
-export type ScheduleAnomalyIncidentEscalationDecision =
-  | "REQUESTED"
-  | "SKIPPED_COOLDOWN"
-  | "FAILED"
-  | "DRY_RUN";
-
-export type ScheduleAnomalyIncidentEscalationItem = {
-  incidentId: string;
-  state: ScheduleAnomalyIncidentLifecycleState;
-  status: ScheduleAnomalyIncidentSlaStatus;
-  elapsedMinutes: number;
-  assigneeId: string | null;
-  decision: ScheduleAnomalyIncidentEscalationDecision;
-  reason: string | null;
-};
-
-export type ScheduleAnomalyIncidentEscalationResult = {
-  requestedAt: string;
-  dryRun: boolean;
-  policy: {
-    slaTargetMinutes: number;
-    warningMinutes: number;
-    includeResolved: boolean;
-    includeWarning: boolean;
-    cooldownMinutes: number;
-    escalationChannel: string;
-  };
-  counts: {
-    candidates: number;
-    requested: number;
-    skippedCooldown: number;
-    failed: number;
-  };
-  items: ScheduleAnomalyIncidentEscalationItem[];
-};
-
-export type ScheduleAnomalyIncidentAutoActionDecision =
-  | "ASSIGNED"
-  | "SKIPPED_ESCALATION"
-  | "SKIPPED_ALREADY_ASSIGNED"
-  | "SKIPPED_SAME_ASSIGNEE"
-  | "FAILED"
-  | "DRY_RUN";
-
-export type ScheduleAnomalyIncidentAutoActionItem = {
-  incidentId: string;
-  state: ScheduleAnomalyIncidentLifecycleState;
-  status: ScheduleAnomalyIncidentSlaStatus;
-  escalationDecision: ScheduleAnomalyIncidentEscalationDecision;
-  previousAssigneeId: string | null;
-  assignedAssigneeId: string | null;
-  decision: ScheduleAnomalyIncidentAutoActionDecision;
-  reason: string | null;
-};
-
-export type ScheduleAnomalyIncidentAutoActionResult = {
-  executedAt: string;
-  dryRun: boolean;
-  policy: {
-    slaTargetMinutes: number;
-    warningMinutes: number;
-    includeResolved: boolean;
-    includeWarning: boolean;
-    cooldownMinutes: number;
-    escalationChannel: string;
-    autoAssigneeId: string;
-    autoAssignMode: ScheduleAnomalyIncidentAutoAssignMode;
-    autoAssignNote: string | null;
-  };
-  counts: {
-    candidates: number;
-    escalated: number;
-    assigned: number;
-    skippedEscalation: number;
-    skippedAssigned: number;
-    failed: number;
-    dryRun: number;
-  };
-  items: ScheduleAnomalyIncidentAutoActionItem[];
-};
-
-export type ScheduleAnomalyIncidentArchiveDecision =
-  | "ARCHIVED"
-  | "DRY_RUN"
-  | "FAILED";
-
-export type ScheduleAnomalyIncidentArchiveItem = {
-  incidentId: string;
-  state: ScheduleAnomalyIncidentLifecycleState;
-  assigneeId: string | null;
-  updatedAt: string;
-  decision: ScheduleAnomalyIncidentArchiveDecision;
-  reason: string | null;
-};
-
-export type ScheduleAnomalyIncidentArchiveResult = {
-  archivedAt: string;
-  dryRun: boolean;
-  policy: {
-    olderThanMinutes: number;
-    includeNonResolved: boolean;
-    reason: string | null;
-  };
-  filters: {
-    state: ScheduleAnomalyIncidentLifecycleState | null;
-    assigneeId: string | null;
-    topN: number;
-  };
-  counts: {
-    total: number;
-    eligible: number;
-    candidates: number;
-    archived: number;
-    dryRun: number;
-    skippedState: number;
-    skippedRecent: number;
-    failed: number;
-  };
-  items: ScheduleAnomalyIncidentArchiveItem[];
-};
-
-export type ScheduleAnomalyIncidentReplayDecision =
-  | "REPLAYED"
-  | "DRY_RUN"
-  | "NOT_FOUND"
-  | "FAILED";
-
-export type ScheduleAnomalyIncidentReplayItem = {
-  incidentId: string;
-  state: ScheduleAnomalyIncidentLifecycleState | null;
-  historyCount: number;
-  decision: ScheduleAnomalyIncidentReplayDecision;
-  reason: string | null;
-};
-
-export type ScheduleAnomalyIncidentReplayResult = {
-  replayedAt: string;
-  dryRun: boolean;
-  policy: {
-    includeArchived: boolean;
-    from: string | null;
-    to: string | null;
-  };
-  filters: {
-    topN: number;
-    incidentIds: string[] | null;
-  };
-  counts: {
-    requested: number;
-    replayed: number;
-    dryRun: number;
-    notFound: number;
-    failed: number;
-  };
-  items: ScheduleAnomalyIncidentReplayItem[];
-};
-
-export type ScheduleAnomalyIncidentReconcileStatus =
-  | "MATCH"
-  | "STORE_MISSING"
-  | "ORPHANED_STORE"
-  | "FIELD_MISMATCH";
-
-export type ScheduleAnomalyIncidentReconcileItem = {
-  incidentId: string;
-  status: ScheduleAnomalyIncidentReconcileStatus;
-  fields: string[];
-  storeState: ScheduleAnomalyIncidentLifecycleState | null;
-  auditState: ScheduleAnomalyIncidentLifecycleState | null;
-  storeHistoryCount: number;
-  auditHistoryCount: number;
-};
-
-export type ScheduleAnomalyIncidentReconcileResult = {
-  reconciledAt: string;
-  filters: {
-    topN: number;
-    includeMatching: boolean;
-  };
-  counts: {
-    total: number;
-    match: number;
-    storeMissing: number;
-    orphanedStore: number;
-    fieldMismatch: number;
-  };
-  items: ScheduleAnomalyIncidentReconcileItem[];
-};
-
-export type RotationBalanceGrade = "BALANCED" | "MODERATE" | "IMBALANCED";
-export type RotationFairnessGlobalObjective = "MINIMIZE_DAILY_PLANNED_MINUTES_GAP";
-
-type RotationFairnessGlobalConstraintsInput = {
-  objective?: RotationFairnessGlobalObjective;
-  maxDailyPlannedMinutesGap?: number;
-};
-
-type RotationFairnessPreferenceRuleInput = {
-  employeeId: string;
-  preferredTemplateIds?: string[];
-  avoidTemplateIds?: string[];
-};
-
-type RotationFairnessAdvancedConstraintsInput = {
-  preference?: {
-    weight?: number;
-    rules: RotationFairnessPreferenceRuleInput[];
-  };
-  laborLaw?: {
-    weight?: number;
-    minRestMinutesBetweenShifts?: number;
-    maxConsecutiveWorkDays?: number;
-  };
-};
-
-type RotationFairnessAdvancedConstraints = {
-  preference:
-    | {
-        weight: number;
-        rulesByEmployeeId: Map<
-          string,
-          {
-            preferredTemplateIds: Set<string>;
-            avoidTemplateIds: Set<string>;
-          }
-        >;
-      }
-    | null;
-  laborLaw:
-    | {
-        weight: number;
-        minRestMinutesBetweenShifts: number | null;
-        maxConsecutiveWorkDays: number | null;
-      }
-    | null;
-};
-
-export type RotationFairnessAdvancedScore = {
-  preferencePenalty: number;
-  laborLawPenalty: number;
-  totalPenalty: number;
-  preferenceMismatchCount: number;
-  avoidTemplateViolationCount: number;
-  minRestViolationCount: number;
-  maxConsecutiveWorkDayViolationCount: number;
-};
-
-export type RotationFairnessAdvancedSummary = {
-  enabled: boolean;
-  preferenceWeight: number | null;
-  laborLawWeight: number | null;
-  totalPreferencePenalty: number;
-  totalLaborLawPenalty: number;
-  totalPenalty: number;
-  totalPreferenceMismatchCount: number;
-  totalAvoidTemplateViolationCount: number;
-  totalMinRestViolationCount: number;
-  totalMaxConsecutiveWorkDayViolationCount: number;
-};
-
-export type RotationFairnessGlobalSummary = {
-  objective: RotationFairnessGlobalObjective;
-  dailyPlannedMinutesGap: number;
-  maxDailyPlannedMinutesGap: number | null;
-  thresholdBreached: boolean;
-  dailyPlannedMinutes: Array<{
-    date: string;
-    plannedMinutes: number;
-  }>;
-};
-
-export type RotationBalanceReport = {
-  periodStart: Date;
-  periodEnd: Date;
-  employeeId: string | null;
-  counts: {
-    schedules: number;
-    activeWeekdays: number;
-    weekdayGap: number;
-    plannedMinutesGap: number;
-    grade: RotationBalanceGrade;
-  };
-  weekdays: Array<{
-    weekday: number;
-    scheduleCount: number;
-    plannedMinutes: number;
-  }>;
-  recommendations: string[];
-};
-
-export type RotationFairnessEmployeeResult = {
-  employeeId: string;
-  recommendedStartOffset: number;
-  optimizedTemplateIds: string[];
-  matchedDates: string[];
-  score: {
-    weekdayGap: number;
-    plannedMinutesGap: number;
-    grade: RotationBalanceGrade;
-  };
-  advancedScore: RotationFairnessAdvancedScore | null;
-};
-
-export type RotationFairnessReport = {
-  organizationId: string;
-  fromDate: string;
-  toDate: string;
-  templateIds: string[];
-  employeeCount: number;
-  summary: {
-    maxWeekdayGap: number;
-    maxPlannedMinutesGap: number;
-    avgWeekdayGap: number;
-    avgPlannedMinutesGap: number;
-    grade: RotationBalanceGrade;
-  };
-  global: RotationFairnessGlobalSummary | null;
-  advanced: RotationFairnessAdvancedSummary | null;
-  results: RotationFairnessEmployeeResult[];
-};
-
-export type RotationFairnessApplyResult = {
-  organizationId: string;
-  fromDate: string;
-  toDate: string;
-  templateIds: string[];
-  employeeCount: number;
-  appliedEmployeeCount: number;
-  summary: RotationFairnessReport["summary"];
-  global: RotationFairnessGlobalSummary | null;
-  advanced: RotationFairnessAdvancedSummary | null;
-  assignments: Array<{
-    employeeId: string;
-    createdScheduleIds: string[];
-  }>;
-  totals: {
-    createdSchedules: number;
-  };
-};
-
-export type ServiceContext = {
-  actor: Actor | null;
-  dataAccess: DataAccess;
-  eventPublisher?: DomainEventPublisher;
-};
-
-type EmployeeRotationOptimizationEvaluation =
-  EmployeeRotationOptimizationEvaluationBase<RotationFairnessAdvancedScore>;
-
-async function evaluateBestRotationForEmployee(
-  context: ServiceContext,
-  input: {
-    employee: EmployeeEntity;
-    fromDate: string;
-    toDate: string;
-    templates: WorkScheduleTemplateEntity[];
-    matchedDates: string[];
-    advancedConstraints: RotationFairnessAdvancedConstraints | undefined;
-  }
-): Promise<EmployeeRotationOptimizationEvaluation> {
-  return evaluateEmployeeRotationOptimization({
-    employee: input.employee,
-    fromDate: input.fromDate,
-    toDate: input.toDate,
-    templates: input.templates,
-    matchedDates: input.matchedDates,
-    advancedConstraints: input.advancedConstraints,
-    listExistingSchedules: ({ periodStart, periodEnd, employeeId }) =>
-      listWorkSchedules(context, {
-        periodStart,
-        periodEnd,
-        employeeId
-      }),
-    buildRotationOffsetEvaluation: (evaluationInput) =>
-      buildRotationOffsetEvaluation({
-        existingSchedules: evaluationInput.existingSchedules,
-        templates: evaluationInput.templates,
-        matchedDates: evaluationInput.matchedDates,
-        offset: evaluationInput.offset,
-        employeeId: evaluationInput.employeeId,
-        advancedConstraints: evaluationInput.advancedConstraints,
-        rotateTemplatesByOffset,
-        buildRotationWindowsForTemplates,
-        weekdayFromDateTime: weekdayFromKstDateTime,
-        plannedMinutesForSchedule,
-        plannedMinutesForGeneratedWindow,
-        evaluateAdvancedScore: (advancedEvaluationInput) =>
-          evaluateRotationFairnessAdvancedScore(
-            advancedEvaluationInput.employeeId,
-            {
-              optimizedTemplateIds: advancedEvaluationInput.optimizedTemplateIds,
-              generatedWindows: advancedEvaluationInput.generatedWindows
-            },
-            advancedEvaluationInput.existingSchedules,
-            advancedEvaluationInput.advancedConstraints
-          ),
-        deriveRotationBalanceGrade
-      }),
-    sortRotationOffsetEvaluations
-  });
-}
+export type * from "@/features/scheduling/helpers/service-types";
 
 export async function createWorkSchedule(
   context: ServiceContext,
@@ -1450,13 +772,19 @@ export async function optimizeWorkScheduleRotation(
   const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
   ensureRotationTemplatesShareWeekdaySet(templates, templateIds);
   const matchedDates = enumerateTemplateMatchedDates(input.fromDate, input.toDate, templates[0].weekdays);
-  const evaluation = await evaluateBestRotationForEmployee(context, {
+  const evaluation = await evaluateBestRotationForEmployee({
     employee,
     fromDate: input.fromDate,
     toDate: input.toDate,
     templates,
     matchedDates,
-    advancedConstraints: undefined
+    advancedConstraints: undefined,
+    listExistingSchedules: ({ periodStart, periodEnd, employeeId }) =>
+      listWorkSchedules(context, {
+        periodStart,
+        periodEnd,
+        employeeId
+      })
   });
   const best = evaluation.best;
 
@@ -1567,13 +895,19 @@ export async function listWorkScheduleRotationFairness(
   );
   const evaluations: EmployeeRotationOptimizationEvaluation[] = [];
   for (const employee of scopedEmployees) {
-    const evaluation = await evaluateBestRotationForEmployee(context, {
+    const evaluation = await evaluateBestRotationForEmployee({
       employee,
       fromDate: input.fromDate,
       toDate: input.toDate,
       templates,
       matchedDates,
-      advancedConstraints
+      advancedConstraints,
+      listExistingSchedules: ({ periodStart, periodEnd, employeeId }) =>
+        listWorkSchedules(context, {
+          periodStart,
+          periodEnd,
+          employeeId
+        })
     });
     evaluations.push(evaluation);
   }
