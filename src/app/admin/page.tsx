@@ -8,6 +8,7 @@ import {
   firstDayOfMonthLocal,
   isTruthyFlag,
   lastDayOfMonthLocal,
+  toLocalInputValue,
   toIso
 } from "@/app/admin/page-helpers";
 import {
@@ -43,8 +44,18 @@ export default function AdminDashboardPage() {
 
   const periodStart = useMemo(() => firstDayOfMonthLocal(), []);
   const periodEnd = useMemo(() => lastDayOfMonthLocal(), []);
+  const todayPeriodStart = useMemo(() => {
+    const now = new Date();
+    return toLocalInputValue(new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0));
+  }, []);
+  const todayPeriodEnd = useMemo(() => {
+    const now = new Date();
+    return toLocalInputValue(new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59));
+  }, []);
 
   const [summary, setSummary] = useState<AdminSummary>(EMPTY_SUMMARY);
+  const [todayAttendanceCount, setTodayAttendanceCount] = useState(0);
+  const [monthlyLeaveCount, setMonthlyLeaveCount] = useState(0);
   const [pendingAttendanceQueue, setPendingAttendanceQueue] = useState<AttendanceRecordDto[]>([]);
   const [pendingLeaveQueue, setPendingLeaveQueue] = useState<LeaveRequestDto[]>([]);
   const [approvalQuickActionPending, setApprovalQuickActionPending] = useState<"attendance" | "leave" | null>(null);
@@ -105,6 +116,8 @@ export default function AdminDashboardPage() {
   const refreshSummary = useCallback(async () => {
     if (requiresLoginSession) {
       setSummary(EMPTY_SUMMARY);
+      setTodayAttendanceCount(0);
+      setMonthlyLeaveCount(0);
       setPendingAttendanceQueue([]);
       setPendingLeaveQueue([]);
       setLoadError(productionSessionRequiredNotice);
@@ -116,8 +129,19 @@ export default function AdminDashboardPage() {
     try {
       const from = toIso(periodStart);
       const to = toIso(periodEnd);
+      const todayFrom = toIso(todayPeriodStart);
+      const todayTo = toIso(todayPeriodEnd);
 
-      const [attendanceResult, leaveResult, payrollResult, employeeResult, approvalResult, contractsResult] = await Promise.all([
+      const [
+        attendanceResult,
+        leaveResult,
+        payrollResult,
+        employeeResult,
+        approvalResult,
+        contractsResult,
+        todayAttendanceResult,
+        monthlyLeaveResult
+      ] = await Promise.all([
         callApi("refresh pending attendance", `/api/attendance/records${buildQuery({ from, to, state: "PENDING" })}`),
         callApi("refresh pending leave", `/api/leave/requests${buildQuery({ from, to, state: "PENDING" })}`),
         callApi("refresh payroll runs", `/api/payroll/runs${buildQuery({ from, to })}`),
@@ -138,7 +162,9 @@ export default function AdminDashboardPage() {
         callApi(
           "refresh contracts",
           `/api/contracts/documents${buildQuery({ organizationId: organizationId || undefined })}`
-        )
+        ),
+        callApi("refresh today's attendance", `/api/attendance/records${buildQuery({ from: todayFrom, to: todayTo })}`),
+        callApi("refresh monthly leave requests", `/api/leave/requests${buildQuery({ from, to })}`)
       ]);
       const nextPendingAttendance =
         attendanceResult.response.ok &&
@@ -154,9 +180,25 @@ export default function AdminDashboardPage() {
         Array.isArray((leaveResult.body as { requests?: LeaveRequestDto[] }).requests)
           ? (leaveResult.body as { requests: LeaveRequestDto[] }).requests
           : [];
+      const todayAttendanceRecords =
+        todayAttendanceResult.response.ok &&
+        todayAttendanceResult.body &&
+        typeof todayAttendanceResult.body === "object" &&
+        Array.isArray((todayAttendanceResult.body as { records?: AttendanceRecordDto[] }).records)
+          ? (todayAttendanceResult.body as { records: AttendanceRecordDto[] }).records
+          : [];
+      const monthlyLeaveRequests =
+        monthlyLeaveResult.response.ok &&
+        monthlyLeaveResult.body &&
+        typeof monthlyLeaveResult.body === "object" &&
+        Array.isArray((monthlyLeaveResult.body as { requests?: LeaveRequestDto[] }).requests)
+          ? (monthlyLeaveResult.body as { requests: LeaveRequestDto[] }).requests
+          : [];
 
       setPendingAttendanceQueue(nextPendingAttendance);
       setPendingLeaveQueue(nextPendingLeave);
+      setTodayAttendanceCount(new Set(todayAttendanceRecords.map((record) => record.employeeId)).size);
+      setMonthlyLeaveCount(monthlyLeaveRequests.length);
       setSummary(
         buildAdminSummaryFromApiResults({
           attendanceResult,
@@ -179,6 +221,8 @@ export default function AdminDashboardPage() {
     organizationId,
     periodEnd,
     periodStart,
+    todayPeriodEnd,
+    todayPeriodStart,
     productionSessionRequiredNotice,
     requiresLoginSession,
     runtimeLocale
@@ -433,6 +477,24 @@ export default function AdminDashboardPage() {
               ) : null}
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="panel">
+        <h2>핵심 위젯</h2>
+        <div className="kpi-strip">
+          <article className="kpi-card">
+            <p>오늘 출근 인원수</p>
+            <strong>{todayAttendanceCount}</strong>
+          </article>
+          <article className="kpi-card">
+            <p>대기 승인 건수</p>
+            <strong>{summary.pendingApprovalExecutionCount}</strong>
+          </article>
+          <article className="kpi-card">
+            <p>이번 달 휴가 건수</p>
+            <strong>{monthlyLeaveCount}</strong>
+          </article>
         </div>
       </section>
 
