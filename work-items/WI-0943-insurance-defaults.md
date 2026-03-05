@@ -42,6 +42,13 @@ This introduces repetitive setup work and raises the risk of rate-entry mistakes
 - Insurance rates are validated as numbers between `0` and `1`.
 - Payroll preview breakdown includes `wci` amount; default `wci` remains `0` in calculations when unset.
 
+## Data Changes
+
+- Table updates:
+  - `Organization`
+- Migration id:
+  - `202603050010_wi0943_insurance_rates_defaults`
+
 ## Test Plan
 
 - `scripts/tests/e2e-wi0943-insurance-defaults.test.ts`
