@@ -1,4 +1,5 @@
 import type { User } from "@supabase/supabase-js";
+import { validateActiveEmployee } from "@/lib/auth/validate-employee";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const actorRoles = [
@@ -130,17 +131,22 @@ export async function readActor(request: Request): Promise<Actor | null> {
     const { data, error } = await supabaseAdmin.auth.getUser(token);
     if (!error && data.user) {
       const actorId = parseActorIdFromUser(data.user);
-      return {
+      const actor = {
         id: actorId ?? data.user.id,
         role: parseRoleFromUser(data.user),
         organizationId: parseOrganizationIdFromUser(data.user)
       };
+      return (await validateActiveEmployee(actor)) ? actor : null;
     }
   }
 
   // Temporary non-prod fallback for local/dev tooling without JWT.
   if (process.env.NODE_ENV !== "production") {
-    return readActorFromHeaders(request);
+    const actor = readActorFromHeaders(request);
+    if (!actor) {
+      return null;
+    }
+    return (await validateActiveEmployee(actor)) ? actor : null;
   }
 
   return null;
