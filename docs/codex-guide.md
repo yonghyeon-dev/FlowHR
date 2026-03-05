@@ -1068,17 +1068,22 @@ Work Item(work-items/) → Spec(specs/) → 구현 → 테스트 → PR → 머�
 
 ## 규칙 1: 모든 Required Checkbox는 `[x]`로 체크
 
-N/A인 항목도 반드시 `[x]`로 체크하고 괄호 안에 사유를 적는다. `[ ]`로 두면 CI 실패.
+N/A인 항목도 반드시 `[x]`로 체크한다. `[ ]`로 두면 CI 실패.
+
+**중요**: 체크박스 라벨 뒤에 괄호 텍스트를 붙이면 안 된다.
+CI regex가 `- [x] {label}\s*$`로 라인 끝까지 매칭하므로 뒤에 추가 텍스트가 있으면 실패한다.
 
 ```markdown
 # 올바른 예
-- [x] Domain `contract.yaml` is added or updated. (N/A: no contract change)
+- [x] Domain `contract.yaml` is added or updated.
 - [x] Unit tests
 - [x] Migration smoke
 
-# 잘못된 예 (CI 실패)
-- [ ] Unit tests
+# 잘못된 예 (CI 실패 — 괄호 텍스트)
 - [x] Domain `contract.yaml` is added or updated. (N/A: no contract change)
+
+# 잘못된 예 (CI 실패 — 미체크)
+- [ ] Unit tests
 ```
 
 대상 체크박스 전체 목록:
