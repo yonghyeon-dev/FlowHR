@@ -23,6 +23,8 @@ type UseAdminPeopleDirectoryActionsInput = {
   editDepartmentId: string;
   editPositionId: string;
   editActive: string;
+  supabaseSessionLoading: boolean;
+  requiresLoginSession: boolean;
   logs: ApiLog[];
   setPendingLabel: Dispatch<SetStateAction<string | null>>;
   setLogs: Dispatch<SetStateAction<ApiLog[]>>;
@@ -44,6 +46,8 @@ export function useAdminPeopleDirectoryActions(input: UseAdminPeopleDirectoryAct
     editDepartmentId,
     editPositionId,
     editActive,
+    supabaseSessionLoading,
+    requiresLoginSession,
     logs,
     setPendingLabel,
     setLogs,
@@ -54,6 +58,8 @@ export function useAdminPeopleDirectoryActions(input: UseAdminPeopleDirectoryAct
     setHistory,
     setSelectedEmployeeId
   } = input;
+
+  const sessionBlocked = supabaseSessionLoading || requiresLoginSession;
 
   const callApi = useCallback(
     async (label: string, method: ApiMethod, path: string, payload?: Record<string, unknown>) => {
@@ -84,6 +90,7 @@ export function useAdminPeopleDirectoryActions(input: UseAdminPeopleDirectoryAct
   );
 
   const loadOrganizations = useCallback(async () => {
+    if (sessionBlocked) return;
     const { response, body } = await callApi(
       isKoLocale ? "조직 목록 조회" : "Load organizations",
       "GET",
@@ -94,9 +101,10 @@ export function useAdminPeopleDirectoryActions(input: UseAdminPeopleDirectoryAct
     }
     const parsed = body as { organizations?: Organization[] };
     setOrganizations(Array.isArray(parsed.organizations) ? parsed.organizations : []);
-  }, [callApi, isKoLocale, setOrganizations]);
+  }, [callApi, isKoLocale, sessionBlocked, setOrganizations]);
 
   const loadDepartments = useCallback(async () => {
+    if (sessionBlocked) return;
     const { response, body } = await callApi(
       isKoLocale ? "부서 목록 조회" : "Load departments",
       "GET",
@@ -107,9 +115,10 @@ export function useAdminPeopleDirectoryActions(input: UseAdminPeopleDirectoryAct
     }
     const parsed = body as { departments?: Department[] };
     setDepartments(Array.isArray(parsed.departments) ? parsed.departments : []);
-  }, [callApi, isKoLocale, organizationId, setDepartments]);
+  }, [callApi, isKoLocale, organizationId, sessionBlocked, setDepartments]);
 
   const loadPositions = useCallback(async () => {
+    if (sessionBlocked) return;
     const { response, body } = await callApi(
       isKoLocale ? "직급 목록 조회" : "Load positions",
       "GET",
@@ -120,9 +129,10 @@ export function useAdminPeopleDirectoryActions(input: UseAdminPeopleDirectoryAct
     }
     const parsed = body as { positions?: Position[] };
     setPositions(Array.isArray(parsed.positions) ? parsed.positions : []);
-  }, [callApi, isKoLocale, organizationId, setPositions]);
+  }, [callApi, isKoLocale, organizationId, sessionBlocked, setPositions]);
 
   const loadEmployees = useCallback(async () => {
+    if (sessionBlocked) return;
     const { response, body } = await callApi(
       isKoLocale ? "직원 목록 조회" : "Load employees",
       "GET",
@@ -137,15 +147,17 @@ export function useAdminPeopleDirectoryActions(input: UseAdminPeopleDirectoryAct
     if (!selectedEmployeeId && nextEmployees.length > 0) {
       setSelectedEmployeeId(nextEmployees[0]!.id);
     }
-  }, [callApi, isKoLocale, organizationId, selectedEmployeeId, setEmployees, setSelectedEmployeeId]);
+  }, [callApi, isKoLocale, organizationId, selectedEmployeeId, sessionBlocked, setEmployees, setSelectedEmployeeId]);
 
   const refreshDirectory = useCallback(async () => {
+    if (sessionBlocked) return;
     await loadOrganizations();
     await Promise.all([loadDepartments(), loadPositions(), loadEmployees()]);
-  }, [loadDepartments, loadEmployees, loadOrganizations, loadPositions]);
+  }, [loadDepartments, loadEmployees, loadOrganizations, loadPositions, sessionBlocked]);
 
   const loadSelectedEmployeeHistory = useCallback(
     async (employeeId: string) => {
+      if (sessionBlocked) return;
       if (!employeeId.trim()) {
         return;
       }
@@ -162,10 +174,11 @@ export function useAdminPeopleDirectoryActions(input: UseAdminPeopleDirectoryAct
       const parsed = body as { history?: EmployeeHistory[] };
       setHistory(Array.isArray(parsed.history) ? parsed.history : []);
     },
-    [callApi, historyLimit, isKoLocale, setHistory]
+    [callApi, historyLimit, isKoLocale, sessionBlocked, setHistory]
   );
 
   const applySelectedProfileUpdate = useCallback(async () => {
+    if (sessionBlocked) return;
     if (!selectedEmployeeId.trim()) {
       return;
     }
@@ -193,6 +206,7 @@ export function useAdminPeopleDirectoryActions(input: UseAdminPeopleDirectoryAct
     isKoLocale,
     loadEmployees,
     loadSelectedEmployeeHistory,
+    sessionBlocked,
     selectedEmployeeId
   ]);
 

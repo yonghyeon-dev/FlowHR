@@ -36,18 +36,14 @@ import {
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
-function isTruthyFlag(value: string | undefined) {
-  const normalized = (value ?? "").trim().toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
-}
-
 export default function AdminPeoplePage() {
   const searchParams = useSearchParams();
   const queryHydratedRef = useRef(false);
   const autoLoadTriggeredRef = useRef(false);
   const autoHistoryFetchKeyRef = useRef<string | null>(null);
   const isProductionRuntime = process.env.NODE_ENV === "production";
-  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
+  const devFlag = (process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS ?? "").trim().toLowerCase();
+  const showDevTools = devFlag === "1" || devFlag === "true" || devFlag === "yes" || devFlag === "on";
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
   const [departmentFilter, setDepartmentFilter] = useState("");
@@ -251,6 +247,8 @@ export default function AdminPeoplePage() {
     editDepartmentId,
     editPositionId,
     editActive,
+    supabaseSessionLoading,
+    requiresLoginSession,
     logs,
     setPendingLabel,
     setLogs,
@@ -261,58 +259,6 @@ export default function AdminPeoplePage() {
     setHistory,
     setSelectedEmployeeId
   });
-
-  const loadOrganizationsWithSessionGuard = useCallback(async () => {
-    if (supabaseSessionLoading || requiresLoginSession) {
-      return;
-    }
-    await loadOrganizations();
-  }, [loadOrganizations, requiresLoginSession, supabaseSessionLoading]);
-
-  const loadDepartmentsWithSessionGuard = useCallback(async () => {
-    if (supabaseSessionLoading || requiresLoginSession) {
-      return;
-    }
-    await loadDepartments();
-  }, [loadDepartments, requiresLoginSession, supabaseSessionLoading]);
-
-  const loadPositionsWithSessionGuard = useCallback(async () => {
-    if (supabaseSessionLoading || requiresLoginSession) {
-      return;
-    }
-    await loadPositions();
-  }, [loadPositions, requiresLoginSession, supabaseSessionLoading]);
-
-  const loadEmployeesWithSessionGuard = useCallback(async () => {
-    if (supabaseSessionLoading || requiresLoginSession) {
-      return;
-    }
-    await loadEmployees();
-  }, [loadEmployees, requiresLoginSession, supabaseSessionLoading]);
-
-  const refreshDirectoryWithSessionGuard = useCallback(async () => {
-    if (supabaseSessionLoading || requiresLoginSession) {
-      return;
-    }
-    await refreshDirectory();
-  }, [refreshDirectory, requiresLoginSession, supabaseSessionLoading]);
-
-  const loadSelectedEmployeeHistoryWithSessionGuard = useCallback(
-    async (employeeId: string) => {
-      if (supabaseSessionLoading || requiresLoginSession) {
-        return;
-      }
-      await loadSelectedEmployeeHistory(employeeId);
-    },
-    [loadSelectedEmployeeHistory, requiresLoginSession, supabaseSessionLoading]
-  );
-
-  const applySelectedProfileUpdateWithSessionGuard = useCallback(async () => {
-    if (supabaseSessionLoading || requiresLoginSession) {
-      return;
-    }
-    await applySelectedProfileUpdate();
-  }, [applySelectedProfileUpdate, requiresLoginSession, supabaseSessionLoading]);
 
   const historyChangeSummary = useMemo(() => {
     const counters: Record<ProfileField, number> = {
@@ -435,8 +381,8 @@ export default function AdminPeoplePage() {
       return;
     }
     autoLoadTriggeredRef.current = true;
-    void refreshDirectoryWithSessionGuard();
-  }, [refreshDirectoryWithSessionGuard, requiresLoginSession, supabaseSessionLoading]);
+    void refreshDirectory();
+  }, [refreshDirectory, requiresLoginSession, supabaseSessionLoading]);
 
   useEffect(() => {
     const employeeId = selectedEmployeeId.trim();
@@ -457,10 +403,10 @@ export default function AdminPeoplePage() {
       return;
     }
     autoHistoryFetchKeyRef.current = historyKey;
-    void loadSelectedEmployeeHistoryWithSessionGuard(employeeId);
+    void loadSelectedEmployeeHistory(employeeId);
   }, [
     historyLimit,
-    loadSelectedEmployeeHistoryWithSessionGuard,
+    loadSelectedEmployeeHistory,
     requiresLoginSession,
     selectedEmployeeId,
     supabaseSessionLoading
@@ -485,7 +431,7 @@ export default function AdminPeoplePage() {
       filteredEmployees={filteredEmployees}
       tree={tree}
       stats={stats}
-      refreshDirectory={refreshDirectoryWithSessionGuard}
+      refreshDirectory={refreshDirectory}
       organizationId={organizationId}
       adminActorId={adminActorId}
       isProductionRuntime={isProductionRuntime}
@@ -505,15 +451,15 @@ export default function AdminPeoplePage() {
       setRecentlyUpdatedDays={setRecentlyUpdatedDays}
       historyLimit={historyLimit}
       setHistoryLimit={setHistoryLimit}
-      loadOrganizations={loadOrganizationsWithSessionGuard}
-      loadDepartments={loadDepartmentsWithSessionGuard}
-      loadPositions={loadPositionsWithSessionGuard}
-      loadEmployees={loadEmployeesWithSessionGuard}
+      loadOrganizations={loadOrganizations}
+      loadDepartments={loadDepartments}
+      loadPositions={loadPositions}
+      loadEmployees={loadEmployees}
       resetDirectoryFilters={resetDirectoryFilters}
       supabaseSessionError={supabaseSessionError}
       selectedEmployeeId={selectedEmployeeId}
       setSelectedEmployeeId={setSelectedEmployeeId}
-      loadSelectedEmployeeHistory={loadSelectedEmployeeHistoryWithSessionGuard}
+      loadSelectedEmployeeHistory={loadSelectedEmployeeHistory}
       compareA={compareA}
       setCompareA={setCompareA}
       compareB={compareB}
@@ -530,7 +476,7 @@ export default function AdminPeoplePage() {
       setEditActive={setEditActive}
       selectedDepartments={selectedDepartments}
       selectedPositions={selectedPositions}
-      applySelectedProfileUpdate={applySelectedProfileUpdateWithSessionGuard}
+      applySelectedProfileUpdate={applySelectedProfileUpdate}
       history={history}
       filteredHistory={filteredHistory}
       historyActionFilter={historyActionFilter}
@@ -548,5 +494,3 @@ export default function AdminPeoplePage() {
     />
   );
 }
-
-
