@@ -715,6 +715,19 @@ model AuditLog {
   @@index([organizationId, createdAt])
 }
 
+model PersonalDataConsent {
+  id          String                  @id @default(cuid())
+  userId      String
+  consentType PersonalDataConsentType
+  consentedAt DateTime                @default(now())
+  version     String
+  ipAddress   String?
+  createdAt   DateTime                @default(now())
+
+  @@unique([userId, consentType, version], name: "personal_data_consent_user_type_version_key")
+  @@index([userId, consentedAt])
+}
+
 enum AttendanceState {
   PENDING
   APPROVED
@@ -896,4 +909,9 @@ enum ScheduleAnomalyIncidentResolutionCode {
   ATTENDANCE_CORRECTED
   MANUAL_CONFIRMED
   OTHER
+}
+
+enum PersonalDataConsentType {
+  PRIVACY_POLICY
+  TERMS_OF_SERVICE
 }

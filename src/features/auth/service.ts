@@ -1,12 +1,16 @@
 import type { Actor } from "@/lib/actor";
 import type { DataAccess } from "@/features/shared/data-access";
 import { ServiceError } from "@/features/shared/service-error";
+import { prisma } from "@/lib/prisma";
 
 export const inviteRoles = ["admin", "manager", "employee", "payroll_operator"] as const;
 export type InviteRole = (typeof inviteRoles)[number];
 
 export const inviteDeliveryModes = ["link", "email"] as const;
 export type InviteDeliveryMode = (typeof inviteDeliveryModes)[number];
+
+export const personalDataConsentTypes = ["PRIVACY_POLICY", "TERMS_OF_SERVICE"] as const;
+export type PersonalDataConsentType = (typeof personalDataConsentTypes)[number];
 
 type SupabaseError = { message?: string };
 
@@ -119,6 +123,14 @@ type ServiceContext = {
   supabaseAdmin: SupabaseAdminAuthClient;
 };
 
+export type RecordPersonalDataConsentsInput = {
+  userId: string;
+  consentTypes: PersonalDataConsentType[];
+  version: string;
+  ipAddress?: string | null;
+  consentedAt?: Date;
+};
+
 const AUTH_INVITE_AUDIT_ACTION = "auth.invite.generated";
 
 function requireActor(actor: Actor | null): Actor {
@@ -185,6 +197,56 @@ function normalizeInviteListLimit(limit: number | undefined) {
     return 100;
   }
   return Math.min(limit, 500);
+}
+
+function normalizeConsentTypes(types: PersonalDataConsentType[]) {
+  const unique = new Set<PersonalDataConsentType>();
+  for (const type of types) {
+    if (personalDataConsentTypes.includes(type)) {
+      unique.add(type);
+    }
+  }
+  return Array.from(unique);
+}
+
+function normalizeIpAddress(ipAddress: string | null | undefined) {
+  if (typeof ipAddress !== "string") {
+    return null;
+  }
+  const normalized = ipAddress.trim();
+  if (!normalized) {
+    return null;
+  }
+  return normalized.slice(0, 64);
+}
+
+export async function recordPersonalDataConsents(input: RecordPersonalDataConsentsInput): Promise<void> {
+  const userId = input.userId.trim();
+  const version = input.version.trim();
+  if (!userId) {
+    throw new ServiceError(400, "userId is required");
+  }
+  if (!version) {
+    throw new ServiceError(400, "consent version is required");
+  }
+
+  const consentTypes = normalizeConsentTypes(input.consentTypes);
+  if (consentTypes.length === 0) {
+    return;
+  }
+
+  const consentedAt = input.consentedAt ?? new Date();
+  const ipAddress = normalizeIpAddress(input.ipAddress);
+  await prisma.personalDataConsent.createMany({
+    data: consentTypes.map((consentType) => ({
+      userId,
+      consentType,
+      consentedAt,
+      version,
+      ipAddress
+    })),
+    skipDuplicates: true
+  });
 }
 
 export async function createAuthInvite(

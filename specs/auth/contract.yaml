@@ -1,16 +1,18 @@
 owner: auth-agent
-version: 0.2.0
+version: 0.3.0
 scope:
   in:
     - invite/join onboarding with selectable delivery mode (link/email)
     - provision Supabase app_metadata claims (role/org/actor_id)
+    - self-service sign-up consent capture and PIPA consent persistence
   out:
     - custom email template/branding management
-    - self-service sign-up UX
     - invite expiration/reissue policy automation
 entities:
   - name: AuthInvite
     description: Generated Supabase invite action link used to bootstrap user access.
+  - name: PersonalDataConsent
+    description: Sign-up legal consent evidence record (privacy policy and terms of service).
 api:
   auth:
     - role: admin
@@ -21,18 +23,25 @@ api:
     - method: POST
       path: /auth/invites
       description: Generate invite action link or send invite email, then set app_metadata(role/org/actor_id) for the invited user.
+    - method: POST
+      path: /auth/setup-metadata
+      description: Set role/organization metadata and persist optional sign-up consent records.
   events:
     published: []
     consumed: []
 db_changes:
-  migrations: []
+  migrations:
+    - id: 202603050013_wi0990_pipa_consent_record
+      description: Add PersonalDataConsent model and consent type enum for PIPA sign-up consent evidence.
   backward_compatible: true
-  notes: Supabase Auth only; no database migrations.
+  notes: Additive PersonalDataConsent table for legal consent evidence persistence.
 invariants:
   - Invites must set claims in app_metadata (not user_metadata).
   - If actor.organizationId exists, payload.organizationId must match.
   - deliveryMode=link must return actionLink; deliveryMode=email must return actionLink=null.
   - action_link is secret and must be returned only to authorized actors.
+  - Sign-up consent persistence is append-only evidence; duplicates for same user/type/version are ignored.
+  - Consent types must include PRIVACY_POLICY and TERMS_OF_SERVICE for sign-up legal coverage.
 risk:
   permissions:
     - action_link leakage could grant account access; endpoint must stay admin/system-only and audited.
@@ -41,16 +50,20 @@ risk:
     - not applicable
   legal:
     - invite email addresses are PII; avoid persisting action_link in logs.
+    - consent timestamp, version, and source IP must be preserved for PIPA audit evidence.
 test_plan:
   unit:
     - validate payload parsing, role allowlist, and delivery mode allowlist
     - enforce org mismatch rejection
+    - validate consent type allowlist and consent version parsing
   integration:
     - admin can generate invite with deliveryMode=link and receives action_link
     - admin can invite with deliveryMode=email and receives actionLink=null
+    - signup setup-metadata can persist consent rows with privacy+terms types
     - non-admin forbidden
   regression:
-    - existing auth/session flows remain unchanged
+    - existing auth/session and invite flows remain unchanged
+    - signup callback remains successful when consent metadata is present
   authorization:
     - only admin/system can call invite endpoint
   payroll_accuracy:
@@ -62,22 +75,27 @@ observability:
   metrics:
     - auth_invite_generated_count
     - auth_invite_delivery_mode_count
+    - auth_signup_consent_recorded_count
   logs:
     - auth invite failures (without action_link)
+    - auth consent persistence failures (without sensitive payload)
 rollout:
   feature_flags:
     - name: auth_invites_v1
       default: "on"
+    - name: auth_signup_pipa_consent_v1
+      default: "on"
   migration_strategy: expand-contract
 rollback:
-  strategy: disable auth_invites_v1 and remove UI entry points
+  strategy: disable auth_signup_pipa_consent_v1 and hide signup consent UI; invite flow remains unchanged
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Adds deliveryMode(link/email) to admin-only invite endpoint while keeping backward-compatible default(link)."
+consumer_impact: "Adds sign-up legal consent persistence for PIPA compliance while keeping invite API behavior backward compatible."
 references:
   - work-items/WI-0096-auth-invite-baseline.md
   - work-items/WI-0111-auth-invite-delivery-mode.md
+  - work-items/WI-0990-pipa-consent-record.md
 approval:
   spec_owner: auth-agent
   qa_owner: qa-agent

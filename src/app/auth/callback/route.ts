@@ -2,6 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient, type EmailOtpType } from "@supabase/supabase-js";
 
+import {
+  type PersonalDataConsentType,
+  personalDataConsentTypes,
+  recordPersonalDataConsents
+} from "@/features/auth/service";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { FLOWHR_ACCESS_TOKEN_COOKIE } from "@/lib/auth/session-cookie";
 import { getPublicEnv } from "@/lib/env";
@@ -47,6 +52,41 @@ function createEmployeeId() {
   crypto.getRandomValues(bytes);
   const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("").toUpperCase();
   return `EMP-${hex}`;
+}
+
+function readConsentTypesFromMetadata(metadata: Record<string, unknown>): PersonalDataConsentType[] {
+  const raw =
+    (Array.isArray(metadata.consent_types) ? metadata.consent_types : null) ??
+    (Array.isArray(metadata.consentTypes) ? metadata.consentTypes : null);
+  if (!raw) {
+    return [];
+  }
+
+  const unique = new Set<PersonalDataConsentType>();
+  for (const item of raw) {
+    if (typeof item !== "string") {
+      continue;
+    }
+    if (personalDataConsentTypes.includes(item as PersonalDataConsentType)) {
+      unique.add(item as PersonalDataConsentType);
+    }
+  }
+  return Array.from(unique);
+}
+
+function readClientIpAddress(request: NextRequest): string | null {
+  const keys = ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "x-client-ip"];
+  for (const key of keys) {
+    const raw = request.headers.get(key)?.trim() ?? "";
+    if (!raw) {
+      continue;
+    }
+    const first = raw.split(",")[0]?.trim() ?? "";
+    if (first) {
+      return first.slice(0, 64);
+    }
+  }
+  return null;
 }
 
 async function provisionFirstTimeSignup(input: {
@@ -186,10 +226,21 @@ export async function GET(request: NextRequest) {
     const userMetadata = (session.user.user_metadata ?? {}) as Record<string, unknown>;
     const appOrganizationId = readAppMetadataString(appMetadata, "organization_id", "organizationId");
     const signupOrganizationName = readAppMetadataString(userMetadata, "organization_name", "organizationName");
+    const consentVersion = readAppMetadataString(userMetadata, "consent_version", "consentVersion");
+    const consentTypes = readConsentTypesFromMetadata(userMetadata);
 
     let role = normalizeMetadataRole(appMetadata.role) ?? normalizeMetadataRole(userMetadata.role);
     let organizationId =
       appOrganizationId ?? readAppMetadataString(userMetadata, "organization_id", "organizationId");
+
+    if (consentVersion && consentTypes.length > 0) {
+      await recordPersonalDataConsents({
+        userId: session.user.id,
+        consentTypes,
+        version: consentVersion,
+        ipAddress: readClientIpAddress(request)
+      });
+    }
 
     if (signupOrganizationName && !appOrganizationId) {
       try {

@@ -140,6 +140,8 @@ async function setupMetadata(input: {
   role: MetadataRole;
   organizationId: string;
   actorId?: string;
+  consentVersion?: string;
+  consentTypes?: ("PRIVACY_POLICY" | "TERMS_OF_SERVICE")[];
 }) {
   const payload: Record<string, unknown> = {
     role: input.role,
@@ -147,6 +149,12 @@ async function setupMetadata(input: {
   };
   if (input.actorId) {
     payload.actor_id = input.actorId;
+  }
+  if (input.consentVersion) {
+    payload.consentVersion = input.consentVersion;
+  }
+  if (input.consentTypes && input.consentTypes.length > 0) {
+    payload.consentTypes = input.consentTypes;
   }
 
   const response = await fetch("/api/auth/setup-metadata", {
@@ -165,10 +173,12 @@ async function setupMetadata(input: {
 }
 
 export default function SignupPage() {
+  const consentVersion = "2026-03-05";
   const [organizationName, setOrganizationName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [acceptedPersonalDataConsent, setAcceptedPersonalDataConsent] = useState(false);
   const [pending, setPending] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -199,6 +209,11 @@ export default function SignupPage() {
       setSuccessMessage(null);
       return;
     }
+    if (!acceptedPersonalDataConsent) {
+      setErrorMessage("개인정보 처리 및 이용약관 동의가 필요합니다.");
+      setSuccessMessage(null);
+      return;
+    }
 
     setPending(true);
     setErrorMessage(null);
@@ -213,7 +228,9 @@ export default function SignupPage() {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             organization_name: trimmedOrganization,
-            role: "admin"
+            role: "admin",
+            consent_version: consentVersion,
+            consent_types: ["PRIVACY_POLICY", "TERMS_OF_SERVICE"]
           }
         }
       });
@@ -247,7 +264,9 @@ export default function SignupPage() {
           accessToken,
           role,
           organizationId,
-          actorId
+          actorId,
+          consentVersion,
+          consentTypes: ["PRIVACY_POLICY", "TERMS_OF_SERVICE"]
         });
       }
 
@@ -321,6 +340,16 @@ export default function SignupPage() {
                 />
               </label>
             </div>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", marginTop: "0.75rem" }}>
+              <input
+                type="checkbox"
+                checked={acceptedPersonalDataConsent}
+                onChange={(event) => setAcceptedPersonalDataConsent(event.target.checked)}
+              />
+              <span className="small">
+                개인정보 처리방침 및 이용약관에 동의합니다. 회원가입 완료 시 동의 내역이 저장됩니다.
+              </span>
+            </label>
 
             {errorMessage ? (
               <p className="small" style={{ color: "var(--danger)" }}>
@@ -337,7 +366,14 @@ export default function SignupPage() {
               <button
                 type="submit"
                 className="btn btn-primary"
-                disabled={pending || !organizationName.trim() || !email.trim() || !password || !passwordConfirm}
+                disabled={
+                  pending ||
+                  !organizationName.trim() ||
+                  !email.trim() ||
+                  !password ||
+                  !passwordConfirm ||
+                  !acceptedPersonalDataConsent
+                }
               >
                 회원가입
               </button>
