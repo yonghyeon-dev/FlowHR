@@ -199,6 +199,10 @@ import {
   evaluateBestRotationForEmployee,
   type EmployeeRotationOptimizationEvaluation
 } from "@/features/scheduling/helpers/rotation-evaluation-service-helper";
+import {
+  buildRotationAssignmentAuditEntry,
+  buildRotationAssignmentEvent
+} from "@/features/scheduling/helpers/rotation-assignment-telemetry-helper";
 
 import type {
   CreateScheduleInput,
@@ -707,38 +711,31 @@ export async function assignWorkScheduleRotation(
     createSchedule: (scheduleInput) => createWorkSchedule(context, scheduleInput)
   });
 
-  await context.dataAccess.audit.append({
-    action: "scheduling.rotation.assigned",
-    entityType: "WorkSchedule",
-    organizationId: employee.organizationId ?? undefined,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: {
+  await context.dataAccess.audit.append(
+    buildRotationAssignmentAuditEntry({
+      organizationId: employee.organizationId ?? undefined,
+      actorRole: actor.role,
+      actorId: actor.id,
       employeeId: input.employeeId,
       templateIds,
       fromDate: input.fromDate,
       toDate: input.toDate,
       matchedDates,
-      createdScheduleIds,
-      createdCount: createdScheduleIds.length
-    }
-  });
-  await resolveSchedulingEventPublisher(context).publish({
-    name: "scheduling.rotation.assigned.v1",
-    occurredAt: new Date().toISOString(),
-    entityType: "WorkSchedule",
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: {
+      createdScheduleIds
+    })
+  );
+  await resolveSchedulingEventPublisher(context).publish(
+    buildRotationAssignmentEvent({
+      actorRole: actor.role,
+      actorId: actor.id,
       employeeId: input.employeeId,
       templateIds,
       fromDate: input.fromDate,
       toDate: input.toDate,
       matchedDates,
-      createdScheduleIds,
-      createdCount: createdScheduleIds.length
-    }
-  });
+      createdScheduleIds
+    })
+  );
 
   return {
     employeeId: input.employeeId,
@@ -1069,39 +1066,32 @@ export async function applyWorkScheduleRotationFairness(
       createSchedule: (scheduleInput) => createWorkSchedule(context, scheduleInput)
     });
 
-    await context.dataAccess.audit.append({
-      action: "scheduling.rotation.assigned",
-      entityType: "WorkSchedule",
-      organizationId: plan.organizationId,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload: {
+    await context.dataAccess.audit.append(
+      buildRotationAssignmentAuditEntry({
+        organizationId: plan.organizationId,
+        actorRole: actor.role,
+        actorId: actor.id,
         employeeId: plan.employeeId,
         templateIds: plan.templateIds,
         fromDate: input.fromDate,
         toDate: input.toDate,
         matchedDates: plan.matchedDates,
-        createdScheduleIds,
-        createdCount: createdScheduleIds.length
-      }
-    });
+        createdScheduleIds
+      })
+    );
 
-    await resolveSchedulingEventPublisher(context).publish({
-      name: "scheduling.rotation.assigned.v1",
-      occurredAt: new Date().toISOString(),
-      entityType: "WorkSchedule",
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload: {
+    await resolveSchedulingEventPublisher(context).publish(
+      buildRotationAssignmentEvent({
+        actorRole: actor.role,
+        actorId: actor.id,
         employeeId: plan.employeeId,
         templateIds: plan.templateIds,
         fromDate: input.fromDate,
         toDate: input.toDate,
         matchedDates: plan.matchedDates,
-        createdScheduleIds,
-        createdCount: createdScheduleIds.length
-      }
-    });
+        createdScheduleIds
+      })
+    );
 
     assignments.push({
       employeeId: plan.employeeId,
