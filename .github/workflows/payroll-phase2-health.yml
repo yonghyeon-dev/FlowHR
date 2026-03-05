@@ -41,12 +41,6 @@ jobs:
             exit 1
           fi
 
-      - name: Run pending Prisma migrations
-        env:
-          DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
-        run: npx prisma migrate deploy
-
       - name: Run phase2 health report
         env:
           DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
