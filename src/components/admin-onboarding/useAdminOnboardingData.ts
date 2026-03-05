@@ -40,6 +40,12 @@ type LeavePolicyLite = {
   maxHoursPerRequest: number;
   source: "configured" | "default";
 };
+type OnboardingTaskTemplateLite = {
+  id: string;
+  title: string;
+  sortOrder: number;
+  active: boolean;
+};
 
 type UseAdminOnboardingDataInput = {
   loadingLabel: string;
@@ -91,6 +97,8 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
   >([]);
   const [pendingContractSendDocumentIds, setPendingContractSendDocumentIds] = useState<string[]>([]);
   const [leavePolicyConfigured, setLeavePolicyConfigured] = useState(false);
+  const [onboardingTaskTemplates, setOnboardingTaskTemplates] = useState<OnboardingTaskTemplateLite[]>([]);
+  const [onboardingTemplateDraftTitle, setOnboardingTemplateDraftTitle] = useState("");
 
   const [departmentSeedInput, setDepartmentSeedInput] = useState("HR,Human Resources\nDEV,Development");
   const [employeeSeedInput, setEmployeeSeedInput] = useState(
@@ -203,11 +211,19 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
         setPendingContractApprovalDecisionDocumentIds([]);
         setPendingContractSendDocumentIds([]);
         setLeavePolicyConfigured(false);
+        setOnboardingTaskTemplates([]);
         return;
       }
 
       const orgQuery = buildQuery({ organizationId: targetOrganizationId });
-      const [departmentsBody, employeesBody, leavePolicyBody, contractTemplatesBody, invitesBody] = await Promise.all([
+      const [
+        departmentsBody,
+        employeesBody,
+        leavePolicyBody,
+        contractTemplatesBody,
+        invitesBody,
+        onboardingTaskTemplatesBody
+      ] = await Promise.all([
         requestJson(input.requestLabels.departments, `/api/people/departments${orgQuery}`),
         requestJson(
           input.requestLabels.employees,
@@ -232,13 +248,18 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
             role: "employee",
             limit: "500"
           })}`
-        )
+        ),
+        requestJson("onboarding task templates", `/api/admin/onboarding/task-templates${orgQuery}`)
       ]);
 
       const departmentRows = parseArray<DepartmentLite>(departmentsBody, "departments");
       const employeeRows = parseArray<EmployeeLite>(employeesBody, "employees");
       const contractTemplateRows = parseArray<ContractTemplateLite>(contractTemplatesBody, "templates");
       const inviteRows = parseArray<AuthInviteLite>(invitesBody, "invites");
+      const onboardingTemplateRows = parseArray<OnboardingTaskTemplateLite>(
+        onboardingTaskTemplatesBody,
+        "templates"
+      );
       const policy = ((leavePolicyBody as { policy?: LeavePolicyLite })?.policy ?? null) as
         | LeavePolicyLite
         | null;
@@ -355,6 +376,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       setPendingContractApprovalRequestDocumentIds(Array.from(pendingApprovalDraftByEmployee.values()));
       setPendingContractApprovalDecisionDocumentIds(Array.from(pendingApprovalDecisionByEmployee.values()));
       setPendingContractSendDocumentIds(Array.from(pendingSendByEmployee.values()));
+      setOnboardingTaskTemplates(onboardingTemplateRows);
 
       if (policy) {
         setAnnualGrantDays(String(policy.annualGrantDays));
@@ -660,6 +682,61 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     await loadSetup();
   }, [input.requestLabels.createContractTemplate, loadSetup, organizationId, requestJson]);
 
+  const createOnboardingTaskTemplate = useCallback(async () => {
+    const targetOrganizationId = organizationId.trim();
+    const title = onboardingTemplateDraftTitle.trim();
+    if (!targetOrganizationId || !title) {
+      return;
+    }
+    await requestJson("create onboarding task template", "/api/admin/onboarding/task-templates", {
+      method: "POST",
+      body: {
+        organizationId: targetOrganizationId,
+        title,
+        sortOrder: onboardingTaskTemplates.length
+      }
+    });
+    setOnboardingTemplateDraftTitle("");
+    await loadSetup();
+  }, [
+    loadSetup,
+    onboardingTaskTemplates.length,
+    onboardingTemplateDraftTitle,
+    organizationId,
+    requestJson
+  ]);
+
+  const toggleOnboardingTaskTemplate = useCallback(
+    async (templateId: string, active: boolean) => {
+      await requestJson(
+        `toggle onboarding task template ${templateId}`,
+        `/api/admin/onboarding/task-templates/${encodeURIComponent(templateId)}`,
+        {
+          method: "PATCH",
+          body: {
+            active: !active
+          }
+        }
+      );
+      await loadSetup();
+    },
+    [loadSetup, requestJson]
+  );
+
+  const deleteOnboardingTaskTemplate = useCallback(
+    async (templateId: string) => {
+      await requestJson(
+        `delete onboarding task template ${templateId}`,
+        `/api/admin/onboarding/task-templates/${encodeURIComponent(templateId)}`,
+        {
+          method: "DELETE"
+        }
+      );
+      await loadSetup();
+    },
+    [loadSetup, requestJson]
+  );
+
   const refreshDisabled =
     Boolean(pendingLabel) || (!usesBearerToken && !organizationId.trim() && !showDevTools);
 
@@ -693,6 +770,9 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     approvePendingContractApprovals,
     sendPendingContracts,
     bootstrapEmploymentContractTemplate,
+    createOnboardingTaskTemplate,
+    toggleOnboardingTaskTemplate,
+    deleteOnboardingTaskTemplate,
     carryOverCapDays,
     checklistItems,
     departmentSeedInput,
@@ -704,6 +784,8 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     loadSetup,
     logs,
     maxHoursPerRequest,
+    onboardingTaskTemplates,
+    onboardingTemplateDraftTitle,
     organizationId,
     organizations,
     pendingLabel,
@@ -717,6 +799,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     setEmployeeSeedInput,
     setHourlyIncrementMinutes,
     setMaxHoursPerRequest,
+    setOnboardingTemplateDraftTitle,
     showDevTools,
     usesBearerToken
   };

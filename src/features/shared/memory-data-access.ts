@@ -32,6 +32,7 @@ import type {
   CreateBenefitCatalogItemInput,
   CreateBenefitRequestInput,
   CreateOnboardingTaskInput,
+  CreateOnboardingTaskTemplateInput,
   CreateRecruitmentOpeningInput,
   CreateRecruitmentReferralInput,
   CreateDepartmentInput,
@@ -51,6 +52,7 @@ import type {
   InsuranceEnrollmentType,
   InAppNotificationEntity,
   OnboardingTaskEntity,
+  OnboardingTaskTemplateEntity,
   OnboardingTaskStatus,
   LeaveBalanceEntity,
   LeavePromotionDeliveryEntity,
@@ -84,6 +86,7 @@ import type {
   UpdateBenefitRequestInput,
   UpdateInAppNotificationInput,
   UpdateOnboardingTaskInput,
+  UpdateOnboardingTaskTemplateInput,
   UpsertInsuranceEnrollmentInput,
   UpdateLeaveRequestInput,
   UpdateLeavePromotionDeliveryInput,
@@ -131,6 +134,7 @@ type MemoryState = {
   benefitCatalogItems: Map<string, BenefitCatalogItemEntity>;
   benefitRequests: Map<string, BenefitRequestEntity>;
   onboardingTasks: Map<string, OnboardingTaskEntity>;
+  onboardingTaskTemplates: Map<string, OnboardingTaskTemplateEntity>;
   insuranceEnrollments: Map<string, InsuranceEnrollmentEntity>;
   notices: Map<string, NoticeEntity>;
   noticeReadReceipts: Map<string, NoticeReadReceiptEntity>;
@@ -186,6 +190,7 @@ function createState(): MemoryState {
     benefitCatalogItems: new Map<string, BenefitCatalogItemEntity>(),
     benefitRequests: new Map<string, BenefitRequestEntity>(),
     onboardingTasks: new Map<string, OnboardingTaskEntity>(),
+    onboardingTaskTemplates: new Map<string, OnboardingTaskTemplateEntity>(),
     insuranceEnrollments: new Map<string, InsuranceEnrollmentEntity>(),
     notices: new Map<string, NoticeEntity>(),
     noticeReadReceipts: new Map<string, NoticeReadReceiptEntity>(),
@@ -398,6 +403,16 @@ function cloneOnboardingTask(entity: OnboardingTaskEntity): OnboardingTaskEntity
   return {
     ...entity,
     createdAt: cloneDate(entity.createdAt)
+  };
+}
+
+function cloneOnboardingTaskTemplate(
+  entity: OnboardingTaskTemplateEntity
+): OnboardingTaskTemplateEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
   };
 }
 
@@ -2930,6 +2945,7 @@ export const memoryDataAccess: DataAccess = {
       const task: OnboardingTaskEntity = {
         id: nextId("ONB"),
         employeeId: input.employeeId,
+        templateId: input.templateId ?? null,
         title: input.title,
         status: input.status ?? "PENDING",
         createdAt: input.createdAt ? cloneDate(input.createdAt) : new Date()
@@ -2974,6 +2990,84 @@ export const memoryDataAccess: DataAccess = {
       };
       state.onboardingTasks.set(id, updated);
       return cloneOnboardingTask(updated);
+    }
+  },
+
+  onboardingTaskTemplates: {
+    async create(input: CreateOnboardingTaskTemplateInput) {
+      const now = new Date();
+      const template: OnboardingTaskTemplateEntity = {
+        id: nextId("ONBTPL"),
+        organizationId: input.organizationId,
+        title: input.title,
+        sortOrder: input.sortOrder ?? 0,
+        active: input.active ?? true,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.onboardingTaskTemplates.set(template.id, template);
+      return cloneOnboardingTaskTemplate(template);
+    },
+
+    async findById(id: string) {
+      const template = state.onboardingTaskTemplates.get(id);
+      return template ? cloneOnboardingTaskTemplate(template) : null;
+    },
+
+    async update(id: string, input: UpdateOnboardingTaskTemplateInput) {
+      const existing = state.onboardingTaskTemplates.get(id);
+      if (!existing) {
+        throw new Error(`onboarding task template not found: ${id}`);
+      }
+      const updated: OnboardingTaskTemplateEntity = {
+        ...existing,
+        title: input.title ?? existing.title,
+        sortOrder: input.sortOrder ?? existing.sortOrder,
+        active: input.active ?? existing.active,
+        updatedAt: new Date()
+      };
+      state.onboardingTaskTemplates.set(id, updated);
+      return cloneOnboardingTaskTemplate(updated);
+    },
+
+    async delete(id: string) {
+      const existing = state.onboardingTaskTemplates.get(id);
+      if (!existing) {
+        throw new Error(`onboarding task template not found: ${id}`);
+      }
+      state.onboardingTaskTemplates.delete(id);
+      for (const [taskId, task] of state.onboardingTasks.entries()) {
+        if (task.templateId !== id) {
+          continue;
+        }
+        state.onboardingTasks.set(taskId, {
+          ...task,
+          templateId: null
+        });
+      }
+      return cloneOnboardingTaskTemplate(existing);
+    },
+
+    async listByOrganization(organizationId: string) {
+      const rows: OnboardingTaskTemplateEntity[] = [];
+      for (const template of state.onboardingTaskTemplates.values()) {
+        if (template.organizationId !== organizationId) {
+          continue;
+        }
+        rows.push(cloneOnboardingTaskTemplate(template));
+      }
+      rows.sort((left, right) => {
+        const bySortOrder = left.sortOrder - right.sortOrder;
+        if (bySortOrder !== 0) {
+          return bySortOrder;
+        }
+        const byCreatedAt = left.createdAt.getTime() - right.createdAt.getTime();
+        if (byCreatedAt !== 0) {
+          return byCreatedAt;
+        }
+        return left.id.localeCompare(right.id);
+      });
+      return rows;
     }
   },
 

@@ -51,6 +51,7 @@ model Organization {
   inAppNotifications       InAppNotification[]
   benefitCatalogItems      BenefitCatalogItem[]
   benefitRequests          BenefitRequest[]
+  onboardingTaskTemplates  OnboardingTaskTemplate[]
   recruitmentOpenings      RecruitmentOpening[]
   recruitmentReferrals     RecruitmentReferral[]
   payrollRuns              PayrollRun[]
@@ -94,11 +95,30 @@ model OnboardingTask {
   id         String               @id @default(cuid())
   employeeId String
   employee   Employee             @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  templateId String?
+  template   OnboardingTaskTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   title      String
   status     OnboardingTaskStatus @default(PENDING)
   createdAt  DateTime             @default(now())
 
+  @@unique([employeeId, templateId])
+  @@index([templateId])
   @@index([employeeId, createdAt, id])
+}
+
+model OnboardingTaskTemplate {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  sortOrder      Int             @default(0)
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  tasks OnboardingTask[]
+
+  @@index([organizationId, active, sortOrder, id])
 }
 
 model InsuranceEnrollment {

@@ -105,6 +105,7 @@ export function AdminOnboardingDashboard() {
 
       <AdminOnboardingSetupPanels
         copy={copy}
+        locale={locale}
         showDevTools={data.showDevTools}
         organizationId={data.organizationId}
         organizations={data.organizations}
@@ -132,6 +133,8 @@ export function AdminOnboardingDashboard() {
         pendingContractSendCount={data.pendingContractSendCount}
         respondedContractEmployeeCount={data.respondedContractEmployeeCount}
         pendingContractResponseCount={data.pendingContractResponseCount}
+        onboardingTaskTemplates={data.onboardingTaskTemplates}
+        onboardingTemplateDraftTitle={data.onboardingTemplateDraftTitle}
         onSetDepartmentSeedInput={data.setDepartmentSeedInput}
         onSetEmployeeSeedInput={data.setEmployeeSeedInput}
         onSetAnnualGrantDays={data.setAnnualGrantDays}
@@ -140,6 +143,7 @@ export function AdminOnboardingDashboard() {
         onSetAllowHourly={data.setAllowHourly}
         onSetHourlyIncrementMinutes={data.setHourlyIncrementMinutes}
         onSetMaxHoursPerRequest={data.setMaxHoursPerRequest}
+        onSetOnboardingTemplateDraftTitle={data.setOnboardingTemplateDraftTitle}
         onReloadOrganizations={() => {
           void data.loadSetup();
         }}
@@ -169,6 +173,15 @@ export function AdminOnboardingDashboard() {
         }}
         onSendPendingContracts={() => {
           void data.sendPendingContracts();
+        }}
+        onCreateOnboardingTaskTemplate={() => {
+          void data.createOnboardingTaskTemplate();
+        }}
+        onToggleOnboardingTaskTemplate={(templateId, active) => {
+          void data.toggleOnboardingTaskTemplate(templateId, active);
+        }}
+        onDeleteOnboardingTaskTemplate={(templateId) => {
+          void data.deleteOnboardingTaskTemplate(templateId);
         }}
         onOpenPendingContractResponses={() => {
           router.push("/admin/contracts?status=SENT&focus=pending-response");

@@ -57,14 +57,17 @@ async function run() {
     leavePromotionDeliveries: ["LeavePromotionDelivery", "LeavePromotionDeliveryRecipient"],
     benefits: ["BenefitCatalogItem", "BenefitRequest"],
     onboardingTasks: ["OnboardingTask"],
+    onboardingTaskTemplates: ["OnboardingTaskTemplate"],
     insuranceEnrollments: ["InsuranceEnrollment"],
     recruitment: ["RecruitmentOpening", "RecruitmentReferral"],
+    inAppNotifications: ["InAppNotification"],
     notices: ["Notice"],
     noticeReadReceipts: ["NoticeReadReceipt"],
     noticeNotifications: ["NoticeNotificationQueue"],
     payroll: ["PayrollRun"],
     deductionProfiles: ["DeductionProfile"],
-    audit: ["AuditLog"]
+    audit: ["AuditLog"],
+    contractTemplateVersions: []
   };
 
   const dataAccessKeys = extractDataAccessKeys(dataAccessSource);

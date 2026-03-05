@@ -35,6 +35,7 @@ import type {
   CreateBenefitCatalogItemInput,
   CreateBenefitRequestInput,
   CreateOnboardingTaskInput,
+  CreateOnboardingTaskTemplateInput,
   CreateOrganizationInput,
   CreatePayrollRunInput,
   CreatePositionInput,
@@ -54,6 +55,8 @@ import type {
   InsuranceEnrollmentEntity,
   InsuranceEnrollmentStore,
   OnboardingTaskEntity,
+  OnboardingTaskTemplateEntity,
+  OnboardingTaskTemplateStore,
   OnboardingTaskStore,
   DeductionProfileStore,
   EmployeeEntity,
@@ -123,6 +126,7 @@ import type {
   UpdateBenefitCatalogItemInput,
   UpdateBenefitRequestInput,
   UpdateOnboardingTaskInput,
+  UpdateOnboardingTaskTemplateInput,
   UpsertInsuranceEnrollmentInput,
   UpdatePositionInput,
   UpdatePayrollRunInput,
@@ -846,10 +850,23 @@ function resolveEmployeeStatusInput(input: {
 function toOnboardingTaskEntity(record: {
   id: string;
   employeeId: string;
+  templateId: string | null;
   title: string;
   status: "PENDING" | "COMPLETED";
   createdAt: Date;
 }): OnboardingTaskEntity {
+  return record;
+}
+
+function toOnboardingTaskTemplateEntity(record: {
+  id: string;
+  organizationId: string;
+  title: string;
+  sortOrder: number;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): OnboardingTaskTemplateEntity {
   return record;
 }
 
@@ -3001,6 +3018,7 @@ const onboardingTasks: OnboardingTaskStore = {
     const record = await prisma.onboardingTask.create({
       data: {
         employeeId: input.employeeId,
+        templateId: input.templateId ?? null,
         title: input.title,
         status: input.status ?? "PENDING",
         ...(input.createdAt ? { createdAt: input.createdAt } : {})
@@ -3032,6 +3050,54 @@ const onboardingTasks: OnboardingTaskStore = {
       }
     });
     return toOnboardingTaskEntity(record);
+  }
+};
+
+const onboardingTaskTemplates: OnboardingTaskTemplateStore = {
+  async create(input: CreateOnboardingTaskTemplateInput) {
+    const record = await prisma.onboardingTaskTemplate.create({
+      data: {
+        organizationId: input.organizationId,
+        title: input.title,
+        sortOrder: input.sortOrder ?? 0,
+        active: input.active ?? true
+      }
+    });
+    return toOnboardingTaskTemplateEntity(record);
+  },
+
+  async findById(id: string) {
+    const record = await prisma.onboardingTaskTemplate.findUnique({
+      where: { id }
+    });
+    return record ? toOnboardingTaskTemplateEntity(record) : null;
+  },
+
+  async update(id: string, input: UpdateOnboardingTaskTemplateInput) {
+    const record = await prisma.onboardingTaskTemplate.update({
+      where: { id },
+      data: {
+        title: input.title,
+        sortOrder: input.sortOrder,
+        active: input.active
+      }
+    });
+    return toOnboardingTaskTemplateEntity(record);
+  },
+
+  async delete(id: string) {
+    const record = await prisma.onboardingTaskTemplate.delete({
+      where: { id }
+    });
+    return toOnboardingTaskTemplateEntity(record);
+  },
+
+  async listByOrganization(organizationId: string) {
+    const records = await prisma.onboardingTaskTemplate.findMany({
+      where: { organizationId },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }]
+    });
+    return records.map(toOnboardingTaskTemplateEntity);
   }
 };
 
@@ -3480,6 +3546,7 @@ export const prismaDataAccess: DataAccess = {
   leavePromotionDeliveries,
   benefits,
   onboardingTasks,
+  onboardingTaskTemplates,
   insuranceEnrollments,
   recruitment,
   inAppNotifications,

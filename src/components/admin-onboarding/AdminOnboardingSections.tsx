@@ -42,6 +42,7 @@ export function AdminOnboardingContextPanel(props: ContextPanelProps) {
 }
 type SetupPanelsProps = {
   copy: AdminOnboardingCopy;
+  locale: "ko" | "en";
   showDevTools: boolean;
   organizationId: string;
   organizations: AdminOnboardingOrganizationOption[];
@@ -68,6 +69,8 @@ type SetupPanelsProps = {
   sentContractEmployeeCount: number;
   pendingContractSendCount: number;
   respondedContractEmployeeCount: number; pendingContractResponseCount: number;
+  onboardingTaskTemplates: Array<{ id: string; title: string; sortOrder: number; active: boolean }>;
+  onboardingTemplateDraftTitle: string;
   onSetDepartmentSeedInput: (value: string) => void;
   onSetEmployeeSeedInput: (value: string) => void;
   onSetAnnualGrantDays: (value: string) => void;
@@ -76,6 +79,7 @@ type SetupPanelsProps = {
   onSetAllowHourly: (value: boolean) => void;
   onSetHourlyIncrementMinutes: (value: string) => void;
   onSetMaxHoursPerRequest: (value: string) => void;
+  onSetOnboardingTemplateDraftTitle: (value: string) => void;
   onReloadOrganizations: () => void;
   onApplyDepartments: () => void;
   onApplyEmployees: () => void;
@@ -86,10 +90,14 @@ type SetupPanelsProps = {
   onRequestPendingContractApprovals: () => void;
   onApprovePendingContractApprovals: () => void;
   onSendPendingContracts: () => void; onOpenPendingContractResponses: () => void;
+  onCreateOnboardingTaskTemplate: () => void;
+  onToggleOnboardingTaskTemplate: (templateId: string, active: boolean) => void;
+  onDeleteOnboardingTaskTemplate: (templateId: string) => void;
 };
 export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
   const {
     copy,
+    locale,
     showDevTools,
     organizationId,
     organizations,
@@ -117,6 +125,8 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     pendingContractSendCount,
     respondedContractEmployeeCount,
     pendingContractResponseCount,
+    onboardingTaskTemplates,
+    onboardingTemplateDraftTitle,
     onSetDepartmentSeedInput,
     onSetEmployeeSeedInput,
     onSetAnnualGrantDays,
@@ -125,6 +135,7 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     onSetAllowHourly,
     onSetHourlyIncrementMinutes,
     onSetMaxHoursPerRequest,
+    onSetOnboardingTemplateDraftTitle,
     onReloadOrganizations,
     onApplyDepartments,
     onApplyEmployees,
@@ -135,8 +146,35 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     onRequestPendingContractApprovals,
     onApprovePendingContractApprovals,
     onSendPendingContracts,
-    onOpenPendingContractResponses
+    onOpenPendingContractResponses,
+    onCreateOnboardingTaskTemplate,
+    onToggleOnboardingTaskTemplate,
+    onDeleteOnboardingTaskTemplate
   } = props;
+  const onboardingTemplateCopy =
+    locale === "ko"
+      ? {
+          title: "7) 온보딩 기본 태스크 템플릿",
+          description: "직원이 ACTIVE 상태가 되면 활성 템플릿이 자동으로 할당됩니다.",
+          inputPlaceholder: "새 템플릿 제목",
+          addButton: "템플릿 추가",
+          empty: "등록된 템플릿이 없습니다.",
+          active: "활성",
+          inactive: "비활성",
+          toggle: "활성 전환",
+          remove: "삭제"
+        }
+      : {
+          title: "7) Onboarding task templates",
+          description: "Active templates are assigned automatically when employee status becomes ACTIVE.",
+          inputPlaceholder: "New template title",
+          addButton: "Add template",
+          empty: "No templates configured.",
+          active: "Active",
+          inactive: "Inactive",
+          toggle: "Toggle",
+          remove: "Delete"
+        };
   return (
     <section className="panel-grid">
       <article className="panel">
@@ -226,6 +264,56 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
           <label>{copy.leavePolicyFields.maxHoursPerRequest}<input type="number" min={1} max={24} value={maxHoursPerRequest} onChange={(event) => onSetMaxHoursPerRequest(event.target.value)} /></label>
         </div>
         <div className="actions"><button className="btn btn-primary" onClick={onApplyLeavePolicy}>{copy.applyLeavePolicyButton}</button></div>
+      </article>
+      <article className="panel">
+        <h2>{onboardingTemplateCopy.title}</h2>
+        <p className="small muted">{onboardingTemplateCopy.description}</p>
+        <div className="input-grid">
+          <label>
+            <input
+              type="text"
+              value={onboardingTemplateDraftTitle}
+              placeholder={onboardingTemplateCopy.inputPlaceholder}
+              onChange={(event) => onSetOnboardingTemplateDraftTitle(event.target.value)}
+            />
+          </label>
+        </div>
+        <div className="actions">
+          <button
+            className="btn btn-primary"
+            onClick={onCreateOnboardingTaskTemplate}
+            disabled={onboardingTemplateDraftTitle.trim().length === 0}
+          >
+            {onboardingTemplateCopy.addButton}
+          </button>
+        </div>
+        {onboardingTaskTemplates.length === 0 ? (
+          <p className="small muted">{onboardingTemplateCopy.empty}</p>
+        ) : (
+          <ul className="simple-list">
+            {onboardingTaskTemplates.map((template) => (
+              <li key={template.id}>
+                <span>
+                  <strong>{template.sortOrder + 1}.</strong> {template.title}{" "}
+                  <span className={template.active ? "ok" : "fail"}>
+                    ({template.active ? onboardingTemplateCopy.active : onboardingTemplateCopy.inactive})
+                  </span>
+                </span>
+                <div className="actions">
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => onToggleOnboardingTaskTemplate(template.id, template.active)}
+                  >
+                    {onboardingTemplateCopy.toggle}
+                  </button>
+                  <button className="btn btn-secondary" onClick={() => onDeleteOnboardingTaskTemplate(template.id)}>
+                    {onboardingTemplateCopy.remove}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </article>
       <article className="panel">
         <h2>{copy.contractTemplateTitle}</h2>

@@ -2,6 +2,7 @@ import type { Actor } from "@/lib/actor";
 import { requirePermission } from "@/lib/permissions";
 import { Permissions, type Permission } from "@/lib/rbac";
 import { ensureTenantMatch, resolveTenantScope } from "@/features/shared/tenant-scope";
+import { ensureEmployeeOnboardingTasks } from "@/features/onboarding/default-task-templates";
 import type {
   DataAccess,
   DepartmentEntity,
@@ -1004,6 +1005,13 @@ export async function createEmployee(
     status
   });
 
+  if (employee.status === "ACTIVE" && employee.organizationId) {
+    await ensureEmployeeOnboardingTasks(context.dataAccess, {
+      employeeId: employee.id,
+      organizationId: employee.organizationId
+    });
+  }
+
   await context.dataAccess.audit.append({
     action: "employee.created",
     entityType: "Employee",
@@ -1222,6 +1230,13 @@ export async function updateEmployee(
       address: input.address,
       status: normalizedStatus
     });
+
+    if (existing.status !== "ACTIVE" && employee.status === "ACTIVE" && employee.organizationId) {
+      await ensureEmployeeOnboardingTasks(context.dataAccess, {
+        employeeId: employee.id,
+        organizationId: employee.organizationId
+      });
+    }
   }
 
   await context.dataAccess.audit.append({
@@ -1302,6 +1317,13 @@ export async function transitionEmployeeStatus(
   const employee = await context.dataAccess.employees.update(input.employeeId, {
     status: input.status
   });
+
+  if (existing.status !== "ACTIVE" && employee.status === "ACTIVE" && employee.organizationId) {
+    await ensureEmployeeOnboardingTasks(context.dataAccess, {
+      employeeId: employee.id,
+      organizationId: employee.organizationId
+    });
+  }
 
   const sessionInvalidation =
     input.status === "RESIGNED"

@@ -1,11 +1,10 @@
 import { z } from "zod";
 
+import { ensureEmployeeOnboardingTasks } from "@/features/onboarding/default-task-templates";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import type { Actor } from "@/lib/actor";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
-import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
-import { translate, type MessageKey } from "@/lib/i18n/messages";
 
 const createOnboardingTasksSchema = z.object({
   employeeId: z.string().trim().min(1)
@@ -14,15 +13,6 @@ const createOnboardingTasksSchema = z.object({
 const listOnboardingTasksQuerySchema = z.object({
   employeeId: z.string().trim().min(1)
 });
-
-const defaultTaskTitleKeys = [
-  "admin.onboarding.defaultTask.signContract",
-  "admin.onboarding.defaultTask.registerPayrollAccount",
-  "admin.onboarding.defaultTask.confirmInsuranceEnrollment",
-  "admin.onboarding.defaultTask.issueInternalAccount",
-  "admin.onboarding.defaultTask.attendDepartmentOt"
-] as const satisfies readonly MessageKey[];
-const defaultTaskTitles = defaultTaskTitleKeys.map((key) => translate(DEFAULT_LOCALE, key));
 
 async function requireAdmin(request: Request) {
   const actor = await readActor(request);
@@ -62,7 +52,16 @@ export async function GET(request: Request) {
     return fail(403, "admin.onboarding.tasks.forbidden", { reason: "admin_or_self_required" });
   }
 
-  const tasks = await getRuntimeDataAccess().onboardingTasks.listByEmployee(parsed.data.employeeId);
+  const dataAccess = getRuntimeDataAccess();
+  const employee = await dataAccess.employees.findById(parsed.data.employeeId);
+  if (employee?.organizationId) {
+    await ensureEmployeeOnboardingTasks(dataAccess, {
+      employeeId: parsed.data.employeeId,
+      organizationId: employee.organizationId
+    });
+  }
+
+  const tasks = await dataAccess.onboardingTasks.listByEmployee(parsed.data.employeeId);
   return ok({ tasks });
 }
 
@@ -85,15 +84,18 @@ export async function POST(request: Request) {
   }
 
   const dataAccess = getRuntimeDataAccess();
-  const tasks = await Promise.all(
-    defaultTaskTitles.map((title) =>
-      dataAccess.onboardingTasks.create({
-        employeeId: parsed.data.employeeId,
-        title,
-        status: "PENDING"
-      })
-    )
-  );
+  const employee = await dataAccess.employees.findById(parsed.data.employeeId);
+  if (!employee) {
+    return fail(404, "admin.onboarding.tasks.employee_not_found");
+  }
+  if (!employee.organizationId) {
+    return fail(409, "admin.onboarding.tasks.organization_required");
+  }
+
+  const tasks = await ensureEmployeeOnboardingTasks(dataAccess, {
+    employeeId: employee.id,
+    organizationId: employee.organizationId
+  });
 
   return ok({ tasks }, 201);
 }

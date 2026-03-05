@@ -520,9 +520,20 @@ export type BenefitRequestEntity = {
 export type OnboardingTaskEntity = {
   id: string;
   employeeId: string;
+  templateId: string | null;
   title: string;
   status: OnboardingTaskStatus;
   createdAt: Date;
+};
+
+export type OnboardingTaskTemplateEntity = {
+  id: string;
+  organizationId: string;
+  title: string;
+  sortOrder: number;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export type InsuranceEnrollmentEntity = {
@@ -1117,6 +1128,7 @@ export type UpdateBenefitRequestInput = {
 
 export type CreateOnboardingTaskInput = {
   employeeId: string;
+  templateId?: string | null;
   title: string;
   status?: OnboardingTaskStatus;
   createdAt?: Date;
@@ -1124,6 +1136,19 @@ export type CreateOnboardingTaskInput = {
 
 export type UpdateOnboardingTaskInput = {
   status?: OnboardingTaskStatus;
+};
+
+export type CreateOnboardingTaskTemplateInput = {
+  organizationId: string;
+  title: string;
+  sortOrder?: number;
+  active?: boolean;
+};
+
+export type UpdateOnboardingTaskTemplateInput = {
+  title?: string;
+  sortOrder?: number;
+  active?: boolean;
 };
 
 export type UpsertInsuranceEnrollmentInput = {
@@ -1573,6 +1598,17 @@ export interface OnboardingTaskStore {
   update(id: string, input: UpdateOnboardingTaskInput): Promise<OnboardingTaskEntity>;
 }
 
+export interface OnboardingTaskTemplateStore {
+  create(input: CreateOnboardingTaskTemplateInput): Promise<OnboardingTaskTemplateEntity>;
+  findById(id: string): Promise<OnboardingTaskTemplateEntity | null>;
+  update(
+    id: string,
+    input: UpdateOnboardingTaskTemplateInput
+  ): Promise<OnboardingTaskTemplateEntity>;
+  delete(id: string): Promise<OnboardingTaskTemplateEntity>;
+  listByOrganization(organizationId: string): Promise<OnboardingTaskTemplateEntity[]>;
+}
+
 export interface InsuranceEnrollmentStore {
   upsert(input: UpsertInsuranceEnrollmentInput): Promise<InsuranceEnrollmentEntity>;
   listByEmployee(employeeId: string): Promise<InsuranceEnrollmentEntity[]>;
@@ -1628,6 +1664,7 @@ export type DataAccess = {
   leavePromotionDeliveries: LeavePromotionDeliveryStore;
   benefits: BenefitStore;
   onboardingTasks: OnboardingTaskStore;
+  onboardingTaskTemplates: OnboardingTaskTemplateStore;
   insuranceEnrollments: InsuranceEnrollmentStore;
   recruitment: RecruitmentStore;
   inAppNotifications: InAppNotificationStore;
