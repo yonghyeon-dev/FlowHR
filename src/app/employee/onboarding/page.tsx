@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
+import { useI18n } from "@/lib/i18n/provider";
 
 type OnboardingTask = {
   id: string;
@@ -33,11 +34,29 @@ function buildAuthHeaders(accessToken: string, employeeId: string): Record<strin
 }
 
 export default function EmployeeOnboardingChecklistPage() {
+  const { locale } = useI18n();
   const { snapshot, error: sessionError, loading: supabaseSessionLoading } = useSupabaseSession();
+  const isKoLocale = locale === "ko";
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const employeeId = (snapshot?.actorId ?? snapshot?.userId ?? "").trim();
   const accessToken = (snapshot?.accessToken ?? "").trim();
   const requiresLoginSession = !supabaseSessionLoading && isProductionRuntime && accessToken.length === 0;
+  const copy = useMemo(() => {
+    if (isKoLocale) {
+      return {
+        requiresLoginSessionError: "프로덕션에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요.",
+        missingEmployeeIdError: "세션에서 직원 ID를 확인할 수 없습니다. /login에서 다시 로그인해 주세요.",
+        loadChecklistFailed: "온보딩 체크리스트를 불러오지 못했습니다.",
+        completeChecklistFailed: "체크리스트 완료 처리에 실패했습니다."
+      };
+    }
+    return {
+      requiresLoginSessionError: "A login session is required in production. Please sign in again at /login.",
+      missingEmployeeIdError: "Employee ID is missing in the session. Please sign in again at /login.",
+      loadChecklistFailed: "Failed to load onboarding checklist.",
+      completeChecklistFailed: "Failed to mark checklist task as complete."
+    };
+  }, [isKoLocale]);
 
   const [tasks, setTasks] = useState<OnboardingTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,13 +77,13 @@ export default function EmployeeOnboardingChecklistPage() {
   const loadTasks = useCallback(async () => {
     if (requiresLoginSession) {
       setLoading(false);
-      setPageError("프로덕션에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요.");
+      setPageError(copy.requiresLoginSessionError);
       return;
     }
 
     if (!employeeId) {
       setLoading(false);
-      setPageError("세션에서 직원 ID를 확인할 수 없습니다. /login에서 다시 로그인해 주세요.");
+      setPageError(copy.missingEmployeeIdError);
       return;
     }
 
@@ -81,18 +100,16 @@ export default function EmployeeOnboardingChecklistPage() {
       );
       const payload = (await response.json()) as OnboardingTaskListPayload;
       if (!response.ok) {
-        throw new Error(payload.error ?? "온보딩 체크리스트를 불러오지 못했습니다.");
+        throw new Error(payload.error ?? copy.loadChecklistFailed);
       }
       setTasks(Array.isArray(payload.tasks) ? payload.tasks : []);
     } catch (error) {
-      setPageError(
-        error instanceof Error ? error.message : "온보딩 체크리스트를 불러오지 못했습니다."
-      );
+      setPageError(error instanceof Error ? error.message : copy.loadChecklistFailed);
       setTasks([]);
     } finally {
       setLoading(false);
     }
-  }, [accessToken, employeeId, requiresLoginSession]);
+  }, [accessToken, copy, employeeId, requiresLoginSession]);
 
   useEffect(() => {
     if (supabaseSessionLoading) {
@@ -102,9 +119,16 @@ export default function EmployeeOnboardingChecklistPage() {
   }, [loadTasks, supabaseSessionLoading]);
 
   async function completeTask(taskId: string) {
-    if (!employeeId) {
+    if (requiresLoginSession) {
+      setPageError(copy.requiresLoginSessionError);
       return;
     }
+
+    if (!employeeId) {
+      setPageError(copy.missingEmployeeIdError);
+      return;
+    }
+
     setPendingTaskId(taskId);
     setPageError(null);
     try {
@@ -118,15 +142,13 @@ export default function EmployeeOnboardingChecklistPage() {
       });
       const payload = (await response.json()) as OnboardingTaskPatchPayload;
       if (!response.ok || !payload.task) {
-        throw new Error(payload.error ?? "체크리스트 완료 처리에 실패했습니다.");
+        throw new Error(payload.error ?? copy.completeChecklistFailed);
       }
       setTasks((current) =>
         current.map((task) => (task.id === taskId ? { ...task, status: "COMPLETED" } : task))
       );
     } catch (error) {
-      setPageError(
-        error instanceof Error ? error.message : "체크리스트 완료 처리에 실패했습니다."
-      );
+      setPageError(error instanceof Error ? error.message : copy.completeChecklistFailed);
     } finally {
       setPendingTaskId(null);
     }
