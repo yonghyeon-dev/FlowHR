@@ -1389,15 +1389,10 @@ export default function HomePage() {
             </label>
             <label>
               휴가 유형
-              <select
-                value={leaveType}
-                onChange={(event) => setLeaveType(event.target.value as "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY")}
-              >
-                <option value="ANNUAL">ANNUAL</option>
-                <option value="SICK">SICK</option>
-                <option value="UNPAID">UNPAID</option>
-                <option value="MATERNITY">MATERNITY</option>
-                <option value="PATERNITY">PATERNITY</option>
+              <select value={leaveType} onChange={(event) => setLeaveType(event.target.value as LeaveTypeCode)}>
+                {(["ANNUAL", "SICK", "UNPAID", "MATERNITY", "PATERNITY"] as const).map((v) => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
               </select>
             </label>
             <label>
