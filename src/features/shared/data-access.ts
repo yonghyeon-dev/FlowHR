@@ -1225,6 +1225,7 @@ export interface AttendanceStore {
   create(input: CreateAttendanceRecordInput): Promise<AttendanceRecordEntity>;
   findById(id: string): Promise<AttendanceRecordEntity | null>;
   update(id: string, input: UpdateAttendanceRecordInput): Promise<AttendanceRecordEntity>;
+  delete(id: string): Promise<AttendanceRecordEntity>;
   listApprovedInPeriod(input: {
     periodStart: Date;
     periodEnd: Date;

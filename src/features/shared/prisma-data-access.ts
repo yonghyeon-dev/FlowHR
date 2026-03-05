@@ -1732,6 +1732,13 @@ const attendance: AttendanceStore = {
     return toAttendanceEntity(record);
   },
 
+  async delete(id: string) {
+    const record = await prisma.attendanceRecord.delete({
+      where: { id }
+    });
+    return toAttendanceEntity(record);
+  },
+
   async listApprovedInPeriod(input: {
     periodStart: Date;
     periodEnd: Date;
