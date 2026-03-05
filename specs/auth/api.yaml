@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Auth API
-  version: 0.2.0
+  version: 0.3.0
 paths:
   /auth/invites:
     post:
@@ -46,3 +46,50 @@ paths:
           description: Forbidden or organization mismatch
         "502":
           description: Supabase admin failure
+  /auth/setup-metadata:
+    post:
+      summary: Set role/org metadata and persist optional signup consent
+      description: >
+        Updates app_metadata for authenticated user and optionally records
+        legal consent evidence for `PRIVACY_POLICY` and `TERMS_OF_SERVICE`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - role
+                - organization_id
+              properties:
+                role:
+                  type: string
+                  enum: [admin, manager, employee, payroll_operator]
+                organization_id:
+                  type: string
+                organizationId:
+                  type: string
+                actor_id:
+                  type: string
+                actorId:
+                  type: string
+                consentVersion:
+                  type: string
+                consentTypes:
+                  type: array
+                  items:
+                    type: string
+                    enum: [PRIVACY_POLICY, TERMS_OF_SERVICE]
+      responses:
+        "200":
+          description: Metadata updated or skipped
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing or invalid bearer token
+        "403":
+          description: actor_id ownership/org validation failed
+        "500":
+          description: Consent persistence failure
+        "502":
+          description: Supabase metadata update failure
