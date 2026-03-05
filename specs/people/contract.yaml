@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.3.15
+version: 0.3.16
 scope:
   in:
     - organization master data (create/read/list)
