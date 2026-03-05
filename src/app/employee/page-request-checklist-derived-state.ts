@@ -21,6 +21,7 @@ import type {
   AttendanceRecordDto,
   IntegratedSubmitChecklistCard,
   LeaveBalanceDto,
+  LeaveTypeDto,
   LeaveRequestDto,
   MobileRequestTimelineItem,
   PreSubmitCheckItem,
@@ -64,7 +65,7 @@ type EmployeeRequestChecklistDerivedStateInput = {
   checkInAt: string;
   checkOutAt: string;
   breakMinutes: string;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: LeaveTypeDto;
   leaveUnit: "FULL_DAY" | "HALF_DAY" | "HOUR";
   leaveHours: string;
   leaveStartDate: string;

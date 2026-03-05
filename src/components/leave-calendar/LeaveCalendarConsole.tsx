@@ -39,7 +39,9 @@ export default function LeaveCalendarConsole() {
   const leaveTypeLabelByCode = {
     ANNUAL: copy.annualLeaveTypeLabel,
     SICK: copy.sickLeaveTypeLabel,
-    UNPAID: copy.unpaidLeaveTypeLabel
+    UNPAID: copy.unpaidLeaveTypeLabel,
+    MATERNITY: copy.maternityLeaveTypeLabel,
+    PATERNITY: copy.paternityLeaveTypeLabel
   } as const;
   const unitLabelByCode = {
     FULL_DAY: copy.fullDayUnitLabel,

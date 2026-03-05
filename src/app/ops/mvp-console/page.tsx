@@ -25,6 +25,7 @@ type ActorContext = {
 type AttendanceListState = "ALL" | "PENDING" | "APPROVED" | "REJECTED";
 type LeaveListState = "ALL" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 type PayrollListState = "ALL" | "PREVIEWED" | "CONFIRMED";
+type LeaveTypeCode = "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
 
 function toLocalInputValue(value: Date) {
   const adjusted = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
@@ -136,7 +137,7 @@ export default function MvpConsolePage() {
     "flowhr:cmd:leaveEmployeeId",
     defaultEmployeeIdForApi
   );
-  const [leaveType, setLeaveType] = useState<"ANNUAL" | "SICK" | "UNPAID">("ANNUAL");
+  const [leaveType, setLeaveType] = useState<LeaveTypeCode>("ANNUAL");
   const [leaveStartDate, setLeaveStartDate] = useState(firstDayOfMonthLocal());
   const [leaveEndDate, setLeaveEndDate] = useState(firstDayOfMonthLocal());
   const [leaveReason, setLeaveReason] = useState("MVP manual verification");
@@ -944,11 +945,13 @@ export default function MvpConsolePage() {
               휴가 유형
               <select
                 value={leaveType}
-                onChange={(event) => setLeaveType(event.target.value as "ANNUAL" | "SICK" | "UNPAID")}
+                onChange={(event) => setLeaveType(event.target.value as "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY")}
               >
                 <option value="ANNUAL">ANNUAL</option>
                 <option value="SICK">SICK</option>
                 <option value="UNPAID">UNPAID</option>
+                <option value="MATERNITY">MATERNITY</option>
+                <option value="PATERNITY">PATERNITY</option>
               </select>
             </label>
             <label>

@@ -195,10 +195,12 @@ export function EmployeeAttendanceLeaveFormsPanel({
         <div className="input-grid">
           <label>
             {leaveCopy.leaveType}
-            <select value={leaveType} onChange={(event) => onLeaveTypeChange(event.target.value as "ANNUAL" | "SICK" | "UNPAID")}>
+            <select value={leaveType} onChange={(event) => onLeaveTypeChange(event.target.value as "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY")}>
               <option value="ANNUAL">{toLeaveTypeLabel("ANNUAL")}</option>
               <option value="SICK">{toLeaveTypeLabel("SICK")}</option>
               <option value="UNPAID">{toLeaveTypeLabel("UNPAID")}</option>
+              <option value="MATERNITY">{toLeaveTypeLabel("MATERNITY")}</option>
+              <option value="PATERNITY">{toLeaveTypeLabel("PATERNITY")}</option>
             </select>
           </label>
           <label>

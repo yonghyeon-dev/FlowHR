@@ -9,6 +9,7 @@ type ActorRole = "admin" | "manager" | "employee" | "payroll_operator" | "system
 type AttendanceListState = "ALL" | "PENDING" | "APPROVED" | "REJECTED";
 type LeaveListState = "ALL" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 type PayrollListState = "ALL" | "PREVIEWED" | "CONFIRMED";
+type LeaveTypeCode = "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
 
 type ActorContext = {
   role: ActorRole;
@@ -45,7 +46,7 @@ type AttendanceRecordDto = {
 type LeaveRequestDto = {
   id: string;
   employeeId: string;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: LeaveTypeCode;
   startDate: string;
   endDate: string;
   days: number;
@@ -241,7 +242,7 @@ export default function HomePage() {
     "flowhr:cmd:leaveEmployeeId",
     defaultEmployeeIdForApi
   );
-  const [leaveType, setLeaveType] = useState<"ANNUAL" | "SICK" | "UNPAID">("ANNUAL");
+  const [leaveType, setLeaveType] = useState<LeaveTypeCode>("ANNUAL");
   const [leaveStartDate, setLeaveStartDate] = useState(firstDayOfMonthLocal());
   const [leaveEndDate, setLeaveEndDate] = useState(firstDayOfMonthLocal());
   const [leaveReason, setLeaveReason] = useState("MVP manual verification");
@@ -1388,13 +1389,10 @@ export default function HomePage() {
             </label>
             <label>
               휴가 유형
-              <select
-                value={leaveType}
-                onChange={(event) => setLeaveType(event.target.value as "ANNUAL" | "SICK" | "UNPAID")}
-              >
-                <option value="ANNUAL">ANNUAL</option>
-                <option value="SICK">SICK</option>
-                <option value="UNPAID">UNPAID</option>
+              <select value={leaveType} onChange={(event) => setLeaveType(event.target.value as LeaveTypeCode)}>
+                {(["ANNUAL", "SICK", "UNPAID", "MATERNITY", "PATERNITY"] as const).map((v) => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
               </select>
             </label>
             <label>

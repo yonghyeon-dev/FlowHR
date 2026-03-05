@@ -5,6 +5,7 @@ import type { resolveEmployeeLocaleLabelBundle } from "@/app/employee/page-local
 import type {
   ApiLog,
   AttendanceRecordDto,
+  LeaveTypeDto,
   LeaveBalanceDto,
   LeaveCalendarDayCell,
   LeaveRequestDto,
@@ -16,7 +17,7 @@ import { EmployeeLeaveCalendarPanel } from "@/components/employee-dashboard/Empl
 
 type EmployeeLocaleBundle = ReturnType<typeof resolveEmployeeLocaleLabelBundle>;
 type RequestStatusValue = "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
-type LeaveTypeValue = "ANNUAL" | "SICK" | "UNPAID";
+type LeaveTypeValue = LeaveTypeDto;
 type LeaveUnitValue = "FULL_DAY" | "HALF_DAY" | "HOUR";
 type LeaveQuickPreset = "today-half" | "tomorrow-full" | "next-week-full";
 
