@@ -17,6 +17,7 @@ import {
 import {
   aggregatePayrollTotalsKrw
 } from "@/features/payroll/service-year-end-run-snapshot-helpers";
+import { aggregateClosePeriodBreakdownKrw } from "@/features/payroll/service-close-period-breakdown-helpers";
 import type {
   AcknowledgePayrollPayslipReceiptInput,
   ClosePayrollPeriodInput,
@@ -70,6 +71,7 @@ export async function closePayrollPeriodFromHelper(
   const canClose = blockingReasons.length === 0;
 
   const totalsKrw = aggregatePayrollTotalsKrw(confirmedRuns);
+  const breakdownKrw = aggregateClosePeriodBreakdownKrw(confirmedRuns);
 
   const priorPaidWithholdingTaxKrw = toKrwInteger(
     input.settlement?.priorPaidWithholdingTaxKrw ?? 0,
@@ -101,7 +103,11 @@ export async function closePayrollPeriodFromHelper(
       blockingRunIds,
       blockingReasons
     },
-    totalsKrw,
+    totalsKrw: {
+      ...totalsKrw,
+      withholdingBreakdownKrw: breakdownKrw.withholdingBreakdownKrw,
+      socialInsuranceBreakdownKrw: breakdownKrw.socialInsuranceBreakdownKrw
+    },
     settlementKrw: {
       priorPaidWithholdingTaxKrw,
       priorPaidSocialInsuranceKrw,

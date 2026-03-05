@@ -257,6 +257,12 @@ export default function PayrollClosePeriodConsole() {
             <ul className="simple-list">
               <li><span>{copy.grossNetLabel}</span><strong>{formatKrw(result.summary.totalsKrw.grossPayKrw, runtimeLocale)} / {formatKrw(result.summary.totalsKrw.netPayKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.withholdingSocialInsuranceLabel}</span><strong>{formatKrw(result.summary.totalsKrw.withholdingTaxKrw, runtimeLocale)} / {formatKrw(result.summary.totalsKrw.socialInsuranceKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.incomeTaxLabel}</span><strong>{formatKrw(result.summary.totalsKrw.withholdingBreakdownKrw.incomeTaxKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.residentTaxLabel}</span><strong>{formatKrw(result.summary.totalsKrw.withholdingBreakdownKrw.residentTaxKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.nationalPensionLabel}</span><strong>{formatKrw(result.summary.totalsKrw.socialInsuranceBreakdownKrw.nationalPensionKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.healthInsuranceLabel}</span><strong>{formatKrw(result.summary.totalsKrw.socialInsuranceBreakdownKrw.healthInsuranceKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.employmentInsuranceLabel}</span><strong>{formatKrw(result.summary.totalsKrw.socialInsuranceBreakdownKrw.employmentInsuranceKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.industrialAccidentLabel}</span><strong>{formatKrw(result.summary.totalsKrw.socialInsuranceBreakdownKrw.industrialAccidentKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.deductionsOtherLabel}</span><strong>{formatKrw(result.summary.totalsKrw.totalDeductionsKrw, runtimeLocale)} / {formatKrw(result.summary.totalsKrw.otherDeductionsKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.withholdingDeltaLabel}</span><strong>{formatKrw(result.summary.settlementKrw.withholdingTaxDeltaKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.socialInsuranceDeltaLabel}</span><strong>{formatKrw(result.summary.settlementKrw.socialInsuranceDeltaKrw, runtimeLocale)}</strong></li>

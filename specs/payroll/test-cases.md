@@ -29,7 +29,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 21. Run payroll 4-insurance settlement preview with contribution caps and verify employee/employer component breakdown.
 22. Reject 4-insurance settlement preview when `payroll_kr_insurance_settlement_v1` feature flag is disabled.
 23. Reject 4-insurance settlement preview when `requireMonthlyBoundary=true` and period is not monthly boundary in `Asia/Seoul`.
-24. Preview payroll close-period summary and verify confirmed/previewed run-state counts plus withholding/social/net settlement deltas.
+24. Preview payroll close-period summary and verify confirmed/previewed run-state counts, withholding breakdown (`incomeTaxKrw`/`residentTaxKrw`), 4-insurance breakdown (`nationalPensionKrw`/`healthInsuranceKrw`/`employmentInsuranceKrw`/`industrialAccidentKrw`), and withholding/social/net settlement deltas.
 25. Apply payroll close-period and reject when unconfirmed (`PREVIEWED`) runs remain.
 26. Reject payroll close-period when `payroll_close_period_v1` feature flag is disabled.
 27. Preview/apply payslip distribution for confirmed runs and verify newly distributed/already distributed counts.

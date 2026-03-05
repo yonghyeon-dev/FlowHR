@@ -36,6 +36,12 @@ export type PayrollCloseCopy = {
   noTotalsYet: string;
   grossNetLabel: string;
   withholdingSocialInsuranceLabel: string;
+  incomeTaxLabel: string;
+  residentTaxLabel: string;
+  nationalPensionLabel: string;
+  healthInsuranceLabel: string;
+  employmentInsuranceLabel: string;
+  industrialAccidentLabel: string;
   deductionsOtherLabel: string;
   withholdingDeltaLabel: string;
   socialInsuranceDeltaLabel: string;
@@ -98,6 +104,12 @@ const copyEn: PayrollCloseCopy = {
   noTotalsYet: "No totals yet.",
   grossNetLabel: "Gross / Net",
   withholdingSocialInsuranceLabel: "Withholding / Social Insurance",
+  incomeTaxLabel: "Income Tax",
+  residentTaxLabel: "Resident Tax",
+  nationalPensionLabel: "National Pension",
+  healthInsuranceLabel: "Health Insurance",
+  employmentInsuranceLabel: "Employment Insurance",
+  industrialAccidentLabel: "Industrial Accident Insurance",
   deductionsOtherLabel: "Deductions / Other",
   withholdingDeltaLabel: "Withholding Delta",
   socialInsuranceDeltaLabel: "Social Insurance Delta",
@@ -159,6 +171,12 @@ const copyKo: PayrollCloseCopy = {
   noTotalsYet: "아직 합계가 없습니다.",
   grossNetLabel: "총지급 / 실지급",
   withholdingSocialInsuranceLabel: "원천세 / 사회보험",
+  incomeTaxLabel: "소득세",
+  residentTaxLabel: "주민세",
+  nationalPensionLabel: "국민연금",
+  healthInsuranceLabel: "건강보험",
+  employmentInsuranceLabel: "고용보험",
+  industrialAccidentLabel: "산재보험",
   deductionsOtherLabel: "공제합계 / 기타공제",
   withholdingDeltaLabel: "원천세 차이",
   socialInsuranceDeltaLabel: "사회보험 차이",

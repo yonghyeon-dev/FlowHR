@@ -162,7 +162,9 @@ export type ClosePayrollPeriodResult = {
     totalsKrw: {
       grossPayKrw: number;
       withholdingTaxKrw: number;
+      withholdingBreakdownKrw: PayrollWithholdingBreakdownKrw;
       socialInsuranceKrw: number;
+      socialInsuranceBreakdownKrw: PayrollSocialInsuranceBreakdownKrw;
       otherDeductionsKrw: number;
       totalDeductionsKrw: number;
       netPayKrw: number;
@@ -245,6 +247,18 @@ export type PayrollTotalsKrw = {
   otherDeductionsKrw: number;
   totalDeductionsKrw: number;
   netPayKrw: number;
+};
+
+export type PayrollWithholdingBreakdownKrw = {
+  incomeTaxKrw: number;
+  residentTaxKrw: number;
+};
+
+export type PayrollSocialInsuranceBreakdownKrw = {
+  nationalPensionKrw: number;
+  healthInsuranceKrw: number;
+  employmentInsuranceKrw: number;
+  industrialAccidentKrw: number;
 };
 
 export type YearEndSettlementSummary = {

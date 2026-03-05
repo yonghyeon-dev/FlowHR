@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.61.0
+version: 1.61.1
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -101,7 +101,7 @@ api:
       description: Generate 4-insurance settlement preview with employee/employer contribution breakdown, optional caps, optional settlement insurance rounding (`mode` + component units), optional policy preset selection (`insurancePolicyPresetId`) or auto-selection (`insurancePolicyPresetAuto` + optional `insurancePolicyAsOf`), raw contribution trace, and prior-withheld/prior-paid deltas. Admin `/admin/payroll-insurance` may expose manual/preset-id/preset-auto controls while preserving the same request contract.
     - method: POST
       path: /payroll/runs/close-period
-      description: Preview/apply payroll period close from confirmed runs with withholding/social/net settlement deltas and blocking reasons when unconfirmed runs remain.
+      description: Preview/apply payroll period close from confirmed runs with withholding breakdown (income/resident), 4-insurance breakdown (national/health/employment/industrial-accident), and withholding/social/net settlement deltas plus blocking reasons when unconfirmed runs remain.
     - method: POST
       path: /payroll/payslips/distribute
       description: Preview/apply confirmed payslip distribution by period with delivery metadata (`in_app`/`email`) and per-run delivery status.
@@ -434,7 +434,7 @@ test_plan:
     - preview-insurance-settlement validates monthly-boundary guard in Asia/Seoul when requireMonthlyBoundary=true
     - preview-insurance-settlement supports deterministic insurance policy preset selection (`insurancePolicyPresetId`) and auto-selection (`insurancePolicyPresetAuto` + optional `insurancePolicyAsOf`) with mixed-mode validation guards
     - admin payroll-insurance policy mode controls deterministically wire manual/preset-id/preset-auto request payload and show summary policy preset/rate/cap trace
-    - close-period preview returns run-state summary (confirmed/previewed) and withholding/social/net settlement deltas
+    - close-period preview returns run-state summary (confirmed/previewed), withholding breakdown (income/resident), 4-insurance breakdown (national/health/employment/industrial-accident), and withholding/social/net settlement deltas
     - close-period apply rejects requests when unconfirmed runs remain
     - close-period rejects requests when payroll_close_period_v1 is disabled
     - payslip distribution dry-run/apply returns deterministic run-state summary and delivery counts
@@ -570,7 +570,7 @@ test_plan:
     - admin payroll-insurance policy mode control and summary trace deterministic checks
     - year-end insurance reconciliation delta/status and monthly breakdown remain deterministic for same run/finalization replay
     - year-end preflight checklist ready/fail/warn and guard-detail outputs remain deterministic for same run/submission/finalization replay
-    - close-period withholding/social/net aggregation and settlement-delta checks
+    - close-period withholding breakdown, 4-insurance breakdown, withholding/social/net aggregation, and settlement-delta checks
     - payslip distribution and receipt confirmation state transitions stay deterministic
     - year-end tax-liability/withholding-delta and receipt-issue guard transitions stay deterministic
     - year-end finalized settlement read snapshot (liability/delta/hash) remains deterministic for same finalization replay

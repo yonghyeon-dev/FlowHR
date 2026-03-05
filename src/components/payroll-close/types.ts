@@ -14,7 +14,17 @@ export type PayrollClosePeriodResponse = {
     totalsKrw: {
       grossPayKrw: number;
       withholdingTaxKrw: number;
+      withholdingBreakdownKrw: {
+        incomeTaxKrw: number;
+        residentTaxKrw: number;
+      };
       socialInsuranceKrw: number;
+      socialInsuranceBreakdownKrw: {
+        nationalPensionKrw: number;
+        healthInsuranceKrw: number;
+        employmentInsuranceKrw: number;
+        industrialAccidentKrw: number;
+      };
       otherDeductionsKrw: number;
       totalDeductionsKrw: number;
       netPayKrw: number;
