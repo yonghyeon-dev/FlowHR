@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
+import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 
 type PayPeriod = "MONTHLY" | "BIWEEKLY";
 
@@ -80,6 +81,7 @@ function parseNumber(value: string, fieldName: string) {
 }
 
 export default function AdminSettingsPage() {
+  const { loading: supabaseSessionLoading } = useSupabaseSession();
   const [form, setForm] = useState<SettingsFormState>(defaultFormState);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -112,8 +114,11 @@ export default function AdminSettingsPage() {
   }, []);
 
   useEffect(() => {
+    if (supabaseSessionLoading) {
+      return;
+    }
     void loadSettings();
-  }, [loadSettings]);
+  }, [loadSettings, supabaseSessionLoading]);
 
   const handleSave = useCallback(async () => {
     setIsSaving(true);
