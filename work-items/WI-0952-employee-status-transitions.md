@@ -27,10 +27,14 @@
   - Admin-only route.
   - Validates transition rules and returns updated employee.
 
-## Data and Compatibility
+## Data Changes
+
+- Migration ID: `202603050011_add_employee_status`.
+- Table updated: `Employee` (field rename: active -> status).
+
+## Compatibility
 
 - Prisma `Employee.active` column replaced by `Employee.status`.
-- Migration ID: `202603050011_add_employee_status`.
 - Backward compatibility preserved by returning computed `active` (`status === ACTIVE`) in employee entities/responses.
 - Legacy `active` writes map to status:
   - `active: true` -> `ACTIVE`
