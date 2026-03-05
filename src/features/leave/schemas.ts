@@ -91,6 +91,11 @@ export const listLeaveRequestQuerySchema = z.object({
   state: leaveRequestStateSchema.optional()
 });
 
+export const readLeaveAvailableBalanceQuerySchema = z.object({
+  leaveType: leaveTypeSchema.default("ANNUAL"),
+  year: z.preprocess(parseIntegerLike, z.number().int().min(2000).max(9999).optional())
+});
+
 export const listLeaveCalendarQuerySchema = z.object({
   from: isoDateTime,
   to: isoDateTime,
