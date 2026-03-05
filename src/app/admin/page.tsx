@@ -40,7 +40,7 @@ export default function AdminDashboardPage() {
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
-  const { snapshot: supabaseSession } = useSupabaseSession();
+  const { snapshot: supabaseSession, loading: supabaseSessionLoading } = useSupabaseSession();
 
   const periodStart = useMemo(() => firstDayOfMonthLocal(), []);
   const periodEnd = useMemo(() => lastDayOfMonthLocal(), []);
@@ -83,7 +83,8 @@ export default function AdminDashboardPage() {
   const productionSessionRequiredNotice = isKoLocale
     ? "운영 환경에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요."
     : "Login session is required in production. Please sign in again at /login.";
-  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
+  const requiresLoginSession =
+    !supabaseSessionLoading && isProductionRuntime && !usesBearerToken && !showDevTools;
   const organizationId = supabaseSession?.organizationId?.trim() ?? "";
 
   const callApi = useCallback(
@@ -114,6 +115,10 @@ export default function AdminDashboardPage() {
   }
 
   const refreshSummary = useCallback(async () => {
+    if (supabaseSessionLoading) {
+      return;
+    }
+
     if (requiresLoginSession) {
       setSummary(EMPTY_SUMMARY);
       setTodayAttendanceCount(0);
@@ -224,6 +229,7 @@ export default function AdminDashboardPage() {
     todayPeriodEnd,
     todayPeriodStart,
     productionSessionRequiredNotice,
+    supabaseSessionLoading,
     requiresLoginSession,
     runtimeLocale
   ]);
@@ -339,7 +345,11 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <div className="page-actions">
-          <button className="btn btn-primary" onClick={() => void refreshSummary()} disabled={isLoading || requiresLoginSession}>
+          <button
+            className="btn btn-primary"
+            onClick={() => void refreshSummary()}
+            disabled={isLoading || supabaseSessionLoading || requiresLoginSession}
+          >
             {isLoading ? (isKoLocale ? "불러오는 중..." : "Loading...") : isKoLocale ? "새로고침" : "Refresh"}
           </button>
           <Link className="btn btn-secondary" href="/employee">

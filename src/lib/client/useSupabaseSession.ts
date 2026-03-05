@@ -17,6 +17,7 @@ export type SupabaseSessionSnapshot = {
 type SupabaseSessionState = {
   snapshot: SupabaseSessionSnapshot | null;
   error: string | null;
+  loading: boolean;
 };
 
 function readAppMetadataString(
@@ -65,8 +66,9 @@ function toSnapshot(session: Session | null): SupabaseSessionSnapshot | null {
 export function useSupabaseSession(): SupabaseSessionState {
   const [snapshot, setSnapshot] = useState<SupabaseSessionSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const stable = useMemo(() => ({ snapshot, error }), [snapshot, error]);
+  const stable = useMemo(() => ({ snapshot, error, loading }), [snapshot, error, loading]);
 
   useEffect(() => {
     let active = true;
@@ -96,6 +98,11 @@ export function useSupabaseSession(): SupabaseSessionState {
         }
         setError(error instanceof Error ? error.message : String(error));
         setSnapshot(null);
+      } finally {
+        if (!active) {
+          return;
+        }
+        setLoading(false);
       }
     }
 
