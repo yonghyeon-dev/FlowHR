@@ -573,6 +573,9 @@ function toPositionEntity(record: {
   organizationId: string;
   code: string;
   name: string;
+  title: string;
+  grade: number | null;
+  description: string | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -1089,6 +1092,9 @@ const positions: PositionStore = {
         organizationId: input.organizationId,
         code: input.code,
         name: input.name,
+        title: input.title ?? input.name,
+        grade: input.grade ?? null,
+        description: input.description ?? null,
         active: input.active ?? true
       }
     });
@@ -1108,8 +1114,18 @@ const positions: PositionStore = {
       data: {
         ...(input.code !== undefined ? { code: input.code } : {}),
         ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.title !== undefined ? { title: input.title } : {}),
+        ...(input.grade !== undefined ? { grade: input.grade } : {}),
+        ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.active !== undefined ? { active: input.active } : {})
       }
+    });
+    return toPositionEntity(record);
+  },
+
+  async delete(id: string) {
+    const record = await prisma.position.delete({
+      where: { id }
     });
     return toPositionEntity(record);
   },

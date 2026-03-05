@@ -64,6 +64,15 @@ function buildDepartmentCodeBase(name: string) {
   return normalized.length > 0 ? normalized : "DEPARTMENT";
 }
 
+function buildPositionCodeBase(title: string) {
+  const normalized = title
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized.length > 0 ? normalized : "POSITION";
+}
+
 function ensureUniqueDepartmentCode(
   existingDepartments: DepartmentEntity[],
   inputCode: string | undefined,
@@ -91,7 +100,52 @@ function ensureUniqueDepartmentCode(
   throw new ServiceError(409, "department code already exists in organization");
 }
 
+function ensureUniquePositionCode(
+  existingPositions: PositionEntity[],
+  inputCode: string | undefined,
+  inputTitle: string
+) {
+  const existingCodes = new Set(existingPositions.map((row) => normalizeCode(row.code)));
+  if (inputCode !== undefined) {
+    const code = ensureNonEmptyText(inputCode, "code");
+    if (existingCodes.has(normalizeCode(code))) {
+      throw new ServiceError(409, "position code already exists in organization");
+    }
+    return code;
+  }
+
+  const base = buildPositionCodeBase(inputTitle);
+  if (!existingCodes.has(normalizeCode(base))) {
+    return base;
+  }
+  for (let index = 2; index <= 999; index += 1) {
+    const candidate = `${base}-${index}`;
+    if (!existingCodes.has(normalizeCode(candidate))) {
+      return candidate;
+    }
+  }
+  throw new ServiceError(409, "position code already exists in organization");
+}
+
+function normalizeNullableText(value: string | null | undefined) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
 async function requireDepartmentMutationAccess(context: ServiceContext, action: string) {
+  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, action);
+  if (!context.actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  if (context.actor.role !== "admin" && context.actor.role !== "system") {
+    throw new ServiceError(403, "admin role required");
+  }
+}
+
+async function requirePositionMutationAccess(context: ServiceContext, action: string) {
   await requirePeoplePermission(context, Permissions.peopleEmployeesManage, action);
   if (!context.actor) {
     throw new ServiceError(401, "missing or invalid actor context");
@@ -531,31 +585,49 @@ export async function deleteDepartment(
 export async function createPosition(
   context: ServiceContext,
   input: {
-    organizationId: string;
-    code: string;
-    name: string;
+    organizationId?: string;
+    code?: string;
+    name?: string;
+    title?: string;
+    grade?: number | null;
+    description?: string | null;
     active?: boolean;
   }
 ): Promise<PositionEntity> {
-  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "create position");
+  await requirePositionMutationAccess(context, "create position");
   const tenantScope = resolveTenantScope(context.actor);
-  if (tenantScope && input.organizationId !== tenantScope) {
+  if (tenantScope && input.organizationId && input.organizationId !== tenantScope) {
     throw new ServiceError(403, "cross-tenant position create is not allowed");
   }
 
-  const organizationId = tenantScope ?? ensureNonEmptyText(input.organizationId, "organizationId");
+  const organizationIdInput = normalizeNullableId(input.organizationId ?? context.actor?.organizationId);
+  const organizationId = tenantScope ?? ensureNonEmptyText(organizationIdInput, "organizationId");
   await findOrganizationOrThrow(context, organizationId);
 
-  const code = ensureNonEmptyText(input.code, "code");
-  const existing = await context.dataAccess.positions.list({ organizationId });
-  if (existing.some((row) => normalizeCode(row.code) === normalizeCode(code))) {
-    throw new ServiceError(409, "position code already exists in organization");
+  if (input.title !== undefined && input.name !== undefined) {
+    const title = ensureNonEmptyText(input.title, "title");
+    const name = ensureNonEmptyText(input.name, "name");
+    if (title !== name) {
+      throw new ServiceError(400, "title and name must match");
+    }
   }
+
+  const title = ensureNonEmptyText(input.title ?? input.name, "title");
+  const existing = await context.dataAccess.positions.list({ organizationId });
+  const code = ensureUniquePositionCode(existing, input.code, title);
+  const grade = input.grade === undefined ? null : input.grade;
+  if (grade !== null && !Number.isInteger(grade)) {
+    throw new ServiceError(400, "grade must be an integer");
+  }
+  const description = normalizeNullableText(input.description);
 
   const position = await context.dataAccess.positions.create({
     organizationId,
     code,
-    name: ensureNonEmptyText(input.name, "name"),
+    name: title,
+    title,
+    grade,
+    description,
     active: input.active
   });
 
@@ -569,6 +641,9 @@ export async function createPosition(
     payload: {
       code: position.code,
       name: position.name,
+      title: position.title,
+      grade: position.grade,
+      description: position.description,
       active: position.active
     }
   });
@@ -584,6 +659,9 @@ export async function createPosition(
       organizationId: position.organizationId,
       code: position.code,
       name: position.name,
+      title: position.title,
+      grade: position.grade,
+      description: position.description,
       active: position.active
     }
   });
@@ -618,14 +696,25 @@ export async function updatePosition(
     positionId: string;
     code?: string;
     name?: string;
+    title?: string;
+    grade?: number | null;
+    description?: string | null;
     active?: boolean;
   }
 ): Promise<PositionEntity> {
-  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "update position");
+  await requirePositionMutationAccess(context, "update position");
   const tenantScope = resolveTenantScope(context.actor);
 
   const existing = await findPositionWithinScopeOrThrow(context, tenantScope, input.positionId);
-  const nextCode = input.code ? ensureNonEmptyText(input.code, "code") : existing.code;
+  if (input.title !== undefined && input.name !== undefined) {
+    const title = ensureNonEmptyText(input.title, "title");
+    const name = ensureNonEmptyText(input.name, "name");
+    if (title !== name) {
+      throw new ServiceError(400, "title and name must match");
+    }
+  }
+
+  const nextCode = input.code !== undefined ? ensureNonEmptyText(input.code, "code") : existing.code;
   if (normalizeCode(nextCode) !== normalizeCode(existing.code)) {
     const siblings = await context.dataAccess.positions.list({
       organizationId: existing.organizationId
@@ -639,9 +728,23 @@ export async function updatePosition(
     }
   }
 
+  const nextTitle =
+    input.title !== undefined
+      ? ensureNonEmptyText(input.title, "title")
+      : input.name !== undefined
+        ? ensureNonEmptyText(input.name, "name")
+        : undefined;
+
+  if (input.grade !== undefined && input.grade !== null && !Number.isInteger(input.grade)) {
+    throw new ServiceError(400, "grade must be an integer");
+  }
+
   const position = await context.dataAccess.positions.update(input.positionId, {
     code: input.code,
-    name: input.name,
+    name: nextTitle,
+    title: nextTitle,
+    grade: input.grade,
+    description: input.description !== undefined ? normalizeNullableText(input.description) : undefined,
     active: input.active
   });
 
@@ -656,11 +759,17 @@ export async function updatePosition(
       before: {
         code: existing.code,
         name: existing.name,
+        title: existing.title,
+        grade: existing.grade,
+        description: existing.description,
         active: existing.active
       },
       after: {
         code: position.code,
         name: position.name,
+        title: position.title,
+        grade: position.grade,
+        description: position.description,
         active: position.active
       }
     }
@@ -677,6 +786,45 @@ export async function updatePosition(
       organizationId: position.organizationId,
       code: position.code,
       name: position.name,
+      title: position.title,
+      grade: position.grade,
+      description: position.description,
+      active: position.active
+    }
+  });
+
+  return position;
+}
+
+export async function deletePosition(
+  context: ServiceContext,
+  input: { positionId: string }
+): Promise<PositionEntity> {
+  await requirePositionMutationAccess(context, "delete position");
+  const tenantScope = resolveTenantScope(context.actor);
+  const existing = await findPositionWithinScopeOrThrow(context, tenantScope, input.positionId);
+
+  const employees = await context.dataAccess.employees.list({
+    organizationId: existing.organizationId
+  });
+  if (employees.some((employee) => employee.positionId === existing.id)) {
+    throw new ServiceError(400, "Position has assigned employees");
+  }
+
+  const position = await context.dataAccess.positions.delete(existing.id);
+  await context.dataAccess.audit.append({
+    action: "position.deleted",
+    entityType: "Position",
+    entityId: position.id,
+    organizationId: position.organizationId,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload: {
+      code: position.code,
+      name: position.name,
+      title: position.title,
+      grade: position.grade,
+      description: position.description,
       active: position.active
     }
   });

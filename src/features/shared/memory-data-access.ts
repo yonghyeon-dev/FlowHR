@@ -736,6 +736,9 @@ function updatePositionEntity(existing: PositionEntity, input: UpdatePositionInp
     ...existing,
     code: input.code ?? existing.code,
     name: input.name ?? existing.name,
+    title: input.title ?? existing.title,
+    grade: input.grade !== undefined ? input.grade : existing.grade,
+    description: input.description !== undefined ? input.description : existing.description,
     active: input.active ?? existing.active,
     updatedAt: new Date()
   };
@@ -937,6 +940,9 @@ export const memoryDataAccess: DataAccess = {
         organizationId: input.organizationId,
         code: input.code,
         name: input.name,
+        title: input.title ?? input.name,
+        grade: input.grade ?? null,
+        description: input.description ?? null,
         active: input.active ?? true,
         createdAt: now,
         updatedAt: now
@@ -958,6 +964,15 @@ export const memoryDataAccess: DataAccess = {
       const updated = updatePositionEntity(existing, input);
       state.positions.set(id, updated);
       return clonePosition(updated);
+    },
+
+    async delete(id: string) {
+      const existing = state.positions.get(id);
+      if (!existing) {
+        throw new Error(`position not found: ${id}`);
+      }
+      state.positions.delete(id);
+      return clonePosition(existing);
     },
 
     async list(input: { active?: boolean; organizationId?: string }) {

@@ -68,20 +68,34 @@ export const updateDepartmentSchema = z
   );
 
 export const createPositionSchema = z.object({
-  organizationId: z.string().min(1),
-  code: z.string().min(1).max(50),
-  name: z.string().min(1).max(100),
+  organizationId: z.string().min(1).optional(),
+  code: z.string().min(1).max(50).optional(),
+  name: z.string().min(1).max(100).optional(),
+  title: z.string().min(1).max(100).optional(),
+  grade: z.number().int().optional(),
+  description: z.string().max(2000).optional(),
   active: z.boolean().optional()
+}).refine((value) => value.title !== undefined || value.name !== undefined, {
+  message: "title is required"
 });
 
 export const updatePositionSchema = z
   .object({
     code: z.string().min(1).max(50).optional(),
     name: z.string().min(1).max(100).optional(),
+    title: z.string().min(1).max(100).optional(),
+    grade: z.number().int().nullable().optional(),
+    description: z.string().max(2000).nullable().optional(),
     active: z.boolean().optional()
   })
   .refine(
-    (value) => value.code !== undefined || value.name !== undefined || value.active !== undefined,
+    (value) =>
+      value.code !== undefined ||
+      value.name !== undefined ||
+      value.title !== undefined ||
+      value.grade !== undefined ||
+      value.description !== undefined ||
+      value.active !== undefined,
     { message: "at least one field is required" }
   );
 
