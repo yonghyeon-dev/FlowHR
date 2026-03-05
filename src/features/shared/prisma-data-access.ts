@@ -16,10 +16,13 @@ import type {
   AttendanceRecordEntity,
   AttendanceStore,
   AuditStore,
+  ContractTemplateVersionEntity,
+  ContractTemplateVersionStore,
   CreateApprovalDelegationInput,
   CreateApprovalExecutionActionInput,
   CreateApprovalExecutionInput,
   CreateApprovalStageHistoryInput,
+  CreateContractTemplateVersionInput,
   CreateApprovalLineTemplateInput,
   CreateAttendanceRecordInput,
   CreateDepartmentInput,
@@ -56,6 +59,7 @@ import type {
   EmployeeEntity,
   EmployeeStore,
   ListAuditLogsInput,
+  ListContractTemplateVersionsInput,
   LeaveBalanceEntity,
   LeaveBalanceStore,
   LeavePromotionDeliveryEntity,
@@ -868,6 +872,59 @@ function toAuditLogEntity(record: {
     actorId: record.actorId,
     payload: record.payload,
     createdAt: record.createdAt
+  };
+}
+
+const CONTRACT_TEMPLATE_VERSION_ACTION = "contract.template.version.snapshotted";
+const CONTRACT_TEMPLATE_VERSION_ENTITY_TYPE = "ContractTemplateVersion";
+
+function toContractTemplateVersionEntity(record: {
+  organizationId: string | null;
+  actorId: string | null;
+  payload: unknown | null;
+}): ContractTemplateVersionEntity | null {
+  if (record.organizationId === null) {
+    return null;
+  }
+  if (!record.payload || typeof record.payload !== "object" || Array.isArray(record.payload)) {
+    return null;
+  }
+
+  const payload = record.payload as Record<string, unknown>;
+  const templateId =
+    typeof payload.templateId === "string" && payload.templateId.trim().length > 0
+      ? payload.templateId.trim()
+      : null;
+  const version =
+    typeof payload.version === "number" && Number.isInteger(payload.version) && payload.version > 0
+      ? payload.version
+      : null;
+  const content = typeof payload.content === "string" ? payload.content : null;
+  const modifiedBy =
+    typeof payload.modifiedBy === "string" && payload.modifiedBy.trim().length > 0
+      ? payload.modifiedBy.trim()
+      : record.actorId;
+  const modifiedAtRaw = typeof payload.modifiedAt === "string" ? payload.modifiedAt : null;
+  const modifiedAt = modifiedAtRaw ? new Date(modifiedAtRaw) : null;
+
+  if (
+    templateId === null ||
+    version === null ||
+    content === null ||
+    modifiedBy === null ||
+    modifiedAt === null ||
+    Number.isNaN(modifiedAt.getTime())
+  ) {
+    return null;
+  }
+
+  return {
+    templateId,
+    organizationId: record.organizationId,
+    version,
+    content,
+    modifiedAt,
+    modifiedBy
   };
 }
 
@@ -3181,6 +3238,94 @@ const deductionProfiles: DeductionProfileStore = {
   }
 };
 
+const contractTemplateVersions: ContractTemplateVersionStore = {
+  async create(input: CreateContractTemplateVersionInput) {
+    await prisma.auditLog.create({
+      data: {
+        action: CONTRACT_TEMPLATE_VERSION_ACTION,
+        entityType: CONTRACT_TEMPLATE_VERSION_ENTITY_TYPE,
+        entityId: `${input.templateId}:${input.version}`,
+        organizationId: input.organizationId,
+        actorRole: "system",
+        actorId: input.modifiedBy,
+        payload: {
+          templateId: input.templateId,
+          version: input.version,
+          content: input.content,
+          modifiedAt: input.modifiedAt.toISOString(),
+          modifiedBy: input.modifiedBy
+        } satisfies Prisma.InputJsonValue
+      }
+    });
+
+    return {
+      templateId: input.templateId,
+      organizationId: input.organizationId,
+      version: input.version,
+      content: input.content,
+      modifiedAt: input.modifiedAt,
+      modifiedBy: input.modifiedBy
+    };
+  },
+
+  async list(input: ListContractTemplateVersionsInput) {
+    const records = await prisma.auditLog.findMany({
+      where: {
+        action: CONTRACT_TEMPLATE_VERSION_ACTION,
+        entityType: CONTRACT_TEMPLATE_VERSION_ENTITY_TYPE,
+        entityId: {
+          startsWith: `${input.templateId}:`
+        },
+        ...(input.organizationId !== undefined ? { organizationId: input.organizationId } : {})
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: 5_000
+    });
+
+    const rows = records
+      .map((record) =>
+        toContractTemplateVersionEntity({
+          organizationId: record.organizationId,
+          actorId: record.actorId,
+          payload: record.payload
+        })
+      )
+      .filter((record): record is ContractTemplateVersionEntity => record !== null);
+
+    rows.sort((left, right) => {
+      const byVersion = right.version - left.version;
+      if (byVersion !== 0) {
+        return byVersion;
+      }
+      return right.modifiedAt.getTime() - left.modifiedAt.getTime();
+    });
+
+    return rows;
+  },
+
+  async find(input: { templateId: string; version: number; organizationId?: string }) {
+    const record = await prisma.auditLog.findFirst({
+      where: {
+        action: CONTRACT_TEMPLATE_VERSION_ACTION,
+        entityType: CONTRACT_TEMPLATE_VERSION_ENTITY_TYPE,
+        entityId: `${input.templateId}:${input.version}`,
+        ...(input.organizationId !== undefined ? { organizationId: input.organizationId } : {})
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }]
+    });
+
+    if (!record) {
+      return null;
+    }
+
+    return toContractTemplateVersionEntity({
+      organizationId: record.organizationId,
+      actorId: record.actorId,
+      payload: record.payload
+    });
+  }
+};
+
 const audit: AuditStore = {
   async append(input) {
     await prisma.auditLog.create({
@@ -3240,5 +3385,6 @@ export const prismaDataAccess: DataAccess = {
   noticeNotifications,
   payroll,
   deductionProfiles,
-  audit
+  audit,
+  contractTemplateVersions
 };

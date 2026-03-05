@@ -2,7 +2,11 @@ import { createHash, randomUUID } from "node:crypto";
 
 import type { Actor } from "@/lib/actor";
 import { applyApprovalExecutionAction } from "@/features/approval/service";
-import type { AuditLogEntity, DataAccess } from "@/features/shared/data-access";
+import type {
+  AuditLogEntity,
+  ContractTemplateVersionEntity,
+  DataAccess
+} from "@/features/shared/data-access";
 import { requireEmployeeWithinTenant } from "@/features/shared/tenant-scope";
 import { ensureTenantMatch, resolveTenantScope } from "@/features/shared/tenant-scope";
 import { ServiceError } from "@/features/shared/service-error";
@@ -39,6 +43,13 @@ type ContractTemplateRecord = {
   createdAt: string;
   updatedAt: string;
   updatedByActorId: string | null;
+};
+
+type ContractTemplateVersionRecord = {
+  version: number;
+  content: string;
+  modifiedAt: string;
+  modifiedBy: string;
 };
 
 type ContractDocumentRecord = {
@@ -173,6 +184,8 @@ const CONTRACT_TEMPLATE_ACTIONS = {
   updated: "contract.template.updated"
 } as const;
 
+const CONTRACT_TEMPLATE_VERSION_UNKNOWN_ACTOR = "unknown";
+
 const CONTRACT_DOCUMENT_ACTIONS = {
   created: "contract.document.created",
   approvalRequested: "contract.document.approval.requested",
@@ -246,6 +259,25 @@ function requireContractAdmin(context: ServiceContext): Actor {
     throw new ServiceError(403, "contract admin permission required");
   }
   return actor;
+}
+
+function requireTemplateVersionAdmin(context: ServiceContext): Actor {
+  const actor = requireActor(context);
+  if (actor.role !== "admin") {
+    throw new ServiceError(403, "admin role required");
+  }
+  return actor;
+}
+
+function toContractTemplateVersionRecord(
+  version: Pick<ContractTemplateVersionEntity, "version" | "content" | "modifiedAt" | "modifiedBy">
+): ContractTemplateVersionRecord {
+  return {
+    version: version.version,
+    content: version.content,
+    modifiedAt: normalizeIsoString(version.modifiedAt),
+    modifiedBy: version.modifiedBy
+  };
 }
 
 async function resolveOrganizationId(
@@ -654,9 +686,15 @@ export async function updateContractTemplate(
   const nextCategory = input.category ?? existing.category;
   const nextBody = input.body?.trim() ?? existing.body;
   const nextStatus = input.status ?? existing.status;
-
-  const contentChanged =
-    nextName !== existing.name || nextCategory !== existing.category || nextBody !== existing.body;
+  const snapshotActorId = existing.updatedByActorId ?? CONTRACT_TEMPLATE_VERSION_UNKNOWN_ACTOR;
+  await context.dataAccess.contractTemplateVersions.create({
+    templateId: existing.id,
+    organizationId: existing.organizationId,
+    version: existing.version,
+    content: existing.body,
+    modifiedAt: new Date(existing.updatedAt),
+    modifiedBy: snapshotActorId
+  });
 
   const template: ContractTemplateRecord = {
     ...existing,
@@ -664,7 +702,7 @@ export async function updateContractTemplate(
     category: nextCategory,
     body: nextBody,
     status: nextStatus,
-    version: contentChanged ? existing.version + 1 : existing.version,
+    version: existing.version + 1,
     updatedAt: nowIso(),
     updatedByActorId: actor.id
   };
@@ -678,6 +716,66 @@ export async function updateContractTemplate(
   });
 
   return { template };
+}
+
+export async function listContractTemplateVersions(
+  context: ServiceContext,
+  templateId: string
+): Promise<ContractTemplateVersionRecord[]> {
+  requireTemplateVersionAdmin(context);
+  const template = await findTemplateForActor(context, templateId);
+  const snapshots = await context.dataAccess.contractTemplateVersions.list({
+    templateId: template.id,
+    organizationId: template.organizationId
+  });
+
+  const recordsByVersion = new Map<number, ContractTemplateVersionRecord>();
+  recordsByVersion.set(template.version, {
+    version: template.version,
+    content: template.body,
+    modifiedAt: normalizeIsoString(template.updatedAt),
+    modifiedBy: template.updatedByActorId ?? CONTRACT_TEMPLATE_VERSION_UNKNOWN_ACTOR
+  });
+
+  for (const snapshot of snapshots) {
+    if (recordsByVersion.has(snapshot.version)) {
+      continue;
+    }
+    recordsByVersion.set(snapshot.version, toContractTemplateVersionRecord(snapshot));
+  }
+
+  const versions = Array.from(recordsByVersion.values());
+  versions.sort((left, right) => right.version - left.version);
+  return versions;
+}
+
+export async function getContractTemplateVersion(
+  context: ServiceContext,
+  templateId: string,
+  version: number
+): Promise<ContractTemplateVersionRecord> {
+  requireTemplateVersionAdmin(context);
+  const template = await findTemplateForActor(context, templateId);
+
+  if (version === template.version) {
+    return {
+      version: template.version,
+      content: template.body,
+      modifiedAt: normalizeIsoString(template.updatedAt),
+      modifiedBy: template.updatedByActorId ?? CONTRACT_TEMPLATE_VERSION_UNKNOWN_ACTOR
+    };
+  }
+
+  const snapshot = await context.dataAccess.contractTemplateVersions.find({
+    templateId: template.id,
+    version,
+    organizationId: template.organizationId
+  });
+  if (!snapshot) {
+    throw new ServiceError(404, "contract template version not found");
+  }
+
+  return toContractTemplateVersionRecord(snapshot);
 }
 
 export async function listContractDocuments(

@@ -15,10 +15,13 @@ import type {
   CreateApprovalExecutionActionInput,
   CreateApprovalExecutionInput,
   CreateApprovalStageHistoryInput,
+  CreateContractTemplateVersionInput,
   CreateApprovalLineTemplateInput,
   CreateWorkScheduleTemplateInput,
   CreateWorkScheduleInput,
+  ContractTemplateVersionEntity,
   ListAuditLogsInput,
+  ListContractTemplateVersionsInput,
   UpdateApprovalDelegationInput,
   UpdateApprovalExecutionInput,
   UpdateApprovalLineTemplateInput,
@@ -137,6 +140,7 @@ type MemoryState = {
   payroll: Map<string, PayrollRunEntity>;
   deductionProfiles: Map<string, DeductionProfileEntity>;
   audit: AuditLogEntity[];
+  contractTemplateVersions: Map<string, ContractTemplateVersionEntity[]>;
 };
 
 function seedRbacDefaults(target: MemoryState) {
@@ -190,7 +194,8 @@ function createState(): MemoryState {
     inAppNotifications: new Map<string, InAppNotificationEntity>(),
     payroll: new Map<string, PayrollRunEntity>(),
     deductionProfiles: new Map<string, DeductionProfileEntity>(),
-    audit: []
+    audit: [],
+    contractTemplateVersions: new Map<string, ContractTemplateVersionEntity[]>()
   };
   seedRbacDefaults(created);
   return created;
@@ -451,6 +456,15 @@ function cloneDeductionProfile(entity: DeductionProfileEntity): DeductionProfile
     ...entity,
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneContractTemplateVersion(
+  entity: ContractTemplateVersionEntity
+): ContractTemplateVersionEntity {
+  return {
+    ...entity,
+    modifiedAt: cloneDate(entity.modifiedAt)
   };
 }
 
@@ -3178,6 +3192,56 @@ export const memoryDataAccess: DataAccess = {
 
       state.deductionProfiles.set(profile.id, profile);
       return cloneDeductionProfile(profile);
+    }
+  },
+
+  contractTemplateVersions: {
+    async create(input: CreateContractTemplateVersionInput) {
+      const versionEntity: ContractTemplateVersionEntity = {
+        templateId: input.templateId,
+        organizationId: input.organizationId,
+        version: input.version,
+        content: input.content,
+        modifiedAt: cloneDate(input.modifiedAt),
+        modifiedBy: input.modifiedBy
+      };
+
+      const existing = state.contractTemplateVersions.get(input.templateId) ?? [];
+      const withoutVersion = existing.filter((row) => row.version !== input.version);
+      withoutVersion.push(versionEntity);
+      state.contractTemplateVersions.set(input.templateId, withoutVersion);
+
+      return cloneContractTemplateVersion(versionEntity);
+    },
+
+    async list(input: ListContractTemplateVersionsInput) {
+      const rows = state.contractTemplateVersions.get(input.templateId) ?? [];
+      return rows
+        .filter((row) =>
+          input.organizationId !== undefined ? row.organizationId === input.organizationId : true
+        )
+        .map(cloneContractTemplateVersion)
+        .sort((left, right) => {
+          const byVersion = right.version - left.version;
+          if (byVersion !== 0) {
+            return byVersion;
+          }
+          return right.modifiedAt.getTime() - left.modifiedAt.getTime();
+        });
+    },
+
+    async find(input: { templateId: string; version: number; organizationId?: string }) {
+      const rows = state.contractTemplateVersions.get(input.templateId) ?? [];
+      const row = rows.find((entry) => {
+        if (entry.version !== input.version) {
+          return false;
+        }
+        if (input.organizationId !== undefined && entry.organizationId !== input.organizationId) {
+          return false;
+        }
+        return true;
+      });
+      return row ? cloneContractTemplateVersion(row) : null;
     }
   },
 
