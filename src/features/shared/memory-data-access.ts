@@ -32,6 +32,7 @@ import type {
   CreateBenefitCatalogItemInput,
   CreateBenefitRequestInput,
   CreateOnboardingTaskInput,
+  CreateOnboardingTaskTemplateInput,
   CreateRecruitmentOpeningInput,
   CreateRecruitmentReferralInput,
   CreateDepartmentInput,
@@ -51,6 +52,7 @@ import type {
   InsuranceEnrollmentType,
   InAppNotificationEntity,
   OnboardingTaskEntity,
+  OnboardingTaskTemplateEntity,
   OnboardingTaskStatus,
   LeaveBalanceEntity,
   LeavePromotionDeliveryEntity,
@@ -130,6 +132,7 @@ type MemoryState = {
   leavePromotionDeliveryRecipients: Map<string, LeavePromotionDeliveryRecipientEntity>;
   benefitCatalogItems: Map<string, BenefitCatalogItemEntity>;
   benefitRequests: Map<string, BenefitRequestEntity>;
+  onboardingTaskTemplates: Map<string, OnboardingTaskTemplateEntity>;
   onboardingTasks: Map<string, OnboardingTaskEntity>;
   insuranceEnrollments: Map<string, InsuranceEnrollmentEntity>;
   notices: Map<string, NoticeEntity>;
@@ -185,6 +188,7 @@ function createState(): MemoryState {
     leavePromotionDeliveryRecipients: new Map<string, LeavePromotionDeliveryRecipientEntity>(),
     benefitCatalogItems: new Map<string, BenefitCatalogItemEntity>(),
     benefitRequests: new Map<string, BenefitRequestEntity>(),
+    onboardingTaskTemplates: new Map<string, OnboardingTaskTemplateEntity>(),
     onboardingTasks: new Map<string, OnboardingTaskEntity>(),
     insuranceEnrollments: new Map<string, InsuranceEnrollmentEntity>(),
     notices: new Map<string, NoticeEntity>(),
@@ -398,6 +402,14 @@ function cloneOnboardingTask(entity: OnboardingTaskEntity): OnboardingTaskEntity
   return {
     ...entity,
     createdAt: cloneDate(entity.createdAt)
+  };
+}
+
+function cloneOnboardingTaskTemplate(entity: OnboardingTaskTemplateEntity): OnboardingTaskTemplateEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
   };
 }
 
@@ -2922,6 +2934,45 @@ export const memoryDataAccess: DataAccess = {
         return right.id.localeCompare(left.id);
       });
       return rows.slice(0, limit);
+    }
+  },
+
+  onboardingTaskTemplates: {
+    async create(input: CreateOnboardingTaskTemplateInput) {
+      const now = new Date();
+      const template: OnboardingTaskTemplateEntity = {
+        id: nextId("ONBT"),
+        organizationId: input.organizationId,
+        title: input.title,
+        sortOrder:
+          input.sortOrder === undefined ? 0 : Math.max(0, Math.trunc(input.sortOrder)),
+        createdAt: input.createdAt ? cloneDate(input.createdAt) : now,
+        updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : now
+      };
+      state.onboardingTaskTemplates.set(template.id, template);
+      return cloneOnboardingTaskTemplate(template);
+    },
+
+    async listByOrganization(organizationId: string) {
+      const rows: OnboardingTaskTemplateEntity[] = [];
+      for (const template of state.onboardingTaskTemplates.values()) {
+        if (template.organizationId !== organizationId) {
+          continue;
+        }
+        rows.push(cloneOnboardingTaskTemplate(template));
+      }
+      rows.sort((left, right) => {
+        const bySortOrder = left.sortOrder - right.sortOrder;
+        if (bySortOrder !== 0) {
+          return bySortOrder;
+        }
+        const byCreatedAt = left.createdAt.getTime() - right.createdAt.getTime();
+        if (byCreatedAt !== 0) {
+          return byCreatedAt;
+        }
+        return left.id.localeCompare(right.id);
+      });
+      return rows;
     }
   },
 

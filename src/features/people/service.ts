@@ -2,6 +2,8 @@ import type { Actor } from "@/lib/actor";
 import { requirePermission } from "@/lib/permissions";
 import { Permissions, type Permission } from "@/lib/rbac";
 import { ensureTenantMatch, resolveTenantScope } from "@/features/shared/tenant-scope";
+import { onboardingDefaultTaskTitleKeys } from "@/features/onboarding/default-task-keys";
+import { ensureEmployeeOnboardingTasksForActiveStatus } from "@/features/onboarding/tasks";
 import type {
   DataAccess,
   DepartmentEntity,
@@ -15,6 +17,8 @@ import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain
 import { ServiceError } from "@/features/shared/service-error";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isTenancyEnabled } from "@/lib/tenancy";
+import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
+import { translate } from "@/lib/i18n/messages";
 
 type ServiceContext = {
   actor: Actor | null;
@@ -32,6 +36,9 @@ export type EmployeeProfileHistoryEntry = {
 
 const EMPLOYEE_PROFILE_HISTORY_ACTIONS = ["employee.created", "employee.profile.updated"] as const;
 const EMPLOYEE_STATUS_TRANSITION_ACTION = "employee.status.transitioned";
+const defaultOnboardingTaskTitles = onboardingDefaultTaskTitleKeys.map((key) =>
+  translate(DEFAULT_LOCALE, key)
+);
 
 const ALLOWED_EMPLOYEE_STATUS_TRANSITIONS: Record<EmployeeStatus, readonly EmployeeStatus[]> = {
   ACTIVE: ["ON_LEAVE", "RESIGNED"],
@@ -1003,6 +1010,11 @@ export async function createEmployee(
     address: input.address,
     status
   });
+  await ensureEmployeeOnboardingTasksForActiveStatus({
+    dataAccess: context.dataAccess,
+    employee,
+    defaultTitles: defaultOnboardingTaskTitles
+  });
 
   await context.dataAccess.audit.append({
     action: "employee.created",
@@ -1222,6 +1234,11 @@ export async function updateEmployee(
       address: input.address,
       status: normalizedStatus
     });
+    await ensureEmployeeOnboardingTasksForActiveStatus({
+      dataAccess: context.dataAccess,
+      employee,
+      defaultTitles: defaultOnboardingTaskTitles
+    });
   }
 
   await context.dataAccess.audit.append({
@@ -1301,6 +1318,11 @@ export async function transitionEmployeeStatus(
 
   const employee = await context.dataAccess.employees.update(input.employeeId, {
     status: input.status
+  });
+  await ensureEmployeeOnboardingTasksForActiveStatus({
+    dataAccess: context.dataAccess,
+    employee,
+    defaultTitles: defaultOnboardingTaskTitles
   });
 
   const sessionInvalidation =

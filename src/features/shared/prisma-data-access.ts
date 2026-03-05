@@ -35,6 +35,7 @@ import type {
   CreateBenefitCatalogItemInput,
   CreateBenefitRequestInput,
   CreateOnboardingTaskInput,
+  CreateOnboardingTaskTemplateInput,
   CreateOrganizationInput,
   CreatePayrollRunInput,
   CreatePositionInput,
@@ -54,6 +55,8 @@ import type {
   InsuranceEnrollmentEntity,
   InsuranceEnrollmentStore,
   OnboardingTaskEntity,
+  OnboardingTaskTemplateEntity,
+  OnboardingTaskTemplateStore,
   OnboardingTaskStore,
   DeductionProfileStore,
   EmployeeEntity,
@@ -850,6 +853,17 @@ function toOnboardingTaskEntity(record: {
   status: "PENDING" | "COMPLETED";
   createdAt: Date;
 }): OnboardingTaskEntity {
+  return record;
+}
+
+function toOnboardingTaskTemplateEntity(record: {
+  id: string;
+  organizationId: string;
+  title: string;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}): OnboardingTaskTemplateEntity {
   return record;
 }
 
@@ -2996,6 +3010,30 @@ const benefits: BenefitStore = {
   }
 };
 
+const onboardingTaskTemplates: OnboardingTaskTemplateStore = {
+  async create(input: CreateOnboardingTaskTemplateInput) {
+    const record = await prisma.onboardingTaskTemplate.create({
+      data: {
+        organizationId: input.organizationId,
+        title: input.title,
+        sortOrder:
+          input.sortOrder === undefined ? 0 : Math.max(0, Math.trunc(input.sortOrder)),
+        createdAt: input.createdAt,
+        updatedAt: input.updatedAt
+      }
+    });
+    return toOnboardingTaskTemplateEntity(record);
+  },
+
+  async listByOrganization(organizationId: string) {
+    const records = await prisma.onboardingTaskTemplate.findMany({
+      where: { organizationId },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }]
+    });
+    return records.map(toOnboardingTaskTemplateEntity);
+  }
+};
+
 const onboardingTasks: OnboardingTaskStore = {
   async create(input: CreateOnboardingTaskInput) {
     const record = await prisma.onboardingTask.create({
@@ -3479,6 +3517,7 @@ export const prismaDataAccess: DataAccess = {
   leaveBalance,
   leavePromotionDeliveries,
   benefits,
+  onboardingTaskTemplates,
   onboardingTasks,
   insuranceEnrollments,
   recruitment,

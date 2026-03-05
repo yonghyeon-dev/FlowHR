@@ -9,6 +9,7 @@ import {
   AdminOnboardingSetupPanels
 } from "@/components/admin-onboarding/AdminOnboardingSections";
 import { AdminOnboardingReadinessPanel } from "@/components/admin-onboarding/AdminOnboardingReadinessPanel";
+import { AdminOnboardingTaskTemplatePanel } from "@/components/admin-onboarding/AdminOnboardingTaskTemplatePanel";
 import { adminOnboardingCopyByLocale } from "@/components/admin-onboarding/copy";
 import type { OnboardingChecklistItem } from "@/features/admin-onboarding/checklist";
 import { useAdminOnboardingData } from "@/components/admin-onboarding/useAdminOnboardingData";
@@ -181,6 +182,8 @@ export function AdminOnboardingDashboard() {
         checklistItems={data.checklistItems}
         logs={data.logs}
       />
+
+      <AdminOnboardingTaskTemplatePanel />
     </main>
   );
 }
