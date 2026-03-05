@@ -9,6 +9,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = listEmployeesQuerySchema.safeParse({
     active: url.searchParams.get("active") ?? undefined,
+    status: url.searchParams.get("status") ?? undefined,
     organizationId: url.searchParams.get("organizationId") ?? undefined
   });
 
@@ -24,6 +25,7 @@ export async function GET(request: Request) {
       },
       {
         active: parsed.data.active,
+        status: parsed.data.status,
         organizationId: parsed.data.organizationId
       }
     );
@@ -64,6 +66,7 @@ export async function POST(request: Request) {
         email: parsed.data.email ?? null,
         phone: parsed.data.phone,
         address: parsed.data.address,
+        status: parsed.data.status,
         active: parsed.data.active
       }
     );

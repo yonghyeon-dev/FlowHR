@@ -17,6 +17,7 @@ export type BenefitRequestStatus = "SUBMITTED" | "APPROVED" | "REJECTED" | "CANC
 export type OnboardingTaskStatus = "PENDING" | "COMPLETED";
 export type InsuranceEnrollmentType = "NPS" | "NHI" | "EI" | "WCI";
 export type InsuranceEnrollmentStatus = "ENROLLED" | "NOT_ENROLLED" | "PENDING";
+export type EmployeeStatus = "ACTIVE" | "ON_LEAVE" | "RESIGNED";
 export type RecruitmentOpeningStatus = "OPEN" | "CLOSED";
 export type RecruitmentReferralStage =
   | "SUBMITTED"
@@ -310,6 +311,7 @@ export type EmployeeEntity = {
   email: string | null;
   phone?: string;
   address?: string;
+  status: EmployeeStatus;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -707,6 +709,7 @@ export type CreateEmployeeInput = {
   email?: string | null;
   phone?: string;
   address?: string;
+  status?: EmployeeStatus;
   active?: boolean;
 };
 
@@ -718,6 +721,7 @@ export type UpdateEmployeeInput = {
   email?: string | null;
   phone?: string;
   address?: string;
+  status?: EmployeeStatus;
   active?: boolean;
 };
 
@@ -1314,7 +1318,7 @@ export interface EmployeeStore {
   create(input: CreateEmployeeInput): Promise<EmployeeEntity>;
   findById(id: string): Promise<EmployeeEntity | null>;
   update(id: string, input: UpdateEmployeeInput): Promise<EmployeeEntity>;
-  list(input: { active?: boolean; organizationId?: string }): Promise<EmployeeEntity[]>;
+  list(input: { active?: boolean; status?: EmployeeStatus; organizationId?: string }): Promise<EmployeeEntity[]>;
 }
 
 export interface DepartmentStore {

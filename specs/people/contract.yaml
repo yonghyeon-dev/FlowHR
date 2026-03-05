@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.3.14
+version: 0.3.15
 scope:
   in:
     - organization master data (create/read/list)
@@ -15,6 +15,7 @@ scope:
     - benefits request queue priority sorting (`sort=pending_priority`) for submitted-first review ordering
     - recruitment referral queue priority sorting (`sort=stalled_priority`) for active stalled-referral-first review ordering
     - admin organization settings read/update API for post-onboarding organization configuration changes
+    - employee lifecycle status model (`ACTIVE`/`ON_LEAVE`/`RESIGNED`) with controlled transitions and resigned-session invalidation
   out:
     - multi-tenant enforcement (RLS) across core tables (Phase 1 follow-up)
     - RBAC engine and permission administration UI (Phase 1 follow-up)
@@ -60,7 +61,10 @@ api:
       description: Update current admin organization settings for profile and work-hour policy fields.
     - method: GET
       path: /people/employees
-      description: List employees (optional filters).
+      description: "List employees (optional filters: `active`, `status`, `organizationId`)."
+    - method: GET
+      path: /employees
+      description: "Alias endpoint to list employees (optional filters: `active`, `status`, `organizationId`)."
     - method: GET
       path: /people/departments
       description: List departments (optional active/organization filters).
@@ -103,6 +107,9 @@ api:
     - method: PATCH
       path: /people/employees/{employeeId}
       description: Update employee profile fields (admin only).
+    - method: PATCH
+      path: /employees/{id}/status
+      description: Transition employee status with enforced transition rules (admin only).
     - method: GET
       path: /benefits/catalog
       description: List organization-scoped benefits catalog items.
@@ -152,6 +159,8 @@ api:
         description: Emitted when an employee record is created.
       - name: employee.profile.updated.v1
         description: Emitted when employee profile metadata is updated (name/email/org/active).
+      - name: employee.status.transitioned.v1
+        description: Emitted when employee status transition succeeds.
     consumed: []
 db_changes:
   migrations:
@@ -179,6 +188,8 @@ db_changes:
       description: Add Department parent/manager references and admin CRUD management support.
     - id: 202603050009_wi0940_position_management
       description: Add Position title/grade/description fields and admin delete guard support.
+    - id: 202603050011_add_employee_status
+      description: Replace Employee.active with Employee.status enum and add employee status transition support.
   backward_compatible: true
   notes: "Additive foundation tables only. Department/Position are organization-scoped catalogs, and recruitment/benefits read models are additive."
 invariants:
@@ -189,6 +200,8 @@ invariants:
   - Position code must be unique within an organization.
   - Position delete is blocked when employees are assigned to the position.
   - Employee department and position assignments must match employee organization scope.
+  - Employee status transitions are restricted to ACTIVE<->ON_LEAVE and ACTIVE/ON_LEAVE->RESIGNED.
+  - RESIGNED is terminal and cannot transition to another status.
 risk:
   permissions:
     - Unauthorized employee creation could lead to data integrity issues once FK enforcement is introduced.
@@ -203,6 +216,8 @@ test_plan:
   integration:
     - organization create/list/get admin-only
     - employee create/list/get/update admin-only
+    - employee status transition API validates allowed transitions and terminal resigned state
+    - employee list supports status filter (`ACTIVE`/`ON_LEAVE`/`RESIGNED`)
     - employee history list (created/profile-updated) returns most recent entries first
     - department/position create/list/get/update admin-only
     - employee org mismatch with department/position returns 409
@@ -230,9 +245,11 @@ observability:
     - position.deleted
     - employee.created
     - employee.profile.updated
+    - employee.status.transitioned
   metrics:
     - employee_created_count
     - employee_updated_count
+    - employee_status_transition_count
     - department_created_count
     - position_created_count
     - position_deleted_count
@@ -248,7 +265,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "People contract v0.3.14 additively includes position management enhancements (title/grade/description fields and position delete endpoint with assigned-employee guard) while preserving backward compatibility for existing People APIs."
+consumer_impact: "People contract v0.3.15 additively introduces employee status lifecycle transitions and resigned session invalidation while preserving backward compatibility with computed employee.active behavior."
 references:
   - work-items/WI-0034-employee-organization-master-model.md
   - work-items/WI-0102-people-department-position-model.md
@@ -265,6 +282,7 @@ references:
   - work-items/WI-0932-org-settings.md
   - work-items/WI-0938-department-management.md
   - work-items/WI-0940-position-management.md
+  - work-items/WI-0952-employee-status-transitions.md
   - docs/data-ownership.md
 approval:
   spec_owner: people-agent

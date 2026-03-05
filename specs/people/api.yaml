@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR People API
-  version: 0.3.14
+  version: 0.3.15
 paths:
   /people/organizations:
     get:
@@ -55,6 +55,15 @@ paths:
           schema:
             type: boolean
         - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum:
+              - ACTIVE
+              - ON_LEAVE
+              - RESIGNED
+        - in: query
           name: organizationId
           required: false
           schema:
@@ -69,6 +78,50 @@ paths:
           description: Created
         "409":
           description: Duplicate
+  /employees:
+    get:
+      summary: List employees (alias endpoint)
+      parameters:
+        - in: query
+          name: active
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum:
+              - ACTIVE
+              - ON_LEAVE
+              - RESIGNED
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Employees listed
+  /employees/{id}/status:
+    patch:
+      summary: Transition employee status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Employee status transitioned
+        "400":
+          description: Invalid transition or payload
+        "403":
+          description: Admin role required
+        "404":
+          description: Employee not found
   /people/departments:
     get:
       summary: List departments

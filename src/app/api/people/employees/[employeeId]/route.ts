@@ -53,6 +53,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       parsed.data.organizationId !== undefined ||
       parsed.data.departmentId !== undefined ||
       parsed.data.positionId !== undefined ||
+      parsed.data.status !== undefined ||
       parsed.data.active !== undefined;
     if (hasRestrictedField) {
       return fail(403, "employees can only update name, email, phone, and address");
@@ -74,6 +75,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         email: parsed.data.email,
         phone: parsed.data.phone,
         address: parsed.data.address,
+        status: parsed.data.status,
         active: parsed.data.active
       }
     );
