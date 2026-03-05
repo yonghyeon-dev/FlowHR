@@ -2,9 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { FLOWHR_ACCESS_TOKEN_COOKIE } from "@/lib/auth/session-cookie";
 
-const PUBLIC_EXACT_PATHS = new Set(["/login", "/signup", "/reset-password", "/favicon.ico"]);
+const PUBLIC_EXACT_PATHS = new Set(["/login", "/signup", "/forgot-password", "/reset-password", "/favicon.ico"]);
 const PUBLIC_PREFIX_PATHS = ["/api", "/_next"] as const;
-const PROTECTED_PREFIX_PATHS = ["/employee", "/admin", "/ops"] as const;
+const PROTECTED_PREFIX_PATHS = ["/employee", "/admin", "/ops", "/onboarding"] as const;
 
 function readAccessToken(request: NextRequest): string | null {
   const raw = request.cookies.get(FLOWHR_ACCESS_TOKEN_COOKIE)?.value?.trim() ?? "";
