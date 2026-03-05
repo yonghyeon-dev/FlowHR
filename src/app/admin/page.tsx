@@ -7,6 +7,7 @@ import {
   firstDayOfMonthLocal,
   isTruthyFlag,
   lastDayOfMonthLocal,
+  minutesToHours,
   toLocalInputValue,
   toIso
 } from "@/app/admin/page-helpers";
@@ -27,7 +28,7 @@ import { useAdminApprovalQuickActions } from "@/app/admin/page-approval-actions"
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
 import { buildAdminSummaryFromApiResults } from "@/app/admin/page-summary-helpers";
 import { EMPTY_SUMMARY, type AdminSummary } from "@/app/admin/page-dashboard-types";
-import type { AttendanceRecordDto, LeaveRequestDto } from "@/app/admin/page-types";
+import type { AttendanceAggregateDto, AttendanceRecordDto, LeaveRequestDto } from "@/app/admin/page-types";
 import { resolveAdminContractDocumentNextStep } from "@/components/contracts/document-action-policy";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
@@ -56,7 +57,8 @@ export default function AdminDashboardPage() {
   const [summary, setSummary] = useState<AdminSummary>(EMPTY_SUMMARY);
   const [todayClockInCount, setTodayClockInCount] = useState(0);
   const [todayOpenAttendanceCount, setTodayOpenAttendanceCount] = useState(0);
-  const [monthlyApprovedLeaveDays, setMonthlyApprovedLeaveDays] = useState(0);
+  const [monthlyApprovedLeaveCount, setMonthlyApprovedLeaveCount] = useState(0);
+  const [todayOvertimeMinutes, setTodayOvertimeMinutes] = useState(0);
   const [pendingAttendanceQueue, setPendingAttendanceQueue] = useState<AttendanceRecordDto[]>([]);
   const [pendingLeaveQueue, setPendingLeaveQueue] = useState<LeaveRequestDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -105,7 +107,8 @@ export default function AdminDashboardPage() {
       setSummary(EMPTY_SUMMARY);
       setTodayClockInCount(0);
       setTodayOpenAttendanceCount(0);
-      setMonthlyApprovedLeaveDays(0);
+      setMonthlyApprovedLeaveCount(0);
+      setTodayOvertimeMinutes(0);
       setPendingAttendanceQueue([]);
       setPendingLeaveQueue([]);
       setLoadError(productionSessionRequiredNotice);
@@ -128,7 +131,8 @@ export default function AdminDashboardPage() {
         approvalResult,
         contractsResult,
         todayAttendanceResult,
-        monthlyLeaveResult
+        monthlyLeaveResult,
+        todayAttendanceAggregatesResult
       ] = await Promise.all([
         callApi("refresh pending attendance", `/api/attendance/records${buildQuery({ from, to, state: "PENDING" })}`),
         callApi("refresh pending leave", `/api/leave/requests${buildQuery({ from, to, state: "PENDING" })}`),
@@ -152,7 +156,11 @@ export default function AdminDashboardPage() {
           `/api/contracts/documents${buildQuery({ organizationId: organizationId || undefined })}`
         ),
         callApi("refresh today's attendance", `/api/attendance/records${buildQuery({ from: todayFrom, to: todayTo })}`),
-        callApi("refresh monthly approved leave requests", `/api/leave/requests${buildQuery({ from, to, state: "APPROVED" })}`)
+        callApi("refresh monthly approved leave requests", `/api/leave/requests${buildQuery({ from, to, state: "APPROVED" })}`),
+        callApi(
+          "refresh today's attendance aggregates",
+          `/api/attendance/aggregates${buildQuery({ from: todayFrom, to: todayTo })}`
+        )
       ]);
       const nextPendingAttendance =
         attendanceResult.response.ok &&
@@ -182,6 +190,15 @@ export default function AdminDashboardPage() {
         Array.isArray((monthlyLeaveResult.body as { requests?: LeaveRequestDto[] }).requests)
           ? (monthlyLeaveResult.body as { requests: LeaveRequestDto[] }).requests
           : [];
+      const todayAttendanceAggregates =
+        todayAttendanceAggregatesResult.response.ok &&
+        todayAttendanceAggregatesResult.body &&
+        typeof todayAttendanceAggregatesResult.body === "object" &&
+        Array.isArray(
+          (todayAttendanceAggregatesResult.body as { aggregates?: AttendanceAggregateDto[] }).aggregates
+        )
+          ? (todayAttendanceAggregatesResult.body as { aggregates: AttendanceAggregateDto[] }).aggregates
+          : [];
 
       setPendingAttendanceQueue(nextPendingAttendance);
       setPendingLeaveQueue(nextPendingLeave);
@@ -190,7 +207,10 @@ export default function AdminDashboardPage() {
         new Set(todayAttendanceRecords.filter((record) => record.checkOutAt === null).map((record) => record.employeeId))
           .size
       );
-      setMonthlyApprovedLeaveDays(monthlyLeaveRequests.reduce((total, request) => total + (request.days ?? 0), 0));
+      setMonthlyApprovedLeaveCount(monthlyLeaveRequests.length);
+      setTodayOvertimeMinutes(
+        todayAttendanceAggregates.reduce((total, aggregate) => total + aggregate.totals.overtime, 0)
+      );
       setSummary(
         buildAdminSummaryFromApiResults({
           attendanceResult,
@@ -421,19 +441,23 @@ export default function AdminDashboardPage() {
       </section>
 
       <section className="panel">
-        <h2>핵심 현황</h2>
+        <h2>{isKoLocale ? "핵심 현황" : "Core status"}</h2>
         <div className="kpi-strip">
           <article className="kpi-card">
-            <p>오늘 출근</p>
+            <p>{isKoLocale ? "오늘 출근/퇴근" : "Today's clock-ins/outs"}</p>
             <strong>{todayClockInCount}</strong>
           </article>
           <article className="kpi-card">
-            <p>미퇴근 근로자</p>
+            <p>{isKoLocale ? "미퇴근 근로자" : "Open attendance records"}</p>
             <strong>{todayOpenAttendanceCount}</strong>
           </article>
           <article className="kpi-card">
-            <p>휴가 사용 일수</p>
-            <strong>{monthlyApprovedLeaveDays}</strong>
+            <p>{isKoLocale ? "휴가 사용 일수" : "Leave days used"}</p>
+            <strong>{monthlyApprovedLeaveCount}</strong>
+          </article>
+          <article className="kpi-card">
+            <p>{isKoLocale ? "연장 근로 시간" : "Overtime worked"}</p>
+            <strong>{minutesToHours(todayOvertimeMinutes)}</strong>
           </article>
         </div>
       </section>
