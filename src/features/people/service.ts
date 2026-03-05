@@ -14,6 +14,8 @@ import type { DomainEventPublisher } from "@/features/shared/domain-event-publis
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { ServiceError } from "@/features/shared/service-error";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
+import { translate, type MessageKey } from "@/lib/i18n/messages";
 import { isTenancyEnabled } from "@/lib/tenancy";
 
 type ServiceContext = {
@@ -32,6 +34,16 @@ export type EmployeeProfileHistoryEntry = {
 
 const EMPLOYEE_PROFILE_HISTORY_ACTIONS = ["employee.created", "employee.profile.updated"] as const;
 const EMPLOYEE_STATUS_TRANSITION_ACTION = "employee.status.transitioned";
+const defaultOnboardingTaskTemplateTitleKeys = [
+  "admin.onboarding.defaultTask.signContract",
+  "admin.onboarding.defaultTask.registerPayrollAccount",
+  "admin.onboarding.defaultTask.confirmInsuranceEnrollment",
+  "admin.onboarding.defaultTask.issueInternalAccount",
+  "admin.onboarding.defaultTask.attendDepartmentOt"
+] as const satisfies readonly MessageKey[];
+const defaultOnboardingTaskTemplateTitles = defaultOnboardingTaskTemplateTitleKeys.map((key) =>
+  translate(DEFAULT_LOCALE, key)
+);
 
 const ALLOWED_EMPLOYEE_STATUS_TRANSITIONS: Record<EmployeeStatus, readonly EmployeeStatus[]> = {
   ACTIVE: ["ON_LEAVE", "RESIGNED"],
@@ -200,6 +212,36 @@ async function invalidateEmployeeSessionsIfPossible(employeeId: string) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown_error";
     return { attempted: true as const, success: false as const, reason: message };
+  }
+}
+
+async function ensureEmployeeOnboardingTasksFromTemplates(
+  context: ServiceContext,
+  employee: EmployeeEntity
+) {
+  if (employee.status !== "ACTIVE") {
+    return;
+  }
+
+  const templates = await context.dataAccess.onboardingTaskTemplates.ensureDefaults(
+    defaultOnboardingTaskTemplateTitles
+  );
+  if (templates.length === 0) {
+    return;
+  }
+
+  const existingTasks = await context.dataAccess.onboardingTasks.listByEmployee(employee.id);
+  const existingTitleSet = new Set(existingTasks.map((task) => task.title));
+  for (const template of templates) {
+    if (existingTitleSet.has(template.title)) {
+      continue;
+    }
+    await context.dataAccess.onboardingTasks.create({
+      employeeId: employee.id,
+      title: template.title,
+      status: "PENDING"
+    });
+    existingTitleSet.add(template.title);
   }
 }
 
@@ -1003,6 +1045,7 @@ export async function createEmployee(
     address: input.address,
     status
   });
+  await ensureEmployeeOnboardingTasksFromTemplates(context, employee);
 
   await context.dataAccess.audit.append({
     action: "employee.created",
@@ -1302,6 +1345,9 @@ export async function transitionEmployeeStatus(
   const employee = await context.dataAccess.employees.update(input.employeeId, {
     status: input.status
   });
+  if (input.status === "ACTIVE") {
+    await ensureEmployeeOnboardingTasksFromTemplates(context, employee);
+  }
 
   const sessionInvalidation =
     input.status === "RESIGNED"

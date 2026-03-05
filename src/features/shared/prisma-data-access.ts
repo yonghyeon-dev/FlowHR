@@ -35,6 +35,7 @@ import type {
   CreateBenefitCatalogItemInput,
   CreateBenefitRequestInput,
   CreateOnboardingTaskInput,
+  CreateOnboardingTaskTemplateInput,
   CreateOrganizationInput,
   CreatePayrollRunInput,
   CreatePositionInput,
@@ -55,6 +56,8 @@ import type {
   InsuranceEnrollmentStore,
   OnboardingTaskEntity,
   OnboardingTaskStore,
+  OnboardingTaskTemplateEntity,
+  OnboardingTaskTemplateStore,
   DeductionProfileStore,
   EmployeeEntity,
   EmployeeStatus,
@@ -850,6 +853,15 @@ function toOnboardingTaskEntity(record: {
   status: "PENDING" | "COMPLETED";
   createdAt: Date;
 }): OnboardingTaskEntity {
+  return record;
+}
+
+function toOnboardingTaskTemplateEntity(record: {
+  id: string;
+  title: string;
+  sortOrder: number;
+  createdAt: Date;
+}): OnboardingTaskTemplateEntity {
   return record;
 }
 
@@ -3035,6 +3047,62 @@ const onboardingTasks: OnboardingTaskStore = {
   }
 };
 
+async function listOnboardingTaskTemplates() {
+  const records = await prisma.onboardingTaskTemplate.findMany({
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }]
+  });
+  return records.map(toOnboardingTaskTemplateEntity);
+}
+
+const onboardingTaskTemplates: OnboardingTaskTemplateStore = {
+  async list() {
+    return listOnboardingTaskTemplates();
+  },
+
+  async create(input: CreateOnboardingTaskTemplateInput) {
+    const record = await prisma.onboardingTaskTemplate.create({
+      data: {
+        title: input.title.trim(),
+        sortOrder: input.sortOrder ?? 0,
+        ...(input.createdAt ? { createdAt: input.createdAt } : {})
+      }
+    });
+    return toOnboardingTaskTemplateEntity(record);
+  },
+
+  async ensureDefaults(titles: string[]) {
+    const normalizedTitles = titles.map((title) => title.trim()).filter((title) => title.length > 0);
+    if (normalizedTitles.length === 0) {
+      return listOnboardingTaskTemplates();
+    }
+
+    const existingRecords = await prisma.onboardingTaskTemplate.findMany({
+      select: {
+        title: true,
+        sortOrder: true
+      }
+    });
+    const existingTitleSet = new Set(existingRecords.map((row) => row.title));
+    const maxSortOrder =
+      existingRecords.length === 0 ? -1 : Math.max(...existingRecords.map((row) => row.sortOrder));
+    const missingRows = normalizedTitles
+      .filter((title) => !existingTitleSet.has(title))
+      .map((title, index) => ({
+        title,
+        sortOrder: maxSortOrder + index + 1
+      }));
+
+    if (missingRows.length > 0) {
+      await prisma.onboardingTaskTemplate.createMany({
+        data: missingRows,
+        skipDuplicates: true
+      });
+    }
+
+    return listOnboardingTaskTemplates();
+  }
+};
+
 const insuranceEnrollments: InsuranceEnrollmentStore = {
   async upsert(input: UpsertInsuranceEnrollmentInput) {
     const record = await prisma.insuranceEnrollment.upsert({
@@ -3479,6 +3547,7 @@ export const prismaDataAccess: DataAccess = {
   leaveBalance,
   leavePromotionDeliveries,
   benefits,
+  onboardingTaskTemplates,
   onboardingTasks,
   insuranceEnrollments,
   recruitment,

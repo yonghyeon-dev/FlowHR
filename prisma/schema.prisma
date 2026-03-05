@@ -98,7 +98,18 @@ model OnboardingTask {
   status     OnboardingTaskStatus @default(PENDING)
   createdAt  DateTime             @default(now())
 
-  @@index([employeeId, createdAt, id])
+  @@index([employeeId, createdAt, id], map: "OnboardingTask_employeeId_createdAt_id_idx")
+  @@map("employee_onboarding_tasks")
+}
+
+model OnboardingTaskTemplate {
+  id        String   @id @default(cuid())
+  title     String   @unique
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([sortOrder, createdAt, id], map: "onboarding_task_templates_sort_order_created_at_id_idx")
+  @@map("onboarding_task_templates")
 }
 
 model InsuranceEnrollment {
