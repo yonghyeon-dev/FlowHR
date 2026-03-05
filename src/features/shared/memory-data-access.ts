@@ -725,6 +725,52 @@ function updateOrganizationEntity(
   existing: OrganizationEntity,
   input: UpdateOrganizationInput
 ): OrganizationEntity {
+  const fiscalYearStartMonthFromLegacy =
+    input.fiscalYearStart !== undefined
+      ? (() => {
+          const parsedMonth = Number.parseInt(input.fiscalYearStart.slice(0, 2), 10);
+          if (!Number.isInteger(parsedMonth) || parsedMonth < 1 || parsedMonth > 12) {
+            return undefined;
+          }
+          return parsedMonth;
+        })()
+      : undefined;
+  const fiscalYearStartMonth =
+    input.fiscalYearStartMonth !== undefined
+      ? input.fiscalYearStartMonth
+      : fiscalYearStartMonthFromLegacy !== undefined
+        ? fiscalYearStartMonthFromLegacy
+        : existing.fiscalYearStartMonth;
+  const fiscalYearStart =
+    input.fiscalYearStart !== undefined
+      ? input.fiscalYearStart
+      : input.fiscalYearStartMonth !== undefined
+        ? `${String(input.fiscalYearStartMonth).padStart(2, "0")}-01`
+        : existing.fiscalYearStart;
+  const standardWorkHoursPerDay =
+    input.standardWorkHoursPerDay !== undefined
+      ? input.standardWorkHoursPerDay
+      : input.workHoursPerDay !== undefined
+        ? input.workHoursPerDay
+        : existing.standardWorkHoursPerDay;
+  const workHoursPerDay =
+    input.workHoursPerDay !== undefined
+      ? input.workHoursPerDay
+      : input.standardWorkHoursPerDay !== undefined
+        ? input.standardWorkHoursPerDay
+        : existing.workHoursPerDay;
+  const overtimeThresholdHours =
+    input.overtimeThresholdHours !== undefined
+      ? input.overtimeThresholdHours
+      : input.overtimeThreshold !== undefined
+        ? input.overtimeThreshold
+        : existing.overtimeThresholdHours;
+  const overtimeThreshold =
+    input.overtimeThreshold !== undefined
+      ? input.overtimeThreshold
+      : input.overtimeThresholdHours !== undefined
+        ? input.overtimeThresholdHours
+        : existing.overtimeThreshold;
   return {
     ...existing,
     name: input.name !== undefined ? input.name : existing.name,
@@ -732,12 +778,17 @@ function updateOrganizationEntity(
       input.businessRegistrationNumber !== undefined
         ? input.businessRegistrationNumber
         : existing.businessRegistrationNumber,
-    fiscalYearStart:
-      input.fiscalYearStart !== undefined ? input.fiscalYearStart : existing.fiscalYearStart,
-    workHoursPerDay:
-      input.workHoursPerDay !== undefined ? input.workHoursPerDay : existing.workHoursPerDay,
-    overtimeThreshold:
-      input.overtimeThreshold !== undefined ? input.overtimeThreshold : existing.overtimeThreshold,
+    fiscalYearStart,
+    fiscalYearStartMonth,
+    workHoursPerDay,
+    standardWorkHoursPerDay,
+    standardWorkDaysPerWeek:
+      input.standardWorkDaysPerWeek !== undefined
+        ? input.standardWorkDaysPerWeek
+        : existing.standardWorkDaysPerWeek,
+    overtimeThreshold,
+    overtimeThresholdHours,
+    payPeriod: input.payPeriod !== undefined ? input.payPeriod : existing.payPeriod,
     industry: input.industry !== undefined ? input.industry : existing.industry,
     representativeName:
       input.representativeName !== undefined ? input.representativeName : existing.representativeName,
@@ -745,6 +796,7 @@ function updateOrganizationEntity(
     workEndTime: input.workEndTime !== undefined ? input.workEndTime : existing.workEndTime,
     workDays: input.workDays !== undefined ? [...input.workDays] : [...existing.workDays],
     timezone: input.timezone !== undefined ? input.timezone : existing.timezone,
+    currency: input.currency !== undefined ? input.currency : existing.currency,
     insuranceRateNps:
       input.insuranceRateNps !== undefined ? input.insuranceRateNps : existing.insuranceRateNps,
     insuranceRateNhi:
@@ -868,14 +920,20 @@ export const memoryDataAccess: DataAccess = {
         name: input.name,
         businessRegistrationNumber: null,
         fiscalYearStart: "01-01",
+        fiscalYearStartMonth: 1,
         workHoursPerDay: 8,
+        standardWorkHoursPerDay: 8,
+        standardWorkDaysPerWeek: 5,
         overtimeThreshold: 8,
+        overtimeThresholdHours: 8,
+        payPeriod: "MONTHLY",
         industry: null,
         representativeName: null,
         workStartTime: null,
         workEndTime: null,
         workDays: [],
         timezone: null,
+        currency: "KRW",
         insuranceRateNps: null,
         insuranceRateNhi: null,
         insuranceRateEi: null,

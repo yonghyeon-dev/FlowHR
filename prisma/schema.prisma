@@ -13,14 +13,20 @@ model Organization {
   name                       String
   businessRegistrationNumber String?
   fiscalYearStart            String   @default("01-01")
+  fiscalYearStartMonth       Int      @default(1)
   workHoursPerDay            Float    @default(8)
+  standardWorkHoursPerDay    Float    @default(8)
+  standardWorkDaysPerWeek    Int      @default(5)
   overtimeThreshold          Float    @default(8)
+  overtimeThresholdHours     Float    @default(8)
+  payPeriod                  PayPeriod @default(MONTHLY)
   industry                   String?
   representativeName         String?
   workStartTime              String?
   workEndTime                String?
   workDays                   Int[]    @default([])
   timezone                   String?
+  currency                   String   @default("KRW")
   insuranceRateNps           Float?
   insuranceRateNhi           Float?
   insuranceRateEi            Float?
@@ -848,6 +854,11 @@ enum InsuranceEnrollmentStatus {
 enum PayrollState {
   PREVIEWED
   CONFIRMED
+}
+
+enum PayPeriod {
+  MONTHLY
+  BIWEEKLY
 }
 
 enum ApprovalDomain {
