@@ -103,6 +103,7 @@ type AutoGrantLeaveAccrualInput = {
 
 type ReadLeavePolicyInput = {
   organizationId?: string;
+  policyId?: string;
 };
 
 type UpsertLeavePolicyInput = {
@@ -1290,10 +1291,22 @@ export async function readLeavePolicy(
   }
   await requirePermission(context, Permissions.leaveBalanceReadAny, "leave policy read requires permission");
 
-  const organizationId = resolveTargetOrganizationId(actor, input.organizationId);
+  const policyId = input.policyId?.trim();
+  const stored = policyId
+    ? await context.dataAccess.leavePolicy.findById(policyId)
+    : await context.dataAccess.leavePolicy.findByOrganizationId(
+        resolveTargetOrganizationId(actor, input.organizationId)
+      );
+  if (policyId && !stored) {
+    throw new ServiceError(404, "leave policy not found");
+  }
+
+  const organizationId = stored?.organizationId ?? resolveTargetOrganizationId(actor, input.organizationId);
+  if (input.organizationId && stored && input.organizationId !== stored.organizationId) {
+    throw new ServiceError(404, "leave policy not found");
+  }
   ensureTenantAccess(actor, organizationId);
 
-  const stored = await context.dataAccess.leavePolicy.findByOrganizationId(organizationId);
   const policy = stored
     ? {
         organizationId: stored.organizationId,
