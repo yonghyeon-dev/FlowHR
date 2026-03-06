@@ -14,6 +14,34 @@ export function clearAccessTokenCookie() {
   writeCookie(`${FLOWHR_ACCESS_TOKEN_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`);
 }
 
+export function readAccessTokenCookie(): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const segments = document.cookie.split(";");
+  for (const segment of segments) {
+    const [namePart, ...valueParts] = segment.split("=");
+    if (namePart?.trim() !== FLOWHR_ACCESS_TOKEN_COOKIE) {
+      continue;
+    }
+
+    const rawValue = valueParts.join("=").trim();
+    if (!rawValue) {
+      return null;
+    }
+
+    try {
+      const decoded = decodeURIComponent(rawValue).trim();
+      return decoded.length > 0 ? decoded : null;
+    } catch {
+      return rawValue.length > 0 ? rawValue : null;
+    }
+  }
+
+  return null;
+}
+
 export function syncAccessTokenCookie(session: Session | null) {
   if (!session?.access_token) {
     clearAccessTokenCookie();
