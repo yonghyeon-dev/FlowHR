@@ -1313,6 +1313,7 @@ export interface SchedulingStore {
 export interface PayrollStore {
   create(input: CreatePayrollRunInput): Promise<PayrollRunEntity>;
   findById(id: string): Promise<PayrollRunEntity | null>;
+  findConfirmedForPeriod(organizationId: string, date: Date): Promise<PayrollRunEntity | null>;
   update(id: string, input: UpdatePayrollRunInput): Promise<PayrollRunEntity>;
   listInPeriod(input: {
     periodStart: Date;

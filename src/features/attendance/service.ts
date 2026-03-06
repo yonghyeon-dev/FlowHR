@@ -203,31 +203,16 @@ function toKoreanMonthKey(value: Date) {
   return `${year}-${month}`;
 }
 
-function toKoreanMonthWindow(value: Date) {
-  const shifted = new Date(value.getTime() + KOREA_UTC_OFFSET_MS);
-  const year = shifted.getUTCFullYear();
-  const month = shifted.getUTCMonth() + 1;
-  const monthToken = String(month).padStart(2, "0");
-  const lastDay = String(new Date(Date.UTC(year, month, 0)).getUTCDate()).padStart(2, "0");
-  return {
-    periodStart: new Date(`${year}-${monthToken}-01T00:00:00+09:00`),
-    periodEnd: new Date(`${year}-${monthToken}-${lastDay}T23:59:59+09:00`)
-  };
-}
-
 export async function isAttendancePeriodFinalized(
   context: ServiceContext,
   organizationId: string,
   attendanceDate: Date
 ) {
-  const monthWindow = toKoreanMonthWindow(attendanceDate);
-  const runs = await context.dataAccess.payroll.listInPeriod({
-    periodStart: monthWindow.periodStart,
-    periodEnd: monthWindow.periodEnd,
+  const run = await context.dataAccess.payroll.findConfirmedForPeriod(
     organizationId,
-    state: "CONFIRMED"
-  });
-  return runs.length > 0;
+    attendanceDate
+  );
+  return run !== null;
 }
 
 async function ensureAttendancePeriodMutable(
@@ -236,10 +221,7 @@ async function ensureAttendancePeriodMutable(
   attendanceDate: Date
 ) {
   if (await isAttendancePeriodFinalized(context, organizationId, attendanceDate)) {
-    throw new ServiceError(
-      409,
-      "attendance cannot be modified because payroll is finalized for this period"
-    );
+    throw new ServiceError(400, "confirmed payroll period — attendance locked");
   }
 }
 
@@ -363,6 +345,10 @@ export async function createAttendanceRecord(
   const forceOverrideRequested = input.forceWeeklyHourLimitOverride === true;
   if (forceOverrideRequested && actor.role !== "admin") {
     throw new ServiceError(403, "force override requires admin role");
+  }
+
+  if (employee.organizationId) {
+    await ensureAttendancePeriodMutable(context, employee.organizationId, input.checkInAt);
   }
 
   const weeklyHours = await calculateWeeklyHoursInternal(
