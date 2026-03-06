@@ -3312,6 +3312,23 @@ const payroll: PayrollStore = {
     return run ? toPayrollEntity(run) : null;
   },
 
+  async findConfirmedForPeriod(organizationId: string, date: Date) {
+    const run = await prisma.payrollRun.findFirst({
+      where: {
+        organizationId,
+        state: "CONFIRMED",
+        periodStart: {
+          lte: date
+        },
+        periodEnd: {
+          gte: date
+        }
+      },
+      orderBy: [{ periodStart: "desc" }, { id: "desc" }]
+    });
+    return run ? toPayrollEntity(run) : null;
+  },
+
   async listInPeriod(input: {
     periodStart: Date;
     periodEnd: Date;

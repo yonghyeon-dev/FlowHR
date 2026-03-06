@@ -3293,6 +3293,29 @@ export const memoryDataAccess: DataAccess = {
       return run ? clonePayroll(run) : null;
     },
 
+    async findConfirmedForPeriod(organizationId, date) {
+      let matched: PayrollRunEntity | null = null;
+      for (const run of state.payroll.values()) {
+        if (run.organizationId !== organizationId) {
+          continue;
+        }
+        if (run.state !== "CONFIRMED") {
+          continue;
+        }
+        if (run.periodStart > date || run.periodEnd < date) {
+          continue;
+        }
+        if (
+          !matched ||
+          run.periodStart.getTime() > matched.periodStart.getTime() ||
+          (run.periodStart.getTime() === matched.periodStart.getTime() && run.id > matched.id)
+        ) {
+          matched = run;
+        }
+      }
+      return matched ? clonePayroll(matched) : null;
+    },
+
     async listInPeriod(input) {
       const rows: PayrollRunEntity[] = [];
       for (const run of state.payroll.values()) {
