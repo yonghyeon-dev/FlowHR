@@ -354,6 +354,27 @@ async function run() {
         }
       }
     });
+    await prisma.approvalStageHistory.deleteMany({
+      where: { organizationId }
+    });
+    await prisma.approvalExecution.deleteMany({
+      where: { organizationId }
+    });
+    await prisma.approvalDelegation.deleteMany({
+      where: { organizationId }
+    });
+    await prisma.approvalLineTemplate.deleteMany({
+      where: { organizationId }
+    });
+    await prisma.approvalPolicy.deleteMany({
+      where: { organizationId }
+    });
+    await prisma.leavePolicy.deleteMany({
+      where: { organizationId }
+    });
+    await prisma.notice.deleteMany({
+      where: { organizationId }
+    });
     await prisma.organization.deleteMany({
       where: {
         id: organizationId
