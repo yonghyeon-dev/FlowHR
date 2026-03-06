@@ -17,9 +17,12 @@ WI-0992 이후 main 브랜치의 CI가 13회 연속 실패 중. 원인은 `stagi
 ## Scope
 
 ### In Scope
-1. GitHub staging 환경 secrets를 transaction pooler(6543+pgbouncer)로 변경
-2. `production-auth-smoke.yml`에서 smoke 테스트의 `DATABASE_URL`을 `FLOWHR_PRODUCTION_DIRECT_URL`(transaction pooler)로 오버라이드
-3. Vercel production 환경변수 `DATABASE_URL`/`DIRECT_URL`을 transaction pooler로 변경
+1. GitHub staging 환경 secrets 수정:
+   - `FLOWHR_STAGING_DATABASE_URL` = session pooler(5432) — `prisma migrate deploy`용 (advisory locks 필요)
+   - `FLOWHR_STAGING_DIRECT_URL` = transaction pooler(6543+pgbouncer) — `prisma db execute`/일반 쿼리용
+2. `ci.yml`의 `prisma migrate deploy`에서 DIRECT_URL 오버라이드 제거 — session pooler(DATABASE_URL) 사용으로 복원
+3. `production-auth-smoke.yml`에서 smoke 테스트의 `DATABASE_URL`을 `FLOWHR_PRODUCTION_DIRECT_URL`(transaction pooler)로 오버라이드
+4. Vercel production 환경변수 `DATABASE_URL`/`DIRECT_URL`을 transaction pooler로 변경
 
 ### Out of Scope
 - 로컬 개발 환경 URL 변경
@@ -36,7 +39,9 @@ WI-0992 이후 main 브랜치의 CI가 13회 연속 실패 중. 원인은 `stagi
 - [ ] 기존 CI jobs (contract-governance, quality-gates, golden-regression) 회귀 없음
 
 ## ADR
-- session pooler(5432)는 장기 연결 애플리케이션용, 단발성 CI/serverless에서는 MaxClients 제한에 걸림
-- transaction pooler(6543+pgbouncer=true)는 Supabase 권장 serverless/CI 연결 방식
+- session pooler(5432)는 advisory locks 지원 → `prisma migrate deploy`에 필요
+- transaction pooler(6543+pgbouncer=true)는 advisory locks 미지원 → migration에서 hang 발생
+- transaction pooler는 일반 쿼리/scripts에 적합 (serverless/CI 권장)
 - direct connection(db.xxx:5432)은 외부(GitHub Actions/Vercel)에서 네트워크 차단됨
 - Supabase Prisma 탭의 "DIRECT_URL" 레이블은 실제로는 session pooler이므로 주의 필요
+- **결론**: DATABASE_URL=session pooler(migration용), DIRECT_URL=transaction pooler(쿼리용)로 역할 분리
