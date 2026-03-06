@@ -284,6 +284,7 @@ jobs:
           CREATE SCHEMA IF NOT EXISTS "staging";
           SQL
           npm run prisma:validate --if-present
-          npx prisma db push --accept-data-loss --force-reset
+          npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > /tmp/staging-schema.sql
+          npx prisma db execute --url "$DATABASE_URL" --file /tmp/staging-schema.sql
           npm run test:e2e:prisma --if-present
           npm run test:e2e:prisma:phase2-flag --if-present
