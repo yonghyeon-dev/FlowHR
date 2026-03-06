@@ -201,8 +201,8 @@ async function run() {
       "/api/attendance/records",
       {
         employeeId: "EMP-APPROVAL-COND-01",
-        checkInAt: "2026-02-22T09:00:00+09:00",
-        checkOutAt: "2026-02-22T18:00:00+09:00",
+        checkInAt: "2026-03-22T09:00:00+09:00",
+        checkOutAt: "2026-03-22T18:00:00+09:00",
         breakMinutes: 60,
         isHoliday: false
       },
@@ -228,8 +228,8 @@ async function run() {
       "POST",
       "/api/payroll/runs/preview",
       {
-        periodStart: "2026-02-22T00:00:00+09:00",
-        periodEnd: "2026-02-22T23:59:59+09:00",
+        periodStart: "2026-03-22T00:00:00+09:00",
+        periodEnd: "2026-03-22T23:59:59+09:00",
         employeeId: "EMP-APPROVAL-COND-01",
         hourlyRateKrw: 10000
       },
