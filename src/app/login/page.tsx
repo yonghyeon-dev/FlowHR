@@ -3,7 +3,7 @@
 import type { Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import {
   clearAccessTokenCookie,
@@ -220,6 +220,14 @@ export default function LoginPage() {
     }
   }
 
+  function handleSignInSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending || !email.trim() || !password) {
+      return;
+    }
+    void signIn();
+  }
+
   async function signOut() {
     setPending(true);
     setErrorMessage(null);
@@ -300,37 +308,43 @@ export default function LoginPage() {
         <article className="panel">
           <h2>{t("login.signInTitle")}</h2>
           <p className="small">{t("login.signInCopy")}</p>
-          <div className="input-grid">
-            <label>
-              {t("login.email")}
-              <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" />
-            </label>
-            <label>
-              {t("login.password")}
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="********"
-              />
-            </label>
-          </div>
-          {errorMessage ? (
-            <p className="small" style={{ color: "var(--danger)" }}>
-              {errorMessage}
+          <form onSubmit={handleSignInSubmit}>
+            <div className="input-grid">
+              <label>
+                {t("login.email")}
+                <input
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@company.com"
+                />
+              </label>
+              <label>
+                {t("login.password")}
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="********"
+                />
+              </label>
+            </div>
+            {errorMessage ? (
+              <p className="small" style={{ color: "var(--danger)" }}>
+                {errorMessage}
+              </p>
+            ) : null}
+            <p className="small muted">
+              {isKoLocale ? "계정이 없나요?" : "Need an account?"}{" "}
+              <Link href="/signup">{isKoLocale ? "회원가입" : "Sign up"}</Link>
+              {" · "}
+              <Link href="/forgot-password">{isKoLocale ? "비밀번호 찾기" : "Forgot password"}</Link>
             </p>
-          ) : null}
-          <p className="small muted">
-            {isKoLocale ? "계정이 없나요?" : "Need an account?"}{" "}
-            <Link href="/signup">{isKoLocale ? "회원가입" : "Sign up"}</Link>
-            {" · "}
-            <Link href="/forgot-password">{isKoLocale ? "비밀번호 찾기" : "Forgot password"}</Link>
-          </p>
-          <div className="actions">
-            <button className="btn btn-primary" onClick={() => void signIn()} disabled={pending || !email.trim() || !password}>
-              {t("login.signIn")}
-            </button>
-          </div>
+            <div className="actions">
+              <button className="btn btn-primary" type="submit" disabled={pending || !email.trim() || !password}>
+                {t("login.signIn")}
+              </button>
+            </div>
+          </form>
         </article>
       </section>
     </main>
