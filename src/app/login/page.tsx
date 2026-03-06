@@ -2,7 +2,7 @@
 
 import type { Session } from "@supabase/supabase-js";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -110,7 +110,6 @@ function parseSession(session: Session | null): SessionSnapshot | null {
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { t, locale } = useI18n();
   const isKoLocale = locale === "ko";
@@ -182,7 +181,7 @@ export default function LoginPage() {
       }
 
       if (readAccessTokenCookie() === snapshot.accessToken) {
-        router.replace(loginSuccessTarget);
+        window.location.href = loginSuccessTarget;
         return;
       }
 
@@ -200,7 +199,7 @@ export default function LoginPage() {
         window.cancelAnimationFrame(frameId);
       }
     };
-  }, [loginSuccessTarget, router, snapshot]);
+  }, [loginSuccessTarget, snapshot]);
 
   async function signIn() {
     setPending(true);
