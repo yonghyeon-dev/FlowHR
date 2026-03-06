@@ -278,7 +278,7 @@ jobs:
           FLOWHR_DATA_ACCESS: prisma
           FLOWHR_PAYROLL_DEDUCTIONS_V1: ${{ vars.FLOWHR_PAYROLL_DEDUCTIONS_V1 || 'false' }}
         run: |
-          npx prisma db execute --url "$DIRECT_URL" --stdin <<'SQL'
+          npx prisma db execute --url "$DATABASE_URL" --stdin <<'SQL'
           DROP SCHEMA IF EXISTS "staging" CASCADE;
           CREATE SCHEMA IF NOT EXISTS "staging";
 

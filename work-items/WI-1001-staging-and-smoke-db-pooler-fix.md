@@ -20,7 +20,7 @@ WI-0992 이후 main 브랜치의 CI가 13회 연속 실패 중. 원인은 `stagi
 1. GitHub staging 환경 secrets 수정:
    - `FLOWHR_STAGING_DATABASE_URL` = session pooler(5432) — `prisma migrate deploy`용 (advisory locks 필요)
    - `FLOWHR_STAGING_DIRECT_URL` = transaction pooler(6543+pgbouncer) — `prisma db execute`/일반 쿼리용
-2. `ci.yml`의 `prisma migrate deploy`에서 DIRECT_URL 오버라이드 제거 — session pooler(DATABASE_URL) 사용으로 복원
+2. `ci.yml`의 `prisma migrate deploy`에서 DIRECT_URL 오버라이드 제거 + `prisma db execute`도 DATABASE_URL로 복원 — WI-0992 성공 시점과 동일하게
 3. `production-auth-smoke.yml`에서 smoke 테스트의 `DATABASE_URL`을 `FLOWHR_PRODUCTION_DIRECT_URL`(transaction pooler)로 오버라이드
 4. Vercel production 환경변수 `DATABASE_URL`/`DIRECT_URL`을 transaction pooler로 변경
 
