@@ -145,6 +145,46 @@ async function run() {
   );
   assert.equal(employeeGetResponse.status, 200, "admin can get employee by id");
 
+  const employeeListAsEmployeeResponse = await employeeRoute.GET(
+    new Request("http://localhost/api/people/employees", {
+      method: "GET",
+      headers: actorHeaders("employee", "EMP-2001")
+    })
+  );
+  assert.equal(employeeListAsEmployeeResponse.status, 200, "employee can list employees");
+  const employeeListAsEmployeeBody = (await readJson(employeeListAsEmployeeResponse)) as {
+    employees: Array<{ id: string }>;
+  };
+  assert.ok(
+    employeeListAsEmployeeBody.employees.some((employee) => employee.id === "EMP-2001"),
+    "employee list should include directory entries"
+  );
+
+  const employeeGetAsEmployeeResponse = await employeeByIdRoute.GET(
+    new Request("http://localhost/api/people/employees/EMP-2001", {
+      method: "GET",
+      headers: actorHeaders("employee", "EMP-2001")
+    }),
+    { params: Promise.resolve({ employeeId: "EMP-2001" }) } as RouteContext<{ employeeId: string }>
+  );
+  assert.equal(employeeGetAsEmployeeResponse.status, 200, "employee can get employee by id");
+
+  const employeeCreateDeniedForEmployee = await employeeRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/people/employees",
+      {
+        id: "EMP-2002",
+        organizationId,
+        name: "Lee",
+        email: "lee@example.com",
+        active: true
+      },
+      actorHeaders("employee", "EMP-2001")
+    )
+  );
+  assert.equal(employeeCreateDeniedForEmployee.status, 403, "employee cannot create employee");
+
   const employeeUpdateResponse = await employeeByIdRoute.PATCH(
     jsonRequest(
       "PATCH",

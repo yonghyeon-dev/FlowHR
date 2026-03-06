@@ -1,5 +1,5 @@
 import type { Actor } from "@/lib/actor";
-import { requirePermission } from "@/lib/permissions";
+import { requireAnyPermission, requirePermission } from "@/lib/permissions";
 import { Permissions, type Permission } from "@/lib/rbac";
 import { ensureTenantMatch, resolveTenantScope } from "@/features/shared/tenant-scope";
 import { seedDefaultWorkSchedulesForEmployee } from "@/features/scheduling/default-work-schedule-seed";
@@ -58,6 +58,14 @@ function getEventPublisher(context: ServiceContext): DomainEventPublisher {
 
 async function requirePeoplePermission(context: ServiceContext, permission: Permission, action: string) {
   await requirePermission(context, permission, `people ${action} requires ${permission}`);
+}
+
+async function requirePeopleEmployeeReadPermission(context: ServiceContext, action: string) {
+  await requireAnyPermission(
+    context,
+    [Permissions.peopleEmployeesRead, Permissions.peopleEmployeesManage],
+    `people ${action} requires ${Permissions.peopleEmployeesRead}`
+  );
 }
 
 function normalizeCode(code: string) {
@@ -1099,7 +1107,7 @@ export async function listEmployees(
   context: ServiceContext,
   input: { active?: boolean; status?: EmployeeStatus; organizationId?: string }
 ): Promise<EmployeeEntity[]> {
-  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "list employees");
+  await requirePeopleEmployeeReadPermission(context, "list employees");
   const tenantScope = resolveTenantScope(context.actor);
   return context.dataAccess.employees.list({
     active: input.active,
@@ -1112,7 +1120,7 @@ export async function getEmployee(
   context: ServiceContext,
   input: { employeeId: string }
 ): Promise<EmployeeEntity> {
-  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "get employee");
+  await requirePeopleEmployeeReadPermission(context, "get employee");
   const tenantScope = resolveTenantScope(context.actor);
   const employee = await context.dataAccess.employees.findById(input.employeeId);
   if (!employee) {

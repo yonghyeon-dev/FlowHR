@@ -4,6 +4,7 @@ export const Permissions = {
   rbacManage: "rbac.manage",
 
   peopleOrganizationsManage: "people.organizations.manage",
+  peopleEmployeesRead: "people.employees.read",
   peopleEmployeesManage: "people.employees.manage",
   approvalPolicyRead: "approval.policy.read",
   approvalPolicyWrite: "approval.policy.write",
@@ -85,6 +86,7 @@ export const defaultRolePermissions: Record<ActorRole, readonly Permission[]> = 
     Permissions.payrollDeductionProfileWrite
   ],
   employee: [
+    Permissions.peopleEmployeesRead,
     Permissions.attendanceRecordWriteOwn,
     Permissions.attendanceRecordListOwn,
     Permissions.attendanceAggregateListOwn,

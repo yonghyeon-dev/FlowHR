@@ -66,11 +66,25 @@ async function run() {
 
   // Permission checks.
   await requirePermission({ actor: admin, dataAccess: memoryDataAccess }, Permissions.rbacManage);
+  await requirePermission(
+    { actor: employee, dataAccess: memoryDataAccess },
+    Permissions.peopleEmployeesRead
+  );
 
   await assert.rejects(
     () => requirePermission({ actor: unknown, dataAccess: memoryDataAccess }, Permissions.rbacManage),
     isServiceErrorWithStatus(403),
     "unknown role should have no permissions"
+  );
+
+  await assert.rejects(
+    () =>
+      requirePermission(
+        { actor: employee, dataAccess: memoryDataAccess },
+        Permissions.peopleEmployeesManage
+      ),
+    isServiceErrorWithStatus(403),
+    "employee should not gain employee manage permission"
   );
 
   // RBAC-on path should still resolve seeded permissions in memory mode.
@@ -82,6 +96,21 @@ async function run() {
       dataAccess: memoryDataAccess
     });
     assert.equal(permissions.has(Permissions.rbacManage), true, "admin should resolve rbac.manage");
+
+    const employeePermissions = await resolveActorPermissions({
+      actor: employee,
+      dataAccess: memoryDataAccess
+    });
+    assert.equal(
+      employeePermissions.has(Permissions.peopleEmployeesRead),
+      true,
+      "employee should resolve people.employees.read"
+    );
+    assert.equal(
+      employeePermissions.has(Permissions.peopleEmployeesManage),
+      false,
+      "employee should not resolve people.employees.manage"
+    );
   } finally {
     if (previousFlag === undefined) {
       delete process.env.FLOWHR_RBAC_V1;
