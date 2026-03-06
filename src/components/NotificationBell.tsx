@@ -14,10 +14,17 @@ type NotificationBellProps = {
 export default function NotificationBell({ href }: NotificationBellProps) {
   const { snapshot } = useSupabaseSession();
   const [count, setCount] = useState(0);
+  const bearerToken = snapshot?.accessToken?.trim() ?? "";
 
   const fetchCount = useCallback(async () => {
+    if (bearerToken.length === 0) return;
+
     try {
-      const res = await fetch("/api/notifications/unread-count");
+      const res = await fetch("/api/notifications/unread-count", {
+        headers: {
+          authorization: `Bearer ${bearerToken}`,
+        },
+      });
       if (res.ok) {
         const data = await res.json();
         setCount(typeof data.count === "number" ? data.count : 0);
@@ -25,7 +32,7 @@ export default function NotificationBell({ href }: NotificationBellProps) {
     } catch {
       // silently ignore fetch errors
     }
-  }, []);
+  }, [bearerToken]);
 
   useEffect(() => {
     if (!snapshot) return;
