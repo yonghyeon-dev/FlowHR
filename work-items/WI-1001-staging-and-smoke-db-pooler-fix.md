@@ -39,9 +39,11 @@ WI-0992 이후 main 브랜치의 CI가 13회 연속 실패 중. 원인은 `stagi
 - [ ] 기존 CI jobs (contract-governance, quality-gates, golden-regression) 회귀 없음
 
 ## ADR
-- session pooler(5432)는 advisory locks 지원 → `prisma migrate deploy`에 필요
-- transaction pooler(6543+pgbouncer=true)는 advisory locks 미지원 → migration에서 hang 발생
-- transaction pooler는 일반 쿼리/scripts에 적합 (serverless/CI 권장)
+- session pooler(5432)는 advisory locks 지원하나, pool_size=15(Nano 플랜)로 Vercel+CI 동시 사용 시 MaxClients
+- transaction pooler(6543+pgbouncer=true)는 advisory locks 미지원 → `prisma migrate deploy` hang
 - direct connection(db.xxx:5432)은 외부(GitHub Actions/Vercel)에서 네트워크 차단됨
-- Supabase Prisma 탭의 "DIRECT_URL" 레이블은 실제로는 session pooler이므로 주의 필요
-- **결론**: DATABASE_URL=session pooler(migration용), DIRECT_URL=transaction pooler(쿼리용)로 역할 분리
+- **최종 결론**: staging CI에서 `prisma migrate deploy` 대신 `prisma db push` 사용
+  - staging schema는 매번 DROP CASCADE → migration 이력 불필요
+  - `prisma db push`는 advisory lock 미사용 → transaction pooler에서 정상 동작
+  - DIRECT_URL도 DATABASE_URL과 동일 (transaction pooler) → session pooler 의존 완전 제거
+  - enum bootstrap SQL도 불필요 (`db push`가 전체 schema 동기화)
