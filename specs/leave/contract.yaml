@@ -1,5 +1,5 @@
 owner: leave-agent
-version: 1.15.0
+version: 1.15.1
 scope:
   in:
     - leave request create/update/cancel flow
@@ -145,6 +145,8 @@ db_changes:
       description: Add leave policy statutory/status fields, request policy reference, and policy delete usage guard support.
     - id: 202603050014_wi0991_maternity_leave_validation
       description: Extend LeaveType enum with MATERNITY/PATERNITY for statutory day-limit validation.
+    - id: 202603070001_wi1012_maternity_paternity_policy_migration
+      description: Seed MATERNITY/PATERNITY statutory leave policies for existing organizations.
   backward_compatible: true
   notes: Additive schema changes with numeric widening (`Int -> Decimal(6,2)`) for leave day precision.
 invariants:
@@ -202,6 +204,7 @@ test_plan:
     - accrual settlement with duplicate-year protection
     - leave policy upsert/read returns configured values
     - leave policy list returns `isStatutory` and `usageCount` with default active-only filter.
+    - leave policy list on migrated organizations includes MATERNITY and PATERNITY statutory defaults.
     - delete leave policy rejects statutory policies with `400`.
     - delete leave policy rejects policies with active request usage with `400`.
     - delete leave policy archives unused non-statutory policy and excludes it from default list results.
