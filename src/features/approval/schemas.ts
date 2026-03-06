@@ -105,6 +105,15 @@ export const triggerApprovalExecutionEscalationSchema = z.object({
   notificationChannel: z.string().trim().min(1).max(100).optional()
 });
 
+export const applyApprovalExecutionActionSchema = z.object({
+  organizationId: z.string().min(1),
+  domain: approvalDomainSchema,
+  targetEntityType: z.string().trim().min(1),
+  targetEntityId: z.string().trim().min(1),
+  action: z.enum(["APPROVE", "REJECT"]),
+  comment: z.string().trim().max(1000).optional()
+});
+
 export const previewApprovalPolicyGateSchema = z
   .object({
     organizationId: z.string().min(1).optional(),
