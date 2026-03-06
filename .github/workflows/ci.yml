@@ -294,6 +294,36 @@ jobs:
           npx prisma db execute --url "$DATABASE_URL" --stdin <<'SQL'
           DROP SCHEMA IF EXISTS "staging" CASCADE;
           CREATE SCHEMA IF NOT EXISTS "staging";
+
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+              WHERE t.typname = 'ApprovalStageResolution' AND n.nspname = 'staging'
+            ) THEN
+              CREATE TYPE "staging"."ApprovalStageResolution" AS ENUM ('EXPECTED_ROLE','ACTIVE_DELEGATION','PRIVILEGED_BYPASS','DENIED');
+            END IF;
+          END $$;
+
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+              WHERE t.typname = 'ApprovalExecutionState' AND n.nspname = 'staging'
+            ) THEN
+              CREATE TYPE "staging"."ApprovalExecutionState" AS ENUM ('PENDING','APPROVED','REJECTED');
+            END IF;
+          END $$;
+
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+              WHERE t.typname = 'ApprovalExecutionAction' AND n.nspname = 'staging'
+            ) THEN
+              CREATE TYPE "staging"."ApprovalExecutionAction" AS ENUM ('APPROVE','REJECT');
+            END IF;
+          END $$;
           SQL
           npm run prisma:validate --if-present
           npm run prisma:migrate:deploy --if-present
