@@ -5,7 +5,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { clearAccessTokenCookie, syncAccessTokenCookie } from "@/lib/auth/session-cookie";
+import {
+  clearAccessTokenCookie,
+  readAccessTokenCookie,
+  syncAccessTokenCookie
+} from "@/lib/auth/session-cookie";
 import { useI18n } from "@/lib/i18n/provider";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
@@ -13,6 +17,7 @@ const metadataRoles = ["admin", "manager", "employee", "payroll_operator"] as co
 type MetadataRole = (typeof metadataRoles)[number];
 
 type SessionSnapshot = {
+  accessToken: string;
   userId: string;
   email: string | null;
   role: string | null;
@@ -84,17 +89,18 @@ async function ensureSessionMetadata(session: Session | null) {
 }
 
 function parseSession(session: Session | null): SessionSnapshot | null {
-  const user = session?.user;
-  if (!user?.id) {
+  if (!session?.access_token || !session.user?.id) {
     return null;
   }
 
+  const user = session.user;
   const app = (user.app_metadata ?? {}) as Record<string, unknown>;
   const role = readAppMetadataString(app, "role");
   const organizationId = readAppMetadataString(app, "organization_id", "organizationId");
   const actorId = readAppMetadataString(app, "actor_id", "actorId");
 
   return {
+    accessToken: session.access_token,
     userId: user.id,
     email: typeof user.email === "string" ? user.email : null,
     role,
@@ -166,11 +172,33 @@ export default function LoginPage() {
     if (!snapshot) {
       return;
     }
-    const timer = window.setTimeout(() => {
-      router.replace(loginSuccessTarget);
-    }, 200);
+
+    let frameId = 0;
+    let timeoutId = 0;
+    let cancelled = false;
+    const verifyCookieAndRedirect = () => {
+      if (cancelled) {
+        return;
+      }
+
+      if (readAccessTokenCookie() === snapshot.accessToken) {
+        router.replace(loginSuccessTarget);
+        return;
+      }
+
+      frameId = window.requestAnimationFrame(verifyCookieAndRedirect);
+    };
+
+    timeoutId = window.setTimeout(() => {
+      frameId = window.requestAnimationFrame(verifyCookieAndRedirect);
+    }, 0);
+
     return () => {
-      window.clearTimeout(timer);
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
     };
   }, [loginSuccessTarget, router, snapshot]);
 
