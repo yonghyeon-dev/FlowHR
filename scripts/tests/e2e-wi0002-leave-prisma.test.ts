@@ -354,27 +354,23 @@ async function run() {
         }
       }
     });
-    await prisma.approvalStageHistory.deleteMany({
-      where: { organizationId }
-    });
-    await prisma.approvalExecution.deleteMany({
-      where: { organizationId }
-    });
-    await prisma.approvalDelegation.deleteMany({
-      where: { organizationId }
-    });
-    await prisma.approvalLineTemplate.deleteMany({
-      where: { organizationId }
-    });
-    await prisma.approvalPolicy.deleteMany({
-      where: { organizationId }
-    });
-    await prisma.leavePolicy.deleteMany({
-      where: { organizationId }
-    });
-    await prisma.notice.deleteMany({
-      where: { organizationId }
-    });
+    // Delete all Organization FK (Restrict) children before organization
+    await prisma.benefitRequest.deleteMany({ where: { organizationId } });
+    await prisma.benefitCatalogItem.deleteMany({ where: { organizationId } });
+    await prisma.recruitmentReferral.deleteMany({ where: { organizationId } });
+    await prisma.recruitmentOpening.deleteMany({ where: { organizationId } });
+    await prisma.inAppNotification.deleteMany({ where: { organizationId } });
+    await prisma.noticeNotificationQueue.deleteMany({ where: { organizationId } });
+    await prisma.noticeReadReceipt.deleteMany({ where: { organizationId } });
+    await prisma.notice.deleteMany({ where: { organizationId } });
+    await prisma.leavePromotionDelivery.deleteMany({ where: { organizationId } });
+    await prisma.approvalStageHistory.deleteMany({ where: { organizationId } });
+    await prisma.approvalExecution.deleteMany({ where: { organizationId } });
+    await prisma.approvalDelegation.deleteMany({ where: { organizationId } });
+    await prisma.approvalLineTemplate.deleteMany({ where: { organizationId } });
+    await prisma.workScheduleTemplate.deleteMany({ where: { organizationId } });
+    await prisma.position.deleteMany({ where: { organizationId } });
+    await prisma.department.deleteMany({ where: { organizationId } });
     await prisma.organization.deleteMany({
       where: {
         id: organizationId
