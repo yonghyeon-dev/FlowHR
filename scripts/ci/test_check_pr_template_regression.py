@@ -109,10 +109,9 @@ def fill_break_glass_fields(body: str) -> str:
 
 
 def fill_backend_only_balance_fields(body: str, next_ui_wi: str = "work-items/WI-0081-admin-ui-shell.md") -> str:
-    values = {
-        "Backend-only reason": "critical backend stabilization required before UI binding",
-        "Next UI WI": next_ui_wi,
-    }
+    values = {"Backend-only reason": "critical backend stabilization required before UI binding"}
+    if next_ui_wi is not None:
+        values["Next UI WI"] = next_ui_wi
     result = body
     for key, value in values.items():
         pattern = re.compile(
@@ -181,7 +180,7 @@ class CheckPrTemplateRegressionTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("UI/UX delivery check requires non-empty field: UI changed files", result.stdout)
 
-    def test_backend_only_balance_requires_reason_and_next_ui_wi(self):
+    def test_backend_only_balance_requires_reason(self):
         body = VALID_PR_BODY.replace(
             "- [x] UI/UX surface changed (at least one page/component/style updated).",
             "- [ ] UI/UX surface changed (at least one page/component/style updated).",
@@ -193,7 +192,6 @@ class CheckPrTemplateRegressionTest(unittest.TestCase):
         result = run_checker(body=body)
         self.assertEqual(result.returncode, 1)
         self.assertIn("Backend-only exception requires non-empty field: Backend-only reason", result.stdout)
-        self.assertIn("Backend-only exception requires non-empty field: Next UI WI", result.stdout)
 
     def test_backend_only_balance_next_ui_wi_format_is_validated(self):
         body = VALID_PR_BODY.replace(
@@ -219,6 +217,20 @@ class CheckPrTemplateRegressionTest(unittest.TestCase):
             "- [x] Backend-only exception approved (reason and next UI WI required).",
         )
         body = fill_backend_only_balance_fields(body)
+        result = run_checker(body=body)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("PR template compliance checks passed.", result.stdout)
+
+    def test_backend_only_balance_with_blank_next_ui_wi_passes(self):
+        body = VALID_PR_BODY.replace(
+            "- [x] UI/UX surface changed (at least one page/component/style updated).",
+            "- [ ] UI/UX surface changed (at least one page/component/style updated).",
+        )
+        body = body.replace(
+            "- [ ] Backend-only exception approved (reason and next UI WI required).",
+            "- [x] Backend-only exception approved (reason and next UI WI required).",
+        )
+        body = fill_backend_only_balance_fields(body, next_ui_wi=None)
         result = run_checker(body=body)
         self.assertEqual(result.returncode, 0)
         self.assertIn("PR template compliance checks passed.", result.stdout)
