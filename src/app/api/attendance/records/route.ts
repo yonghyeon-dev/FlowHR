@@ -5,14 +5,17 @@ import { isServiceError } from "@/features/shared/service-error";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
-const IS_PRODUCTION_RUNTIME = process.env.NODE_ENV === "production";
-
 function isTruthyQueryFlag(value: string | null) {
   const normalized = (value ?? "").trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
 
 export async function GET(request: Request) {
+  const actor = await readActor(request);
+  if (!actor?.id) {
+    return fail(401, "attendance.list.unauthorized");
+  }
+
   const url = new URL(request.url);
 
   // `+09:00` in query params is commonly decoded as a space. Normalize to preserve ISO offsets.
@@ -26,11 +29,6 @@ export async function GET(request: Request) {
 
   if (!parsed.success) {
     return fail(400, "invalid query", parsed.error.flatten());
-  }
-
-  const actor = await readActor(request);
-  if (!actor && IS_PRODUCTION_RUNTIME) {
-    return fail(401, "attendance.list.unauthorized");
   }
 
   try {
