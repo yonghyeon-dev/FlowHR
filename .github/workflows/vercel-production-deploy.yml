@@ -40,70 +40,13 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Validate required production database secrets
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: |
-          missing=()
-          for key in DATABASE_URL DIRECT_URL; do
-            if [ -z "${!key}" ]; then
-              missing+=("$key")
-            fi
-          done
-          if [ ${#missing[@]} -gt 0 ]; then
-            echo "::error::Missing required production database secrets: ${missing[*]}"
-            exit 1
-          fi
-
-      - name: Validate production migration database URL format
-        env:
-          RAW_DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          RAW_DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: |
-          normalize_url() {
-            local value="$1"
-            value="${value#DATABASE_URL=}"
-            value="${value#DIRECT_URL=}"
-            value="${value#\"}"
-            value="${value%\"}"
-            value="$(echo -n "$value" | tr -d '\r' | sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//')"
-            echo "$value"
-          }
-
-          require_session_pooler() {
-            local name="$1"
-            local value="$2"
-            if [[ ! "$value" =~ ^postgres(ql)?:// ]]; then
-              echo "::error::$name must start with postgres:// or postgresql://"
-              exit 1
-            fi
-            if [[ ! "$value" =~ :5432([/?]|$) ]]; then
-              echo "::error::$name must use the session pooler on port 5432."
-              exit 1
-            fi
-            if [[ "$value" != *"pgbouncer=false"* ]]; then
-              echo "::error::$name must include pgbouncer=false for Prisma migrate deploy."
-              exit 1
-            fi
-          }
-
-          NORMALIZED_DATABASE_URL="$(normalize_url "$RAW_DATABASE_URL")"
-          NORMALIZED_DIRECT_URL="$(normalize_url "$RAW_DIRECT_URL")"
-
-          require_session_pooler "DATABASE_URL" "$NORMALIZED_DATABASE_URL"
-          require_session_pooler "DIRECT_URL" "$NORMALIZED_DIRECT_URL"
-
-          echo "FLOWHR_MIGRATION_DATABASE_URL=$NORMALIZED_DATABASE_URL" >> "$GITHUB_ENV"
-          echo "FLOWHR_MIGRATION_DIRECT_URL=$NORMALIZED_DIRECT_URL" >> "$GITHUB_ENV"
-
       - name: Install dependencies for Prisma migration
         run: npm ci
 
       - name: Run Prisma migrate deploy
         env:
-          DATABASE_URL: ${{ env.FLOWHR_MIGRATION_DATABASE_URL }}
-          DIRECT_URL: ${{ env.FLOWHR_MIGRATION_DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
         run: npx prisma migrate deploy
 
       - name: Deploy production on Vercel (scope-candidate fallback)
