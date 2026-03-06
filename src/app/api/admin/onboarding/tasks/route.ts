@@ -86,17 +86,17 @@ function canReadEmployeeTasks(actor: Actor, employeeId: string) {
 }
 
 export async function GET(request: Request) {
+  const actor = await readActor(request);
+  if (!actor) {
+    return fail(401, "admin.onboarding.tasks.unauthorized");
+  }
+
   const url = new URL(request.url);
   const parsed = listOnboardingTasksQuerySchema.safeParse({
     employeeId: url.searchParams.get("employeeId") ?? undefined
   });
   if (!parsed.success) {
     return fail(400, "invalid query", parsed.error.flatten());
-  }
-
-  const actor = await readActor(request);
-  if (!actor) {
-    return fail(401, "admin.onboarding.tasks.unauthorized");
   }
   if (!canReadEmployeeTasks(actor, parsed.data.employeeId)) {
     return fail(403, "admin.onboarding.tasks.forbidden", { reason: "admin_or_self_required" });
