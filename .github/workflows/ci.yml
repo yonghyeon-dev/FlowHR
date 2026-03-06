@@ -269,9 +269,10 @@ jobs:
           fi
 
       - name: Prisma deploy and route-level e2e (staging)
+        timeout-minutes: 10
         env:
           DATABASE_URL: ${{ env.FLOWHR_NORMALIZED_STAGING_DATABASE_URL }}
-          DIRECT_URL: ${{ env.FLOWHR_NORMALIZED_STAGING_DIRECT_URL }}
+          DIRECT_URL: ${{ env.FLOWHR_NORMALIZED_STAGING_DATABASE_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.FLOWHR_STAGING_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.FLOWHR_STAGING_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.FLOWHR_STAGING_SERVICE_ROLE_KEY }}
@@ -281,61 +282,8 @@ jobs:
           npx prisma db execute --url "$DATABASE_URL" --stdin <<'SQL'
           DROP SCHEMA IF EXISTS "staging" CASCADE;
           CREATE SCHEMA IF NOT EXISTS "staging";
-
-          -- Bootstrap enum types in staging schema to avoid cross-schema enum lookup
-          -- mismatch from legacy migrations that check pg_type without namespace.
-          DO $$
-          BEGIN
-            IF NOT EXISTS (
-              SELECT 1
-              FROM pg_type t
-              JOIN pg_namespace n ON n.oid = t.typnamespace
-              WHERE t.typname = 'ApprovalStageResolution'
-                AND n.nspname = 'staging'
-            ) THEN
-              CREATE TYPE "staging"."ApprovalStageResolution" AS ENUM (
-                'EXPECTED_ROLE',
-                'ACTIVE_DELEGATION',
-                'PRIVILEGED_BYPASS',
-                'DENIED'
-              );
-            END IF;
-          END $$;
-
-          DO $$
-          BEGIN
-            IF NOT EXISTS (
-              SELECT 1
-              FROM pg_type t
-              JOIN pg_namespace n ON n.oid = t.typnamespace
-              WHERE t.typname = 'ApprovalExecutionState'
-                AND n.nspname = 'staging'
-            ) THEN
-              CREATE TYPE "staging"."ApprovalExecutionState" AS ENUM (
-                'PENDING',
-                'APPROVED',
-                'REJECTED'
-              );
-            END IF;
-          END $$;
-
-          DO $$
-          BEGIN
-            IF NOT EXISTS (
-              SELECT 1
-              FROM pg_type t
-              JOIN pg_namespace n ON n.oid = t.typnamespace
-              WHERE t.typname = 'ApprovalExecutionAction'
-                AND n.nspname = 'staging'
-            ) THEN
-              CREATE TYPE "staging"."ApprovalExecutionAction" AS ENUM (
-                'APPROVE',
-                'REJECT'
-              );
-            END IF;
-          END $$;
           SQL
           npm run prisma:validate --if-present
-          npm run prisma:migrate:deploy --if-present
+          npx prisma db push --accept-data-loss --force-reset
           npm run test:e2e:prisma --if-present
           npm run test:e2e:prisma:phase2-flag --if-present
