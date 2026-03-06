@@ -282,18 +282,14 @@ jobs:
           echo "=== DB connectivity test ==="
           echo "DATABASE_URL host: $(echo "$DATABASE_URL" | sed -E 's|.*@([^/]+)/.*|\1|')"
           echo "DIRECT_URL host: $(echo "$DIRECT_URL" | sed -E 's|.*@([^/]+)/.*|\1|')"
-          timeout 30 node -e "
-            const { Client } = require('pg');
-            const c = new Client({ connectionString: process.env.DATABASE_URL });
-            c.connect().then(() => c.query('SELECT 1')).then(r => { console.log('DATABASE_URL: OK'); c.end(); })
-            .catch(e => { console.error('DATABASE_URL FAIL:', e.message); process.exit(1); });
-          " || { echo "DATABASE_URL connection failed"; exit 1; }
-          timeout 30 node -e "
-            const { Client } = require('pg');
-            const c = new Client({ connectionString: process.env.DIRECT_URL });
-            c.connect().then(() => c.query('SELECT 1')).then(r => { console.log('DIRECT_URL: OK'); c.end(); })
-            .catch(e => { console.error('DIRECT_URL FAIL:', e.message); process.exit(1); });
-          " || { echo "DIRECT_URL connection failed"; exit 1; }
+          timeout 30 npx prisma db execute --url "$DATABASE_URL" --stdin <<'PING'
+          SELECT 1;
+          PING
+          echo "DATABASE_URL: OK"
+          timeout 30 npx prisma db execute --url "$DIRECT_URL" --stdin <<'PING2'
+          SELECT 1;
+          PING2
+          echo "DIRECT_URL: OK"
           echo "=== Connectivity OK, running Prisma ==="
           npx prisma db execute --url "$DATABASE_URL" --stdin <<'SQL'
           DROP SCHEMA IF EXISTS "staging" CASCADE;
