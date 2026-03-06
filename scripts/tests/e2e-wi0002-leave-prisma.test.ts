@@ -39,6 +39,7 @@ async function readJson<T>(response: Response) {
 async function run() {
   const startedAt = new Date();
   const suffix = `${Date.now()}`;
+  const organizationId = `E2E-LEAVE-ORG-${suffix}`;
   const employeeId = `E2E-LEAVE-EMP-${suffix}`;
   const otherEmployeeId = `E2E-LEAVE-EMP2-${suffix}`;
   const thirdEmployeeId = `E2E-LEAVE-EMP3-${suffix}`;
@@ -57,10 +58,70 @@ async function run() {
   const leaveAccrualSettleRoute = await import("../../src/app/api/leave/accrual/settle/route.ts");
 
   try {
+    await prisma.organization.create({
+      data: {
+        id: organizationId,
+        name: `Leave Test Org ${suffix}`
+      }
+    });
     await prisma.employee.createMany({
-      data: [{ id: employeeId }, { id: otherEmployeeId }, { id: thirdEmployeeId }],
+      data: [
+        { id: employeeId, organizationId },
+        { id: otherEmployeeId, organizationId },
+        { id: thirdEmployeeId, organizationId }
+      ],
       skipDuplicates: true
     });
+    await prisma.workSchedule.create({
+      data: {
+        employeeId: otherEmployeeId,
+        startAt: new Date("2026-03-09T00:00:00+09:00"),
+        endAt: new Date("2026-03-09T23:59:59+09:00"),
+        breakMinutes: 0,
+        isHoliday: true,
+        notes: "Organization holiday"
+      }
+    });
+
+    const weekendHolidayCreateResponse = await leaveCreateRoute.POST(
+      jsonRequest(
+        "POST",
+        "/api/leave/requests",
+        {
+          employeeId,
+          leaveType: "ANNUAL",
+          startDate: "2026-03-06T00:00:00+09:00",
+          endDate: "2026-03-10T23:59:59+09:00"
+        },
+        actorHeaders("employee", employeeId)
+      )
+    );
+    assert.equal(weekendHolidayCreateResponse.status, 201, "weekend and holiday exclusion should apply");
+    const weekendHolidayCreateBody = await readJson<{
+      request: { id: string; state: string; days: number };
+    }>(weekendHolidayCreateResponse);
+    assert.equal(weekendHolidayCreateBody.request.state, "PENDING");
+    assert.equal(weekendHolidayCreateBody.request.days, 2);
+
+    const weekdayOnlyCreateResponse = await leaveCreateRoute.POST(
+      jsonRequest(
+        "POST",
+        "/api/leave/requests",
+        {
+          employeeId: otherEmployeeId,
+          leaveType: "ANNUAL",
+          startDate: "2026-03-16T00:00:00+09:00",
+          endDate: "2026-03-20T23:59:59+09:00"
+        },
+        actorHeaders("employee", otherEmployeeId)
+      )
+    );
+    assert.equal(weekdayOnlyCreateResponse.status, 201, "weekday-only leave request should stay at five days");
+    const weekdayOnlyCreateBody = await readJson<{
+      request: { id: string; state: string; days: number };
+    }>(weekdayOnlyCreateResponse);
+    assert.equal(weekdayOnlyCreateBody.request.state, "PENDING");
+    assert.equal(weekdayOnlyCreateBody.request.days, 5);
 
     const createResponse = await leaveCreateRoute.POST(
       jsonRequest(
@@ -272,6 +333,13 @@ async function run() {
         }
       }
     });
+    await prisma.workSchedule.deleteMany({
+      where: {
+        employeeId: {
+          in: [employeeId, otherEmployeeId, thirdEmployeeId]
+        }
+      }
+    });
     await prisma.leaveBalanceProjection.deleteMany({
       where: {
         employeeId: {
@@ -284,6 +352,11 @@ async function run() {
         id: {
           in: [employeeId, otherEmployeeId, thirdEmployeeId]
         }
+      }
+    });
+    await prisma.organization.deleteMany({
+      where: {
+        id: organizationId
       }
     });
     await prisma.$disconnect();

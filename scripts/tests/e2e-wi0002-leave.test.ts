@@ -80,6 +80,14 @@ async function run() {
   await memoryDataAccess.employees.create({ id: employeeId, organizationId: org.id });
   await memoryDataAccess.employees.create({ id: otherEmployeeId, organizationId: org.id });
   await memoryDataAccess.employees.create({ id: "EMP-LEAVE-3003", organizationId: org.id });
+  await memoryDataAccess.scheduling.create({
+    employeeId: otherEmployeeId,
+    startAt: new Date("2026-03-09T00:00:00+09:00"),
+    endAt: new Date("2026-03-09T23:59:59+09:00"),
+    breakMinutes: 0,
+    isHoliday: true,
+    notes: "Organization holiday"
+  });
 
   const createResponse = await leaveCreateRoute.POST(
     jsonRequest(
@@ -116,6 +124,50 @@ async function run() {
     )
   );
   assert.equal(unauthorizedCreate.status, 403, "employee cannot create leave for another employee");
+
+  const weekendHolidayCreateResponse = await leaveCreateRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/leave/requests",
+      {
+        employeeId,
+        leaveType: "ANNUAL",
+        startDate: "2026-03-06T00:00:00+09:00",
+        endDate: "2026-03-10T23:59:59+09:00"
+      },
+      actorHeaders("employee", employeeId)
+    )
+  );
+  assert.equal(
+    weekendHolidayCreateResponse.status,
+    201,
+    "weekend and organization holiday should be excluded from leave days"
+  );
+  const weekendHolidayCreateBody = await readJson<{
+    request: { id: string; state: string; days: number };
+  }>(weekendHolidayCreateResponse);
+  assert.equal(weekendHolidayCreateBody.request.state, "PENDING");
+  assert.equal(weekendHolidayCreateBody.request.days, 2);
+
+  const weekdayOnlyCreateResponse = await leaveCreateRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/leave/requests",
+      {
+        employeeId: otherEmployeeId,
+        leaveType: "ANNUAL",
+        startDate: "2026-03-16T00:00:00+09:00",
+        endDate: "2026-03-20T23:59:59+09:00"
+      },
+      actorHeaders("employee", otherEmployeeId)
+    )
+  );
+  assert.equal(weekdayOnlyCreateResponse.status, 201, "weekday-only leave request should keep five days");
+  const weekdayOnlyCreateBody = await readJson<{
+    request: { id: string; state: string; days: number };
+  }>(weekdayOnlyCreateResponse);
+  assert.equal(weekdayOnlyCreateBody.request.state, "PENDING");
+  assert.equal(weekdayOnlyCreateBody.request.days, 5);
 
   const updateResponse = await leaveUpdateRoute.PATCH(
     jsonRequest(

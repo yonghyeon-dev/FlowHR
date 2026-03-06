@@ -52,6 +52,16 @@ export function formatSeoulDay(value: Date) {
   return `${year}-${month}-${day}`;
 }
 
+export function getSeoulDayOfWeek(dayIndex: number) {
+  const adjusted = new Date(dayIndex * DAY_MS + SEOUL_OFFSET_MS);
+  return adjusted.getUTCDay();
+}
+
+export function isWeekendSeoulDayIndex(dayIndex: number) {
+  const dayOfWeek = getSeoulDayOfWeek(dayIndex);
+  return dayOfWeek === 0 || dayOfWeek === 6;
+}
+
 export function resolveSeoulYearEnd(value: Date) {
   const adjusted = new Date(value.getTime() + SEOUL_OFFSET_MS);
   const year = adjusted.getUTCFullYear();
@@ -68,6 +78,36 @@ export function calculateLeaveDays(startDate: Date, endDate: Date) {
   if (days <= 0) {
     throw new ServiceError(400, "leave days must be positive");
   }
+  return days;
+}
+
+export function calculateBusinessLeaveDays(input: {
+  startDate: Date;
+  endDate: Date;
+  holidayDayIndexes?: ReadonlySet<number>;
+}) {
+  if (input.endDate < input.startDate) {
+    throw new ServiceError(400, "endDate must be same or after startDate");
+  }
+
+  const startDay = toSeoulDayIndex(input.startDate);
+  const endDay = toSeoulDayIndex(input.endDate);
+  let days = 0;
+
+  for (let dayIndex = startDay; dayIndex <= endDay; dayIndex += 1) {
+    if (isWeekendSeoulDayIndex(dayIndex)) {
+      continue;
+    }
+    if (input.holidayDayIndexes?.has(dayIndex)) {
+      continue;
+    }
+    days += 1;
+  }
+
+  if (days <= 0) {
+    throw new ServiceError(400, "leave days must be positive");
+  }
+
   return days;
 }
 
