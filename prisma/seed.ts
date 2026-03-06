@@ -28,6 +28,15 @@ export type SeedRoleDefinition = {
   permissions: string[];
 };
 
+type SeedStatutoryLeavePolicyDefinition = {
+  name: string;
+  annualGrantDays?: number;
+  carryOverCapDays?: number;
+  allowHalfDay?: boolean;
+  allowHourly?: boolean;
+  maxConsecutiveDays?: number;
+};
+
 type SeedOrganizationUpsertInput = {
   id: string;
   name: string;
@@ -84,6 +93,31 @@ export const DEFAULT_SEED_ROLES: readonly SeedRoleDefinition[] = [
     permissions: [...defaultRolePermissions.employee]
   }
 ];
+
+const DEFAULT_STATUTORY_LEAVE_POLICIES: readonly SeedStatutoryLeavePolicyDefinition[] = [
+  {
+    name: "Annual Leave"
+  },
+  {
+    name: "Sick Leave"
+  },
+  {
+    name: "MATERNITY",
+    annualGrantDays: 90,
+    carryOverCapDays: 0,
+    allowHalfDay: false,
+    allowHourly: false,
+    maxConsecutiveDays: 90
+  },
+  {
+    name: "PATERNITY",
+    annualGrantDays: 10,
+    carryOverCapDays: 0,
+    allowHalfDay: false,
+    allowHourly: false,
+    maxConsecutiveDays: 10
+  }
+] as const;
 
 function dedupeAndSort(values: readonly string[]) {
   return [...new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))].sort(
@@ -256,12 +290,7 @@ async function seedStatutoryLeavePolicies(prisma: PrismaClient, organizationId: 
   });
   const names = new Set(activePolicies.map((policy) => policy.name.trim().toLowerCase()));
 
-  const defaults = [
-    { name: "Annual Leave" },
-    { name: "Sick Leave" }
-  ] as const;
-
-  for (const policy of defaults) {
+  for (const policy of DEFAULT_STATUTORY_LEAVE_POLICIES) {
     if (names.has(policy.name.toLowerCase())) {
       continue;
     }
@@ -270,7 +299,12 @@ async function seedStatutoryLeavePolicies(prisma: PrismaClient, organizationId: 
         organizationId,
         name: policy.name,
         isStatutory: true,
-        status: "ACTIVE"
+        status: "ACTIVE",
+        ...(policy.annualGrantDays !== undefined ? { annualGrantDays: policy.annualGrantDays } : {}),
+        ...(policy.carryOverCapDays !== undefined ? { carryOverCapDays: policy.carryOverCapDays } : {}),
+        ...(policy.allowHalfDay !== undefined ? { allowHalfDay: policy.allowHalfDay } : {}),
+        ...(policy.allowHourly !== undefined ? { allowHourly: policy.allowHourly } : {}),
+        ...(policy.maxConsecutiveDays !== undefined ? { maxConsecutiveDays: policy.maxConsecutiveDays } : {})
       }
     });
   }
