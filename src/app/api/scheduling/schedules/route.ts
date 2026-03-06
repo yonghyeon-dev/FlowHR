@@ -6,6 +6,11 @@ import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
 export async function GET(request: Request) {
+  const actor = await readActor(request);
+  if (!actor?.id) {
+    return fail(401, "scheduling.schedule.list.unauthorized");
+  }
+
   const url = new URL(request.url);
 
   // `+09:00` in query params is commonly decoded as a space. Normalize to preserve ISO offsets.
@@ -23,7 +28,7 @@ export async function GET(request: Request) {
   try {
     const schedules = await listWorkSchedules(
       {
-        actor: await readActor(request),
+        actor,
         dataAccess: getRuntimeDataAccess()
       },
       {

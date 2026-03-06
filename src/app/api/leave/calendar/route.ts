@@ -10,6 +10,11 @@ function normalizeOffset(value: string | null) {
 }
 
 export async function GET(request: Request) {
+  const actor = await readActor(request);
+  if (!actor?.id) {
+    return fail(401, "leave.calendar.unauthorized");
+  }
+
   const url = new URL(request.url);
   const parsed = listLeaveCalendarQuerySchema.safeParse({
     from: normalizeOffset(url.searchParams.get("from")),
@@ -27,7 +32,7 @@ export async function GET(request: Request) {
   try {
     const result = await listLeaveCalendar(
       {
-        actor: await readActor(request),
+        actor,
         dataAccess: getRuntimeDataAccess()
       },
       {

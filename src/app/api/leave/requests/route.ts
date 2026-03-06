@@ -6,6 +6,11 @@ import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
 export async function GET(request: Request) {
+  const actor = await readActor(request);
+  if (!actor?.id) {
+    return fail(401, "leave.request.list.unauthorized");
+  }
+
   const url = new URL(request.url);
 
   const normalizeOffset = (value: string | null) => (value ? value.replace(/ /g, "+") : value);
@@ -23,7 +28,7 @@ export async function GET(request: Request) {
   try {
     const requests = await listLeaveRequests(
       {
-        actor: await readActor(request),
+        actor,
         dataAccess: getRuntimeDataAccess()
       },
       {

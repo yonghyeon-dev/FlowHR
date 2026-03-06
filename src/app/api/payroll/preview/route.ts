@@ -10,6 +10,11 @@ function shouldAuditPreviewFailure(status: number) {
 }
 
 export async function POST(request: Request) {
+  const actor = await readActor(request);
+  if (!actor?.id) {
+    return fail(401, "payroll.preview.unauthorized");
+  }
+
   let payload: unknown;
   try {
     payload = await request.json();
@@ -30,7 +35,6 @@ export async function POST(request: Request) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
-  const actor = await readActor(request);
   const dataAccess = getRuntimeDataAccess();
 
   try {
