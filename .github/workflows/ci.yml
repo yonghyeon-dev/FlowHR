@@ -272,7 +272,7 @@ jobs:
         timeout-minutes: 10
         env:
           DATABASE_URL: ${{ env.FLOWHR_NORMALIZED_STAGING_DATABASE_URL }}
-          DIRECT_URL: ${{ env.FLOWHR_NORMALIZED_STAGING_DATABASE_URL }}
+          DIRECT_URL: ${{ env.FLOWHR_NORMALIZED_STAGING_DIRECT_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.FLOWHR_STAGING_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.FLOWHR_STAGING_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.FLOWHR_STAGING_SERVICE_ROLE_KEY }}
@@ -284,7 +284,6 @@ jobs:
           CREATE SCHEMA IF NOT EXISTS "staging";
           SQL
           npm run prisma:validate --if-present
-          npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > /tmp/staging-schema.sql
-          npx prisma db execute --url "$DATABASE_URL" --file /tmp/staging-schema.sql
+          npm run prisma:migrate:deploy --if-present
           npm run test:e2e:prisma --if-present
           npm run test:e2e:prisma:phase2-flag --if-present
