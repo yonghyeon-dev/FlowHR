@@ -73,7 +73,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.FLOWHR_PRODUCTION_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.FLOWHR_PRODUCTION_SERVICE_ROLE_KEY }}
-          DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
           DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
         run: npm run test:smoke:production-auth
 
