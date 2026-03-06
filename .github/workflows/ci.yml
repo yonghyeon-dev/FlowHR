@@ -279,6 +279,22 @@ jobs:
           FLOWHR_DATA_ACCESS: prisma
           FLOWHR_PAYROLL_DEDUCTIONS_V1: ${{ vars.FLOWHR_PAYROLL_DEDUCTIONS_V1 || 'false' }}
         run: |
+          echo "=== DB connectivity test ==="
+          echo "DATABASE_URL host: $(echo "$DATABASE_URL" | sed -E 's|.*@([^/]+)/.*|\1|')"
+          echo "DIRECT_URL host: $(echo "$DIRECT_URL" | sed -E 's|.*@([^/]+)/.*|\1|')"
+          timeout 30 node -e "
+            const { Client } = require('pg');
+            const c = new Client({ connectionString: process.env.DATABASE_URL });
+            c.connect().then(() => c.query('SELECT 1')).then(r => { console.log('DATABASE_URL: OK'); c.end(); })
+            .catch(e => { console.error('DATABASE_URL FAIL:', e.message); process.exit(1); });
+          " || { echo "DATABASE_URL connection failed"; exit 1; }
+          timeout 30 node -e "
+            const { Client } = require('pg');
+            const c = new Client({ connectionString: process.env.DIRECT_URL });
+            c.connect().then(() => c.query('SELECT 1')).then(r => { console.log('DIRECT_URL: OK'); c.end(); })
+            .catch(e => { console.error('DIRECT_URL FAIL:', e.message); process.exit(1); });
+          " || { echo "DIRECT_URL connection failed"; exit 1; }
+          echo "=== Connectivity OK, running Prisma ==="
           npx prisma db execute --url "$DATABASE_URL" --stdin <<'SQL'
           DROP SCHEMA IF EXISTS "staging" CASCADE;
           CREATE SCHEMA IF NOT EXISTS "staging";
