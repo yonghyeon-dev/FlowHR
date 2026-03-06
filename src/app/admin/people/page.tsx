@@ -81,8 +81,11 @@ export default function AdminPeoplePage() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
-  const organizationId = (supabaseSession?.organizationId ?? "").trim();
-  const adminActorId = (supabaseSession?.actorId ?? "").trim();
+  const organizationId = useMemo(
+    () => supabaseSession?.organizationId?.trim() ?? "",
+    [supabaseSession?.organizationId]
+  );
+  const adminActorId = useMemo(() => supabaseSession?.actorId?.trim() ?? "", [supabaseSession?.actorId]);
 
   const profileFieldLabel = useMemo<Record<ProfileField, string>>(
     () => resolveAdminPeopleProfileFieldLabel(isKoLocale),

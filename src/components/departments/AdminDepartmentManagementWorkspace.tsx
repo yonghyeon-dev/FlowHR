@@ -46,10 +46,19 @@ export default function AdminDepartmentManagementWorkspace() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const { snapshot: supabaseSession } = useSupabaseSession();
-  const organizationId = (supabaseSession?.organizationId ?? "").trim();
-  const actorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
+  const organizationId = useMemo(
+    () => supabaseSession?.organizationId?.trim() ?? "",
+    [supabaseSession?.organizationId]
+  );
+  const actorId = useMemo(
+    () => supabaseSession?.actorId?.trim() || "ADM-1001",
+    [supabaseSession?.actorId]
+  );
   const bearerToken = supabaseSession?.accessToken ?? "";
-  const usesBearerToken = bearerToken.trim().length > 0;
+  const usesBearerToken = useMemo(
+    () => supabaseSession?.accessToken?.trim().length ? true : false,
+    [supabaseSession?.accessToken]
+  );
 
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
