@@ -103,11 +103,6 @@ export function calculateBusinessLeaveDays(input: {
     }
     days += 1;
   }
-
-  if (days <= 0) {
-    throw new ServiceError(400, "leave days must be positive");
-  }
-
   return days;
 }
 

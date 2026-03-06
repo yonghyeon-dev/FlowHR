@@ -250,6 +250,12 @@ function requireAdminRole(actor: Actor | null): asserts actor is Actor {
   }
 }
 
+function assertPositiveRequestedLeaveDays(requestedDays: number) {
+  if (requestedDays <= 0) {
+    throw new ServiceError(400, "leave days must be positive");
+  }
+}
+
 async function ensureNoOverlap(
   context: ServiceContext,
   input: {
@@ -468,6 +474,7 @@ export async function createLeaveRequest(
     requestedDays: requested.days,
     policy: policyRules
   });
+  assertPositiveRequestedLeaveDays(requested.days);
 
   const statutoryLimitDays = assertStatutoryLeaveDayLimit({
     leaveType: input.leaveType,
@@ -606,6 +613,7 @@ export async function updateLeaveRequest(
     requestedDays: requested.days,
     policy: policyRules
   });
+  assertPositiveRequestedLeaveDays(requested.days);
   await ensureNoOverlap(context, {
     employeeId: existing.employeeId,
     startDate: nextStartDate,
