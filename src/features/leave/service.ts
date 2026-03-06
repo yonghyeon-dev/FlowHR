@@ -29,11 +29,13 @@ import {
   DEFAULT_ANNUAL_LEAVE_PROMOTION_THRESHOLD_DAYS,
   DEFAULT_CARRY_OVER_CAP_DAYS,
   DEFAULT_GRANTED_DAYS,
+  FULL_DAY_HOURS,
   DEFAULT_HOURLY_INCREMENT_MINUTES,
   DEFAULT_MAX_CONSECUTIVE_DAYS,
   DEFAULT_MAX_HOURS_PER_REQUEST,
   DEFAULT_MIN_NOTICE_DAYS,
   assertPolicyRequestConstraints,
+  calculateBusinessLeaveDays,
   calculateLeaveDays,
   calculateProRatedAnnualGrantDays,
   calculateRequestedLeave,
@@ -42,6 +44,7 @@ import {
   resolvePolicyRules,
   resolveSeoulYearEnd,
   roundTo2,
+  toSeoulDayIndex,
 } from "@/features/leave/policy-time-helpers";
 import type {
   DataAccess,
@@ -247,6 +250,12 @@ function requireAdminRole(actor: Actor | null): asserts actor is Actor {
   }
 }
 
+function assertPositiveRequestedLeaveDays(requestedDays: number) {
+  if (requestedDays <= 0) {
+    throw new ServiceError(400, "leave days must be positive");
+  }
+}
+
 async function ensureNoOverlap(
   context: ServiceContext,
   input: {
@@ -290,6 +299,80 @@ async function calculateAvailableLeaveBalance(
     employeeId: input.employeeId
   });
   return buildAvailableLeaveBalanceSummary(requests, input.leaveType, projection.grantedDays);
+}
+
+async function listOrganizationHolidayDayIndexes(
+  dataAccess: DataAccess,
+  input: {
+    organizationId?: string | null;
+    startDate: Date;
+    endDate: Date;
+  }
+) {
+  if (!input.organizationId) {
+    return new Set<number>();
+  }
+
+  const schedules = await dataAccess.scheduling.listInPeriod({
+    periodStart: input.startDate,
+    periodEnd: input.endDate,
+    organizationId: input.organizationId
+  });
+  const holidayDayIndexes = new Set<number>();
+
+  for (const schedule of schedules) {
+    if (!schedule.isHoliday) {
+      continue;
+    }
+
+    const startDay = toSeoulDayIndex(schedule.startAt < input.startDate ? input.startDate : schedule.startAt);
+    const endDay = toSeoulDayIndex(schedule.endAt > input.endDate ? input.endDate : schedule.endAt);
+
+    for (let dayIndex = startDay; dayIndex <= endDay; dayIndex += 1) {
+      holidayDayIndexes.add(dayIndex);
+    }
+  }
+
+  return holidayDayIndexes;
+}
+
+async function calculateLeaveRequestDays(
+  dataAccess: DataAccess,
+  input: {
+    organizationId?: string | null;
+    unit: LeaveRequestUnit;
+    startDate: Date;
+    endDate: Date;
+    hours?: number | null;
+    policy: ReturnType<typeof resolvePolicyRules>;
+  }
+) {
+  if (input.unit !== "FULL_DAY") {
+    return calculateRequestedLeave({
+      unit: input.unit,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      hours: input.hours,
+      policy: input.policy
+    });
+  }
+
+  const holidayDayIndexes = await listOrganizationHolidayDayIndexes(dataAccess, {
+    organizationId: input.organizationId,
+    startDate: input.startDate,
+    endDate: input.endDate
+  });
+  const days = calculateBusinessLeaveDays({
+    startDate: input.startDate,
+    endDate: input.endDate,
+    holidayDayIndexes
+  });
+
+  return {
+    unit: input.unit,
+    days: roundTo2(days),
+    hours: roundTo2(days * FULL_DAY_HOURS)
+  };
 }
 
 async function ensureStatutoryLeavePolicies(context: ServiceContext, organizationId: string) {
@@ -378,7 +461,8 @@ export async function createLeaveRequest(
   }
 
   const policyRules = resolvePolicyRules(policy);
-  const requested = calculateRequestedLeave({
+  const requested = await calculateLeaveRequestDays(context.dataAccess, {
+    organizationId: employee.organizationId,
     unit: input.unit ?? "FULL_DAY",
     startDate: input.startDate,
     endDate: input.endDate,
@@ -390,6 +474,7 @@ export async function createLeaveRequest(
     requestedDays: requested.days,
     policy: policyRules
   });
+  assertPositiveRequestedLeaveDays(requested.days);
 
   const statutoryLimitDays = assertStatutoryLeaveDayLimit({
     leaveType: input.leaveType,
@@ -508,7 +593,8 @@ export async function updateLeaveRequest(
       ? await context.dataAccess.leavePolicy.findByOrganizationId(employee.organizationId)
       : null;
   const policyRules = resolvePolicyRules(policy);
-  const requested = calculateRequestedLeave({
+  const requested = await calculateLeaveRequestDays(context.dataAccess, {
+    organizationId: employee.organizationId,
     unit: nextUnit,
     startDate: nextStartDate,
     endDate: nextEndDate,
@@ -527,6 +613,7 @@ export async function updateLeaveRequest(
     requestedDays: requested.days,
     policy: policyRules
   });
+  assertPositiveRequestedLeaveDays(requested.days);
   await ensureNoOverlap(context, {
     employeeId: existing.employeeId,
     startDate: nextStartDate,
