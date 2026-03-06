@@ -64,6 +64,29 @@ migration 추가 시 반드시:
 
 ---
 
+## GitHub Secrets / 환경변수 규칙 (MUST)
+
+### Production environment secrets (정확한 이름 사용 필수)
+workflow에서 production DB에 접속할 때 반드시 아래 secret name을 사용:
+- `FLOWHR_PRODUCTION_DATABASE_URL` — session pooler (port 5432), migration용
+- `FLOWHR_PRODUCTION_DIRECT_URL` — transaction pooler (port 6543), 런타임용
+- `FLOWHR_PRODUCTION_SUPABASE_URL`, `FLOWHR_PRODUCTION_ANON_KEY`, `FLOWHR_PRODUCTION_SERVICE_ROLE_KEY`
+- `VERCEL_TOKEN` — Vercel 배포용
+
+**절대 `secrets.DATABASE_URL` / `secrets.DIRECT_URL`를 사용하지 않는다.**
+이 이름은 production environment에 존재하지 않으며, deploy가 실패한다.
+
+### Prisma migrate deploy 규칙
+- `DATABASE_URL`과 `DIRECT_URL` 모두 **session pooler (port 5432)**를 사용해야 한다.
+- transaction pooler (port 6543)에서는 advisory lock이 작동하지 않아 hang됨.
+- 따라서: `DATABASE_URL=${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}`, `DIRECT_URL=${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}` (둘 다 같은 값)
+
+### 불필요한 URL validation 금지
+- workflow에 URL format 검증 코드를 추가하지 않는다 (port/pgbouncer 검사 등).
+- secret이 올바른지는 secret 설정 시점에 보장한다. workflow에서 재검증하지 않는다.
+
+---
+
 ## 구현 원칙 (SHOULD)
 
 1. **WI 1개 = 기능 1개** — 여러 기능을 한 WI에 묶지 않는다.
