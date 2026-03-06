@@ -76,14 +76,17 @@ export default function AdminDashboardPage() {
     [pendingLeaveQueue]
   );
 
-  const bearerToken = supabaseSession?.accessToken?.trim() ?? "";
+  const bearerToken = useMemo(() => supabaseSession?.accessToken?.trim() ?? "", [supabaseSession?.accessToken]);
   const usesBearerToken = bearerToken.length > 0;
   const productionSessionRequiredNotice = isKoLocale
     ? "운영 환경에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요."
     : "Login session is required in production. Please sign in again at /login.";
   const requiresLoginSession =
     !supabaseSessionLoading && isProductionRuntime && !usesBearerToken && !showDevTools;
-  const organizationId = supabaseSession?.organizationId?.trim() ?? "";
+  const organizationId = useMemo(
+    () => supabaseSession?.organizationId?.trim() ?? "",
+    [supabaseSession?.organizationId]
+  );
 
   const callApi = useCallback(
     async (label: string, path: string) => {
