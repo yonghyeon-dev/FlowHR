@@ -19,6 +19,9 @@ const listPayslipsQuerySchema = z.object({
 
 export async function GET(request: Request) {
   const actor = await readActor(request);
+  if (!actor) {
+    return fail(401, "payslip.list.unauthorized");
+  }
   if (!isPayslipActor(actor)) {
     return fail(403, "payslip.list.forbidden");
   }
