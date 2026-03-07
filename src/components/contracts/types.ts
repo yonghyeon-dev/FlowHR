@@ -11,6 +11,7 @@ export type ContractTemplate = {
   category: ContractCategory;
   body: string;
   status: "DRAFT" | "ACTIVE" | "ARCHIVED";
+  isArchived: boolean;
   version: number;
   createdAt: string;
   updatedAt: string;

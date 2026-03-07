@@ -1,5 +1,5 @@
 owner: contracts-agent
-version: 0.2.0
+version: 0.2.1
 scope:
   in:
     - contract template CRUD with version increment rules
@@ -38,6 +38,9 @@ api:
     - method: PATCH
       path: /contracts/templates/{templateId}
       description: Update template and bump version when content changes.
+    - method: DELETE
+      path: /contracts/templates/{templateId}
+      description: Soft-delete template by setting `isArchived=true` and hide it from list results.
     - method: GET
       path: /contracts/documents
       description: List contract documents for admin scope or employee own scope.
@@ -72,6 +75,8 @@ api:
         description: Emitted when a contract template is created.
       - name: contract.template.updated.v1
         description: Emitted when a contract template is updated.
+      - name: contract.template.archived.v1
+        description: Emitted when a contract template is archived from active list results.
       - name: contract.document.created.v1
         description: Emitted when a contract document draft is created.
       - name: contract.document.approval.requested.v1
@@ -88,11 +93,14 @@ api:
         description: Emitted when source document is renewed and successor draft is created.
     consumed: []
 db_changes:
-  migrations: []
+  migrations:
+    - id: 202603070002_wi1029_contract_template_archive
+      description: Create ContractTemplate table if absent and add `isArchived` soft-delete flag for archive API support.
   backward_compatible: true
-  notes: Uses audit-backed event snapshots without DB schema migration in this baseline.
+  notes: Contract templates remain audit-backed for API reads while `ContractTemplate.isArchived` is added as additive persistence scaffolding for archive semantics.
 invariants:
   - Contract template version starts at 1 and increases only when content fields change.
+  - Archived contract templates are excluded from template list responses and cannot be selected for new document creation.
   - Contract document send is blocked when approval is required and not approved.
   - Employee actor can respond only to own SENT document.
   - SIGN response records deterministic signature hash and evidence hash.
@@ -113,6 +121,7 @@ test_plan:
     - signature hash determinism and expectedDocumentHash mismatch guard
   integration:
     - template create/update/list lifecycle
+    - template archive returns `isArchived=true`, hides archived template from list results, and returns `404` for unknown template id
     - document create/request-approval/approval/send lifecycle
     - employee sign/reject own document flow
     - signed-document signature evidence read/download flow (`format=json|text`)
@@ -131,6 +140,7 @@ observability:
   audit_events:
     - contract.template.created
     - contract.template.updated
+    - contract.template.archived
     - contract.document.created
     - contract.document.approval.requested
     - contract.document.approval.decided
@@ -154,7 +164,7 @@ rollback:
     - revert contracts API and UI routes
     - keep audit logs for traceability
 breaking_changes: false
-consumer_impact: "Contract v0.2.0 additively introduces signed-contract signature evidence read/download API (`GET /contracts/documents/{documentId}/signature-evidence`, `format=json|text`) with deterministic artifact hash metadata (`contentSha256`), while preserving existing contracts APIs (no breaking change)."
+consumer_impact: "Contract v0.2.1 additively introduces contract template archive API (`DELETE /contracts/templates/{templateId}`) and hides archived templates from list responses, while preserving existing contracts APIs (no breaking change)."
 references:
   - work-items/WI-0276-contract-template-crud-and-versioning.md
   - work-items/WI-0277-contract-document-draft-and-send-lifecycle.md
@@ -165,3 +175,4 @@ references:
   - work-items/WI-0288-contract-template-builder-v1.md
   - work-items/WI-0289-contract-signature-evidence-read-download.md
   - work-items/WI-0290-payroll-contract-core-journey-e2e-bundle.md
+  - work-items/WI-1029-contract-template-archive.md

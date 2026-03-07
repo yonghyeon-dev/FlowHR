@@ -90,6 +90,59 @@ async function run() {
   const createTemplateBody = await readJson<{ template: { id: string; version: number } }>(createTemplateResponse);
   assert.equal(createTemplateBody.template.version, 1);
 
+  const archiveTargetResponse = await templateRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/contracts/templates",
+      {
+        name: "Archive Target",
+        category: "nda",
+        body: "archive me"
+      },
+      actorHeaders("admin", "ADMIN-CONTRACT", organization.id)
+    )
+  );
+  assert.equal(archiveTargetResponse.status, 201);
+  const archiveTargetBody = await readJson<{ template: { id: string } }>(archiveTargetResponse);
+  const archiveTargetId = archiveTargetBody.template.id;
+
+  const archiveResponse = await templatePatchRoute.DELETE(
+    new Request(`http://localhost/api/contracts/templates/${archiveTargetId}`, {
+      method: "DELETE",
+      headers: actorHeaders("admin", "ADMIN-CONTRACT", organization.id)
+    }),
+    {
+      params: Promise.resolve({ templateId: archiveTargetId })
+    }
+  );
+  assert.equal(archiveResponse.status, 200);
+  const archiveBody = await readJson<{ template: { id: string; isArchived: boolean } }>(archiveResponse);
+  assert.equal(archiveBody.template.id, archiveTargetId);
+  assert.equal(archiveBody.template.isArchived, true);
+
+  const listTemplatesAfterArchiveResponse = await templateRoute.GET(
+    getRequest("/api/contracts/templates", actorHeaders("admin", "ADMIN-CONTRACT", organization.id))
+  );
+  assert.equal(listTemplatesAfterArchiveResponse.status, 200);
+  const listTemplatesAfterArchiveBody = await readJson<{
+    templates: Array<{ id: string; isArchived: boolean }>;
+  }>(listTemplatesAfterArchiveResponse);
+  assert.ok(
+    listTemplatesAfterArchiveBody.templates.every((template) => template.id !== archiveTargetId)
+  );
+  assert.ok(listTemplatesAfterArchiveBody.templates.every((template) => template.isArchived === false));
+
+  const archiveMissingResponse = await templatePatchRoute.DELETE(
+    new Request("http://localhost/api/contracts/templates/CT-UNKNOWN", {
+      method: "DELETE",
+      headers: actorHeaders("admin", "ADMIN-CONTRACT", organization.id)
+    }),
+    {
+      params: Promise.resolve({ templateId: "CT-UNKNOWN" })
+    }
+  );
+  assert.equal(archiveMissingResponse.status, 404);
+
   const updateTemplateResponse = await templatePatchRoute.PATCH(
     jsonRequest(
       "PATCH",
