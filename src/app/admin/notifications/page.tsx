@@ -39,11 +39,12 @@ export default function AdminNotificationsPage() {
   const [isFetching, setIsFetching] = useState(false);
   const [pendingReadId, setPendingReadId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const bearerToken = snapshot?.accessToken?.trim() ?? "";
 
   const unreadCount = useMemo(() => notifications.filter((row) => !row.isRead).length, [notifications]);
 
   const loadNotifications = useCallback(async () => {
-    if (!snapshot) {
+    if (!snapshot || bearerToken.length === 0) {
       setNotifications([]);
       setErrorMessage(null);
       setIsFetching(false);
@@ -53,7 +54,12 @@ export default function AdminNotificationsPage() {
     setIsFetching(true);
     setErrorMessage(null);
     try {
-      const response = await fetch("/api/notifications", { cache: "no-store" });
+      const response = await fetch("/api/notifications", {
+        cache: "no-store",
+        headers: {
+          authorization: `Bearer ${bearerToken}`
+        }
+      });
       const requestError = toErrorMessage(response, "알림 목록을 불러오지 못했습니다.");
       if (requestError) {
         setErrorMessage(requestError);
@@ -67,14 +73,21 @@ export default function AdminNotificationsPage() {
     } finally {
       setIsFetching(false);
     }
-  }, [snapshot]);
+  }, [bearerToken, snapshot]);
 
   const handleMarkAsRead = useCallback(async (notificationId: string) => {
+    if (bearerToken.length === 0) {
+      return;
+    }
+
     setPendingReadId(notificationId);
     setErrorMessage(null);
     try {
       const response = await fetch(`/api/notifications/${notificationId}/read`, {
-        method: "PATCH"
+        method: "PATCH",
+        headers: {
+          authorization: `Bearer ${bearerToken}`
+        }
       });
       const requestError = toErrorMessage(response, "알림 읽음 처리를 하지 못했습니다.");
       if (requestError) {
@@ -101,7 +114,7 @@ export default function AdminNotificationsPage() {
     } finally {
       setPendingReadId((current) => (current === notificationId ? null : current));
     }
-  }, []);
+  }, [bearerToken]);
 
   useEffect(() => {
     if (loading) {
