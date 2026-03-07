@@ -261,9 +261,18 @@ export default function AdminDashboardPage() {
   }, [refreshSummary]);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.hash === "#approvals") {
-      window.location.replace("/admin/approval-executions");
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#approvals") {
+      window.location.href = "/admin/approval-executions";
+      return;
     }
+    const handleHashChange = () => {
+      if (window.location.hash === "#approvals") {
+        window.location.href = "/admin/approval-executions";
+      }
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
   const workspaceHubs = buildAdminWorkspaceHubs(isKoLocale);
