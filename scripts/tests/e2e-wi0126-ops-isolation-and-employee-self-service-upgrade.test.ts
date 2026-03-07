@@ -22,8 +22,13 @@ function run() {
   const adminLeavePromotionSource = readUtf8("src", "app", "admin", "leave-promotion", "page.tsx");
   assert.match(
     adminLeavePromotionSource,
+    /notFound\(\)/,
+    "admin leave-promotion page should return notFound when dev tools are disabled"
+  );
+  assert.match(
+    adminLeavePromotionSource,
     /redirect\("\/ops\/leave-promotion"\)/,
-    "admin leave-promotion page should redirect to ops route"
+    "admin leave-promotion page should still redirect to ops route when dev tools are enabled"
   );
 
   const opsLeavePromotionSource = readUtf8("src", "app", "ops", "leave-promotion", "page.tsx");
