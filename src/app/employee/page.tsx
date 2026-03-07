@@ -343,13 +343,8 @@ export default function EmployeeSelfServicePage() {
     if (!snapshotLoaded || appliedFocusSectionRef.current === focusSectionId) {
       return;
     }
-    const frameId = window.requestAnimationFrame(() => {
-      jumpToSectionAction(focusSectionId, 0, "instant");
-      appliedFocusSectionRef.current = focusSectionId;
-    });
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
+    appliedFocusSectionRef.current = focusSectionId;
+    jumpToSectionAction(focusSectionId, 0, "instant");
   }, [focusSectionId, snapshotLoaded]);
   useApplyAttendanceSchedulePrefillEffect({ attendanceSchedulePrefill, attendance, appliedAttendanceSchedulePrefillRef, setCheckInAt, setCheckOutAt, setAttendanceNotes, applyAttendanceRecordToCorrectionForm });
 
