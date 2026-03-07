@@ -46,6 +46,26 @@ function toSeoulIso(daysFromToday: number, hour = 9, minute = 0) {
   return new Date(Date.UTC(year, month, day, utcHour, minute, 0)).toISOString();
 }
 
+function toSeoulIsoForNextWeekday(
+  targetDayOfWeek: number,
+  options?: { weekOffset?: number; hour?: number; minute?: number }
+) {
+  const { weekOffset = 0, hour = 9, minute = 0 } = options ?? {};
+  const now = new Date();
+  const seoulNow = new Date(now.getTime() + SEOUL_OFFSET_MS);
+  const year = seoulNow.getUTCFullYear();
+  const month = seoulNow.getUTCMonth();
+  const day = seoulNow.getUTCDate();
+  const todayDayOfWeek = seoulNow.getUTCDay();
+  let daysUntilTarget = (targetDayOfWeek - todayDayOfWeek + 7) % 7;
+  if (daysUntilTarget === 0) {
+    daysUntilTarget = 7;
+  }
+  daysUntilTarget += weekOffset * 7;
+  const utcHour = hour - 9;
+  return new Date(Date.UTC(year, month, day + daysUntilTarget, utcHour, minute, 0)).toISOString();
+}
+
 async function run() {
   const { memoryDataAccess, resetMemoryDataAccess } = await import(
     "../../src/features/shared/memory-data-access.ts"
@@ -119,8 +139,8 @@ async function run() {
         employeeId,
         leaveType: "ANNUAL",
         unit: "FULL_DAY",
-        startDate: toSeoulIso(3, 9, 0),
-        endDate: toSeoulIso(6, 18, 0),
+        startDate: toSeoulIsoForNextWeekday(1, { weekOffset: 1, hour: 9, minute: 0 }),
+        endDate: toSeoulIsoForNextWeekday(4, { weekOffset: 1, hour: 18, minute: 0 }),
         reason: "consecutive cap should fail"
       },
       actorHeaders("employee", employeeId)
@@ -136,8 +156,8 @@ async function run() {
         employeeId,
         leaveType: "ANNUAL",
         unit: "FULL_DAY",
-        startDate: toSeoulIso(3, 9, 0),
-        endDate: toSeoulIso(5, 18, 0),
+        startDate: toSeoulIsoForNextWeekday(1, { weekOffset: 1, hour: 9, minute: 0 }),
+        endDate: toSeoulIsoForNextWeekday(3, { weekOffset: 1, hour: 18, minute: 0 }),
         reason: "within policy"
       },
       actorHeaders("employee", employeeId)
@@ -201,8 +221,8 @@ async function run() {
         employeeId,
         leaveType: "ANNUAL",
         unit: "FULL_DAY",
-        startDate: toSeoulIso(10, 9, 0),
-        endDate: toSeoulIso(14, 18, 0),
+        startDate: toSeoulIsoForNextWeekday(1, { weekOffset: 3, hour: 9, minute: 0 }),
+        endDate: toSeoulIsoForNextWeekday(5, { weekOffset: 3, hour: 18, minute: 0 }),
         reason: "cap cleared"
       },
       actorHeaders("employee", employeeId)
