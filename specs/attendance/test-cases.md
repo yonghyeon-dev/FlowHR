@@ -16,24 +16,26 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 8. Rejection reason is preserved in audit/event payload when provided.
 9. Reject API returns `400` for invalid JSON body and oversized reason payload.
 10. List attendance records by period (`from`/`to`) with role boundary guards (employee self-only, manager requires employeeId).
-11. List attendance aggregates by period (`from`/`to`) with role boundary guards and verify totals are derived from approved records only.
-12. Create attendance with capture metadata (GPS/QR/WIFI/device) and verify fields are persisted in response.
-13. Update pending attendance capture metadata and verify audit/event trace includes capture fields.
-14. Reject attendance create/update when capture payload is invalid (GPS without coordinates, partial coordinate pair).
-15. When `FLOWHR_ATTENDANCE_GPS_REQUIRED=true`, employee non-GPS create/update is rejected while manager correction path remains allowed.
-16. When `FLOWHR_ATTENDANCE_GEOFENCE_ENABLED=true`, employee GPS create/update outside configured radius is rejected while manager correction path remains allowed.
-17. When `FLOWHR_ATTENDANCE_TRUSTED_DEVICE_ENABLED=true`, employee write with missing/untrusted deviceId is rejected while trusted deviceId is accepted.
-18. When `FLOWHR_ATTENDANCE_MULTI_SITE_GEOFENCE_ENABLED=true`, employee GPS create/update must match at least one configured site geofence while manager correction path remains allowed.
-19. When `FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_ENABLED=true`, employee write with missing/mismatched capture attestation token is rejected while mapped device/token pair is accepted.
-20. When `FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED=true`, employee write with risk score above threshold is rejected while low-risk capture payload is accepted and manager correction path remains allowed.
-21. When `FLOWHR_ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_ENABLED=true`, employee write with high-risk device/ip reputation or insufficient signal fusion count is rejected while safe fused payload is accepted.
-22. When `FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ENABLED=true`, employee write uses remote reputation high-risk device/ip signals and rejects high-risk payload while manager correction path remains allowed.
-23. When multi-provider external reputation is enabled with `majority` aggregation, employee write is accepted below threshold and rejected when provider-hit count reaches threshold.
-24. When strict mode and provider `min_success` are enabled, employee write is rejected if successful provider count is below configured minimum.
-25. When provider circuit-breaker is enabled, failed providers are skipped during cooldown and strict `min_success` continues to gate employee writes.
-26. When adaptive routing and auto-heal are enabled, healthy providers are prioritized, open-circuit providers are probed after interval, and recovered providers rejoin routing before cooldown expiry.
-27. Admin `POST /attendance/auto-close` closes only stale open records, sets `checkOutAt = checkInAt + 9h`, and marks `anomalyType = AUTO_CLOSED`.
-28. Employee role calling `POST /attendance/auto-close` is rejected with `403`.
+11. Read single attendance record by id and return `{ record }`.
+12. Read single attendance record returns `404` for missing or cross-tenant ids and `401` without auth.
+13. List attendance aggregates by period (`from`/`to`) with role boundary guards and verify totals are derived from approved records only.
+14. Create attendance with capture metadata (GPS/QR/WIFI/device) and verify fields are persisted in response.
+15. Update pending attendance capture metadata and verify audit/event trace includes capture fields.
+16. Reject attendance create/update when capture payload is invalid (GPS without coordinates, partial coordinate pair).
+17. When `FLOWHR_ATTENDANCE_GPS_REQUIRED=true`, employee non-GPS create/update is rejected while manager correction path remains allowed.
+18. When `FLOWHR_ATTENDANCE_GEOFENCE_ENABLED=true`, employee GPS create/update outside configured radius is rejected while manager correction path remains allowed.
+19. When `FLOWHR_ATTENDANCE_TRUSTED_DEVICE_ENABLED=true`, employee write with missing/untrusted deviceId is rejected while trusted deviceId is accepted.
+20. When `FLOWHR_ATTENDANCE_MULTI_SITE_GEOFENCE_ENABLED=true`, employee GPS create/update must match at least one configured site geofence while manager correction path remains allowed.
+21. When `FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_ENABLED=true`, employee write with missing/mismatched capture attestation token is rejected while mapped device/token pair is accepted.
+22. When `FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED=true`, employee write with risk score above threshold is rejected while low-risk capture payload is accepted and manager correction path remains allowed.
+23. When `FLOWHR_ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_ENABLED=true`, employee write with high-risk device/ip reputation or insufficient signal fusion count is rejected while safe fused payload is accepted.
+24. When `FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ENABLED=true`, employee write uses remote reputation high-risk device/ip signals and rejects high-risk payload while manager correction path remains allowed.
+25. When multi-provider external reputation is enabled with `majority` aggregation, employee write is accepted below threshold and rejected when provider-hit count reaches threshold.
+26. When strict mode and provider `min_success` are enabled, employee write is rejected if successful provider count is below configured minimum.
+27. When provider circuit-breaker is enabled, failed providers are skipped during cooldown and strict `min_success` continues to gate employee writes.
+28. When adaptive routing and auto-heal are enabled, healthy providers are prioritized, open-circuit providers are probed after interval, and recovered providers rejoin routing before cooldown expiry.
+29. Admin `POST /attendance/auto-close` closes only stale open records, sets `checkOutAt = checkInAt + 9h`, and marks `anomalyType = AUTO_CLOSED`.
+30. Employee role calling `POST /attendance/auto-close` is rejected with `403`.
 
 ## Boundary and Accuracy Cases
 
