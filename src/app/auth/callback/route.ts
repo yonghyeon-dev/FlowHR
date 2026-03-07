@@ -7,6 +7,7 @@ import {
   personalDataConsentTypes,
   recordPersonalDataConsents
 } from "@/features/auth/service";
+import { ensureOrganizationRecord } from "@/features/auth/callback-organization-recovery";
 import { seedDefaultWorkSchedulesForEmployee } from "@/features/scheduling/default-work-schedule-seed";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { FLOWHR_ACCESS_TOKEN_COOKIE } from "@/lib/auth/session-cookie";
@@ -233,6 +234,7 @@ export async function GET(request: NextRequest) {
     const signupOrganizationName = readAppMetadataString(userMetadata, "organization_name", "organizationName");
     const consentVersion = readAppMetadataString(userMetadata, "consent_version", "consentVersion");
     const consentTypes = readConsentTypesFromMetadata(userMetadata);
+    const normalizedEmail = session.user.email?.trim().toLowerCase() ?? "";
 
     let role = normalizeMetadataRole(appMetadata.role) ?? normalizeMetadataRole(userMetadata.role);
     let organizationId =
@@ -247,9 +249,24 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    if (appOrganizationId && role === "admin") {
+      try {
+        const organization = await ensureOrganizationRecord({
+          dataAccess: getRuntimeDataAccess(),
+          organizationId: appOrganizationId,
+          organizationName: signupOrganizationName,
+          email: normalizedEmail || null
+        });
+        organizationId = organization.id;
+      } catch {
+        response.cookies.delete(FLOWHR_ACCESS_TOKEN_COOKIE);
+        response.headers.set("Location", new URL("/login?error=auth_callback_setup_failed", requestUrl.origin).toString());
+        return response;
+      }
+    }
+
     if (signupOrganizationName && !appOrganizationId) {
       try {
-        const normalizedEmail = session.user.email?.trim().toLowerCase() ?? "";
         if (!normalizedEmail) {
           throw new Error("missing signup email");
         }

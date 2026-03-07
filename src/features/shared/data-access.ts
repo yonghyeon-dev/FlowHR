@@ -692,6 +692,7 @@ export type UpsertDeductionProfileInput = {
 };
 
 export type CreateOrganizationInput = {
+  id?: string;
   name: string;
 };
 

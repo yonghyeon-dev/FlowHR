@@ -1084,6 +1084,7 @@ const organizations: OrganizationStore = {
   async create(input: CreateOrganizationInput) {
     const record = await prisma.organization.create({
       data: {
+        ...(input.id ? { id: input.id } : {}),
         name: input.name,
         fiscalYearStart: "01-01",
         fiscalYearStartMonth: 1,
