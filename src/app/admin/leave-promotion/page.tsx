@@ -1,13 +1,11 @@
-"use client";
+import { notFound, redirect } from "next/navigation";
 
-import { redirect } from "next/navigation";
-
-import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
+import { isTruthyFlag } from "@/app/admin/page-helpers";
 
 export default function AdminLeavePromotionPage() {
-  const { loading } = useSupabaseSession();
-
-  if (loading) return null;
+  if (!isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS)) {
+    notFound();
+  }
 
   redirect("/ops/leave-promotion");
 }
