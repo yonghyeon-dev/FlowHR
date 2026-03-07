@@ -43,7 +43,9 @@ export function jumpToSectionAction(
     }
     return;
   }
-  target.scrollIntoView({ behavior: behavior === "instant" ? "auto" : behavior, block: "start" });
+  const rect = target.getBoundingClientRect();
+  const absoluteTop = window.scrollY + rect.top;
+  window.scrollTo({ top: absoluteTop, behavior: behavior === "instant" ? "auto" : behavior });
   window.history.replaceState(null, "", `#${sectionId}`);
   window.requestAnimationFrame(() => {
     const retryTarget = document.getElementById(sectionId);
