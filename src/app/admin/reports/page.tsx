@@ -66,9 +66,7 @@ export default function AdminReportsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const f = new Date(fromDate + "T00:00:00+09:00").toISOString();
-      const t = new Date(toDate + "T23:59:59+09:00").toISOString();
-      const path = `/api/admin/reports/attendance/department-summary?from=${encodeURIComponent(f)}&to=${encodeURIComponent(t)}`;
+      const path = `/api/admin/reports/attendance/department-summary?startDate=${fromDate}&endDate=${toDate}`;
       const result = await performAdminApiCall({
         label: "근태 부서요약",
         method: "GET",
