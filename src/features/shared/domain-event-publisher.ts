@@ -62,6 +62,7 @@ export const domainEventNames = [
   "leave.promotion.notice.dispatched.v1",
   "contract.template.created.v1",
   "contract.template.updated.v1",
+  "contract.template.archived.v1",
   "contract.document.created.v1",
   "contract.document.approval.requested.v1",
   "contract.document.approval.decided.v1",
