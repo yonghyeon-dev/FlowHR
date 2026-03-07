@@ -1,4 +1,4 @@
-# People Test Cases (Contract v0.3.15)
+# People Test Cases (Contract v0.3.18)
 
 ## Organization
 
@@ -66,4 +66,13 @@
 - Benefits catalog status update returns `409` when trying to deactivate an item with submitted pending requests.
 - Benefits request list supports `sort=pending_priority` and returns submitted requests first (oldest submitted first).
 - Recruitment referral list supports `sort=stalled_priority` and returns active stalled referrals first.
+
+## Notices
+
+- Admin or manager can partially update a draft notice via `PATCH /notices/{noticeId}`.
+- Admin or manager can partially update a scheduled notice via `PATCH /notices/{noticeId}` without clearing `publishAt`.
+- Title-only patch preserves existing body, audience, and scheduling metadata.
+- Body-only patch preserves existing title, audience, and scheduling metadata.
+- Empty patch payload `{}` returns `400`.
+- Published notice patch attempts return `409`.
 

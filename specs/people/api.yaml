@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR People API
-  version: 0.3.17
+  version: 0.3.18
 paths:
   /people/organizations:
     get:
@@ -337,6 +337,26 @@ paths:
           description: Created
         "403":
           description: Forbidden
+  /notices/{noticeId}:
+    patch:
+      summary: Partially update a draft or scheduled notice
+      parameters:
+        - in: path
+          name: noticeId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Notice updated
+        "400":
+          description: Invalid payload or empty patch body
+        "403":
+          description: Admin or manager role required
+        "404":
+          description: Notice not found
+        "409":
+          description: Published notices are locked from edits
   /benefits/catalog/{benefitId}/status:
     post:
       summary: Update benefits catalog status
