@@ -68,6 +68,7 @@ async function run() {
   const { memoryDataAccess, resetMemoryDataAccess } = await import(
     "../../src/features/shared/memory-data-access.ts"
   );
+  const { parseAuditLogListQuery } = await import("../../src/app/api/admin/audit-logs/shared.ts");
   const employeeRoute = await import("../../src/app/api/people/employees/route.ts");
   const attendanceRecordsRoute = await import("../../src/app/api/attendance/records/route.ts");
   const auditLogsRoute = await import("../../src/app/api/admin/audit-logs/route.ts");
@@ -145,6 +146,40 @@ async function run() {
   assert.ok(
     listBody.items.some((item) => item.action === "attendance.recorded"),
     "list should include attendance.recorded log"
+  );
+
+  const fixedNow = new Date("2026-03-07T12:34:56.000Z");
+  const defaultQuery = parseAuditLogListQuery(new URL("http://localhost/api/admin/audit-logs"), fixedNow);
+  assert.equal(defaultQuery.ok, true, "query parser should accept missing from/to");
+  if (!defaultQuery.ok) {
+    throw new Error("defaultQuery should be successful");
+  }
+  assert.equal(
+    defaultQuery.query.from.toISOString(),
+    "2026-02-05T12:34:56.000Z",
+    "default from should fall back to 30 days before now"
+  );
+  assert.equal(
+    defaultQuery.query.to.toISOString(),
+    "2026-03-07T12:34:56.000Z",
+    "default to should fall back to now"
+  );
+
+  const defaultListResponse = await auditLogsRoute.GET(
+    new Request("http://localhost/api/admin/audit-logs", {
+      method: "GET",
+      headers: adminHeaders
+    })
+  );
+  assert.equal(defaultListResponse.status, 200, "admin should list audit logs without from/to");
+  const defaultListBody = await readJson<{
+    items: Array<{ action: string }>;
+    total: number;
+  }>(defaultListResponse);
+  assert.ok(defaultListBody.total >= 2, "default range should include recent audit logs");
+  assert.ok(
+    defaultListBody.items.some((item) => item.action === "employee.created"),
+    "default range should preserve existing behavior for recent logs"
   );
 
   const employeeOnlyResponse = await auditLogsRoute.GET(
