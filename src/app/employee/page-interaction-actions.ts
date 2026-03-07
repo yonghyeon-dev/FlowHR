@@ -11,6 +11,7 @@ import type {
 } from "@/app/employee/page-types";
 
 const SECTION_JUMP_MAX_RETRIES = 3;
+const SECTION_JUMP_WAIT_TIMEOUT_MS = 500;
 type SectionJumpBehavior = "instant" | "smooth";
 
 function isElementTopInViewport(target: HTMLElement) {
@@ -25,13 +26,21 @@ function isElementTopInViewport(target: HTMLElement) {
 export function jumpToSectionAction(
   sectionId: string,
   retryCount = 0,
-  behavior: SectionJumpBehavior = "smooth"
+  behavior: SectionJumpBehavior = "smooth",
+  waitStartedAt?: number
 ) {
   if (typeof document === "undefined" || typeof window === "undefined") {
     return;
   }
+  const startedAt = waitStartedAt ?? window.performance.now();
   const target = document.getElementById(sectionId);
-  if (!target) {
+  const shouldKeepWaiting = window.performance.now() - startedAt < SECTION_JUMP_WAIT_TIMEOUT_MS;
+  if (!target || target.offsetHeight === 0) {
+    if (shouldKeepWaiting) {
+      window.requestAnimationFrame(() => {
+        jumpToSectionAction(sectionId, retryCount, behavior, startedAt);
+      });
+    }
     return;
   }
   target.scrollIntoView({ behavior: behavior === "instant" ? "auto" : behavior, block: "start" });
@@ -41,7 +50,7 @@ export function jumpToSectionAction(
     if (!retryTarget || isElementTopInViewport(retryTarget) || retryCount >= SECTION_JUMP_MAX_RETRIES) {
       return;
     }
-    jumpToSectionAction(sectionId, retryCount + 1, behavior);
+    jumpToSectionAction(sectionId, retryCount + 1, behavior, window.performance.now());
   });
 }
 
