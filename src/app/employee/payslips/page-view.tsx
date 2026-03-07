@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 import {
   formatKrw,
   resolvePayslipRunStateLabel
@@ -83,6 +85,17 @@ export function EmployeePayslipsPageView({
     : "-";
   const selectedRunNetPayText = selectedRun ? formatKrw(selectedRun.netPayKrw) : "-";
   const compareInsightClassName = "payslip-compare-insight";
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const hash = window.location.hash.replace(/^#/, "").trim();
+    if (!hash) {
+      return;
+    }
+    document.getElementById(hash)?.scrollIntoView({ block: "start" });
+  }, []);
 
   return (
     <main className="saas-content">

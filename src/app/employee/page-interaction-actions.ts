@@ -10,8 +10,8 @@ import type {
   ResubmitCandidate
 } from "@/app/employee/page-types";
 
-const SECTION_JUMP_RETRY_DELAY_MS = 300;
 const SECTION_JUMP_MAX_RETRIES = 3;
+type SectionJumpBehavior = "instant" | "smooth";
 
 function isElementTopInViewport(target: HTMLElement) {
   if (typeof window === "undefined") {
@@ -22,7 +22,11 @@ function isElementTopInViewport(target: HTMLElement) {
   return rect.top >= 0 && rect.top <= viewportHeight && rect.bottom >= 0;
 }
 
-export function jumpToSectionAction(sectionId: string, retryCount = 0) {
+export function jumpToSectionAction(
+  sectionId: string,
+  retryCount = 0,
+  behavior: SectionJumpBehavior = "smooth"
+) {
   if (typeof document === "undefined" || typeof window === "undefined") {
     return;
   }
@@ -30,13 +34,15 @@ export function jumpToSectionAction(sectionId: string, retryCount = 0) {
   if (!target) {
     return;
   }
-  target.scrollIntoView({ behavior: "smooth", block: "start" });
+  target.scrollIntoView({ behavior: behavior === "instant" ? "auto" : behavior, block: "start" });
   window.history.replaceState(null, "", `#${sectionId}`);
-  if (!isElementTopInViewport(target) && retryCount < SECTION_JUMP_MAX_RETRIES) {
-    window.setTimeout(() => {
-      jumpToSectionAction(sectionId, retryCount + 1);
-    }, SECTION_JUMP_RETRY_DELAY_MS);
-  }
+  window.requestAnimationFrame(() => {
+    const retryTarget = document.getElementById(sectionId);
+    if (!retryTarget || isElementTopInViewport(retryTarget) || retryCount >= SECTION_JUMP_MAX_RETRIES) {
+      return;
+    }
+    jumpToSectionAction(sectionId, retryCount + 1, behavior);
+  });
 }
 
 export function pushMobileFlowFeedbackAction(

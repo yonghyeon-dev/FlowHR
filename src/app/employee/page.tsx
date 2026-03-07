@@ -61,7 +61,7 @@ export default function EmployeeSelfServicePage() {
   const appliedAttendanceSchedulePrefillRef = useRef<{ baseKey: string | null; selectedTargetKey: string | null }>({ baseKey: null, selectedTargetKey: null });
   const appliedFocusSectionRef = useRef<string | null>(null);
   const autoSnapshotLoadKeyRef = useRef<string | null>(null);
-  const refreshEmployeeSnapshotRef = useRef<null | (() => Promise<void>)>(null);
+  const refreshEmployeeSnapshotRef = useRef<null | ((range?: { fromIso: string; toIso: string }) => Promise<void>)>(null);
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
   const [periodEnd, setPeriodEnd] = useState(lastDayOfMonthLocal());
   const [checkInAt, setCheckInAt] = useState(todayStartLocal());
@@ -86,6 +86,7 @@ export default function EmployeeSelfServicePage() {
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalanceDto | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
+  const [snapshotLoaded, setSnapshotLoaded] = useState(false);
   const [, setMobileFlowFeedback] = useState("");
   const [requestFeedbackStatusFilter, setRequestFeedbackStatusFilter] = useState<RequestStatusFilter>("all");
   const [timelineChannelFilter, setTimelineChannelFilter] = useState<TimelineChannelFilter>("all");
@@ -153,7 +154,18 @@ export default function EmployeeSelfServicePage() {
     cancelReason,
     lastLeaveRequestId
   });
-  refreshEmployeeSnapshotRef.current = mutationActions.refreshEmployeeSnapshot;
+  const refreshEmployeeSnapshot = useCallback(
+    async (range?: { fromIso: string; toIso: string }) => {
+      setSnapshotLoaded(false);
+      try {
+        await mutationActions.refreshEmployeeSnapshot(range);
+      } finally {
+        setSnapshotLoaded(true);
+      }
+    },
+    [mutationActions]
+  );
+  refreshEmployeeSnapshotRef.current = refreshEmployeeSnapshot;
   const {
     latestPayload,
     stats,
@@ -291,7 +303,7 @@ export default function EmployeeSelfServicePage() {
     latestAttendance,
     leaveRequests,
     periodStart,
-    refreshEmployeeSnapshot: mutationActions.refreshEmployeeSnapshot,
+    refreshEmployeeSnapshot,
     resubmitCandidates,
     selectedCorrectionRecord,
     selectedResubmitCandidate,
@@ -304,29 +316,36 @@ export default function EmployeeSelfServicePage() {
     ...interactionOrchestratorInput
   });
   useEffect(() => {
+    if (supabaseSessionLoading) {
+      return;
+    }
     const autoLoadKey = resolveEmployeeAutoSnapshotLoadKey({
       employeeId,
       isProductionRuntime,
       usesBearerToken
     });
-    if (!autoLoadKey || autoSnapshotLoadKeyRef.current === autoLoadKey) {
+    if (!autoLoadKey) {
+      setSnapshotLoaded(true);
+      return;
+    }
+    if (autoSnapshotLoadKeyRef.current === autoLoadKey) {
       return;
     }
     autoSnapshotLoadKeyRef.current = autoLoadKey;
     void refreshEmployeeSnapshotRef.current?.();
-  }, [employeeId, isProductionRuntime, usesBearerToken]);
+  }, [employeeId, isProductionRuntime, supabaseSessionLoading, usesBearerToken]);
 
   useEffect(() => {
-    if (!focusSectionId || appliedFocusSectionRef.current === focusSectionId) {
-      if (!focusSectionId) {
-        appliedFocusSectionRef.current = null;
-      }
+    if (!focusSectionId) {
+      appliedFocusSectionRef.current = null;
       return;
     }
-    const timeoutId = window.setTimeout(() => jumpToSectionAction(focusSectionId), 300);
+    if (!snapshotLoaded || appliedFocusSectionRef.current === focusSectionId) {
+      return;
+    }
+    jumpToSectionAction(focusSectionId, 0, "instant");
     appliedFocusSectionRef.current = focusSectionId;
-    return () => window.clearTimeout(timeoutId);
-  }, [focusSectionId]);
+  }, [focusSectionId, snapshotLoaded]);
   useApplyAttendanceSchedulePrefillEffect({ attendanceSchedulePrefill, attendance, appliedAttendanceSchedulePrefillRef, setCheckInAt, setCheckOutAt, setAttendanceNotes, applyAttendanceRecordToCorrectionForm });
 
   if (supabaseSessionLoading) return null;
@@ -362,7 +381,7 @@ export default function EmployeeSelfServicePage() {
           integratedSubmitChecklistCards={integratedSubmitChecklistCards}
           onPeriodStartChange={setPeriodStart}
           onPeriodEndChange={setPeriodEnd}
-          onRefreshEmployeeSnapshot={() => void mutationActions.refreshEmployeeSnapshot()}
+          onRefreshEmployeeSnapshot={() => void refreshEmployeeSnapshot()}
           onJumpToSection={jumpToSection}
         />
         <EmployeeRequestFeedbackPanels
