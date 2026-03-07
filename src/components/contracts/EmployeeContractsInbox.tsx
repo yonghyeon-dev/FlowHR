@@ -93,6 +93,7 @@ export default function EmployeeContractsInbox() {
     return () => setContractsRuntimeLocale(null);
   }, [locale]);
   useEffect(() => {
+    if (!accessToken) return;
     reload().catch((loadError) => {
       setError(
         loadError instanceof Error
