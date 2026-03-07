@@ -1255,6 +1255,7 @@ export type ListContractTemplateVersionsInput = {
 export interface AttendanceStore {
   create(input: CreateAttendanceRecordInput): Promise<AttendanceRecordEntity>;
   findById(id: string): Promise<AttendanceRecordEntity | null>;
+  findByIdInOrganization(id: string, organizationId: string): Promise<AttendanceRecordEntity | null>;
   update(id: string, input: UpdateAttendanceRecordInput): Promise<AttendanceRecordEntity>;
   delete(id: string): Promise<AttendanceRecordEntity>;
   listApprovedInPeriod(input: {

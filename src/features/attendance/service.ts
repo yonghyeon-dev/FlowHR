@@ -449,6 +449,32 @@ async function requireEditableRecord(
   return existing;
 }
 
+async function requireReadableRecord(
+  context: ServiceContext,
+  recordId: string
+): Promise<AttendanceRecordEntity> {
+  if (!context.actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  const tenantScope = resolveTenantScope(context.actor);
+  const existing = tenantScope
+    ? await context.dataAccess.attendance.findByIdInOrganization(recordId, tenantScope)
+    : await context.dataAccess.attendance.findById(recordId);
+
+  if (!existing) {
+    throw new ServiceError(404, "attendance record not found");
+  }
+
+  await requireOwnOrAny(context, {
+    own: Permissions.attendanceRecordWriteOwn,
+    any: Permissions.attendanceRecordWriteAny,
+    employeeId: existing.employeeId
+  });
+
+  return existing;
+}
+
 function toRecordUpdateInput(input: UpdateAttendanceInput): UpdateAttendanceRecordInput {
   return {
     checkInAt: input.checkInAt,
@@ -850,6 +876,13 @@ export async function listAttendanceRecords(
   }
 
   throw new ServiceError(403, "attendance list requires permission");
+}
+
+export async function readAttendanceRecord(
+  context: ServiceContext,
+  recordId: string
+): Promise<AttendanceRecordEntity> {
+  return requireReadableRecord(context, recordId);
 }
 
 export async function listAttendanceAggregates(

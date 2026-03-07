@@ -1817,6 +1817,18 @@ const attendance: AttendanceStore = {
     return record ? toAttendanceEntity(record) : null;
   },
 
+  async findByIdInOrganization(id: string, organizationId: string) {
+    const record = await prisma.attendanceRecord.findFirst({
+      where: {
+        id,
+        employee: {
+          organizationId
+        }
+      }
+    });
+    return record ? toAttendanceEntity(record) : null;
+  },
+
   async update(id: string, input: UpdateAttendanceRecordInput) {
     const record = await prisma.attendanceRecord.update({
       where: { id },

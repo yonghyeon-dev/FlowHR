@@ -1663,6 +1663,18 @@ export const memoryDataAccess: DataAccess = {
       return found ? cloneAttendance(found) : null;
     },
 
+    async findByIdInOrganization(id, organizationId) {
+      const found = state.attendance.get(id);
+      if (!found) {
+        return null;
+      }
+      const employee = state.employees.get(found.employeeId);
+      if (!employee || employee.organizationId !== organizationId) {
+        return null;
+      }
+      return cloneAttendance(found);
+    },
+
     async update(id, input) {
       const existing = state.attendance.get(id);
       if (!existing) {

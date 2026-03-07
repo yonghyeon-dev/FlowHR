@@ -1,5 +1,5 @@
 owner: attendance-agent
-version: 1.17.0
+version: 1.17.1
 scope:
   in:
     - attendance record create/update
@@ -54,6 +54,9 @@ api:
     - method: POST
       path: /attendance/records
       description: Create attendance record with optional capture metadata payload.
+    - method: GET
+      path: /attendance/records/{recordId}
+      description: Read a single attendance record within the caller's tenant scope.
     - method: PATCH
       path: /attendance/records/{recordId}
       description: Update attendance record before approval (including capture metadata).
@@ -165,6 +168,8 @@ test_plan:
     - list records by period returns expected rows
     - list aggregates by period returns expected totals and state counts
     - create attendance with capture metadata persists channel/device/ip/location
+    - read single attendance record returns scoped record payload
+    - read single attendance record returns 404 for missing or cross-tenant record
     - update pending attendance capture metadata persists new values
     - invalid capture metadata payload returns 400
     - employee manual/QR attendance write is rejected when gps policy flag is enabled
@@ -266,7 +271,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.17.0 adds admin-triggered attendance auto-close endpoint (`/attendance/auto-close`) and records AUTO_CLOSED anomalyType metadata on stale open attendance entries while preserving existing create/list/approve/reject behavior."
+consumer_impact: "Contract v1.17.1 adds single-record attendance read (`GET /attendance/records/{recordId}`) while preserving existing create/list/update/approve/reject and auto-close behavior."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
