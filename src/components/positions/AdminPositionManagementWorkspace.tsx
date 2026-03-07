@@ -61,6 +61,87 @@ function normalizeIntegerField(raw: string): number | null | "invalid" {
 export default function AdminPositionManagementWorkspace() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
+  const text = useMemo(
+    () =>
+      isKoLocale
+        ? {
+            organizationContextRequired:
+              "조직 컨텍스트가 필요합니다. 세션 또는 x-actor-organization-id를 확인해 주세요.",
+            loadPositions: "직급 목록 조회",
+            loadEmployees: "직원 목록 조회",
+            loadWorkspaceFailed: "직급/직원 데이터를 불러오지 못했습니다.",
+            titleRequired: "직급명을 입력해 주세요.",
+            gradeMustBeInteger: "직급은 정수여야 합니다.",
+            updatePosition: "직급 수정",
+            updatePositionFailed: "직급 수정에 실패했습니다.",
+            positionUpdated: "직급이 수정되었습니다.",
+            createPosition: "직급 생성",
+            createPositionFailed: "직급 생성에 실패했습니다.",
+            positionCreated: "직급이 생성되었습니다.",
+            deletePosition: "직급 삭제",
+            deletePositionFailed: "직급 삭제에 실패했습니다.",
+            positionDeleted: "직급이 삭제되었습니다.",
+            deletePositionConfirm: (title: string) => `"${title}" 직급을 삭제하시겠습니까?`,
+            pageTitle: "직급 관리",
+            pageSubtitle: "직급을 생성, 조회, 수정, 삭제합니다.",
+            refresh: "새로고침",
+            addPosition: "직급 추가",
+            title: "직급명",
+            grade: "등급",
+            description: "설명",
+            employeeCount: "직원 수",
+            actions: "작업",
+            noPositionsFound: "등록된 직급이 없습니다.",
+            edit: "수정",
+            delete: "삭제",
+            editPosition: "직급 수정",
+            titlePlaceholder: "예: 시니어 소프트웨어 엔지니어",
+            gradePlaceholder: "예: 4",
+            descriptionPlaceholder: "예: 플랫폼 이니셔티브를 주도합니다.",
+            cancel: "취소",
+            save: "저장",
+            create: "생성"
+          }
+        : {
+            organizationContextRequired:
+              "Organization context is required. Check session or x-actor-organization-id.",
+            loadPositions: "Load positions",
+            loadEmployees: "Load employees",
+            loadWorkspaceFailed: "Failed to load positions/employees.",
+            titleRequired: "Title is required.",
+            gradeMustBeInteger: "Grade must be an integer.",
+            updatePosition: "Update position",
+            updatePositionFailed: "Failed to update position.",
+            positionUpdated: "Position updated.",
+            createPosition: "Create position",
+            createPositionFailed: "Failed to create position.",
+            positionCreated: "Position created.",
+            deletePosition: "Delete position",
+            deletePositionFailed: "Failed to delete position.",
+            positionDeleted: "Position deleted.",
+            deletePositionConfirm: (title: string) => `Delete "${title}" position?`,
+            pageTitle: "Position Management",
+            pageSubtitle: "Create, list, update, and delete job titles.",
+            refresh: "Refresh",
+            addPosition: "Add Position",
+            title: "Title",
+            grade: "Grade",
+            description: "Description",
+            employeeCount: "Employee Count",
+            actions: "Actions",
+            noPositionsFound: "No positions found.",
+            edit: "Edit",
+            delete: "Delete",
+            editPosition: "Edit Position",
+            titlePlaceholder: "e.g. Senior Software Engineer",
+            gradePlaceholder: "e.g. 4",
+            descriptionPlaceholder: "e.g. Leads platform initiatives.",
+            cancel: "Cancel",
+            save: "Save",
+            create: "Create"
+          },
+    [isKoLocale]
+  );
   const { snapshot: supabaseSession } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const actorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
@@ -124,41 +205,25 @@ export default function AdminPositionManagementWorkspace() {
 
   const loadWorkspace = useCallback(async () => {
     if (!organizationId && !usesBearerToken) {
-      setStatusMessage(
-        isKoLocale
-          ? "Organization context is required. Check session or x-actor-organization-id."
-          : "Organization context is required. Check session or x-actor-organization-id."
-      );
+      setStatusMessage(text.organizationContextRequired);
       return;
     }
 
     const query = buildQuery({ organizationId });
     const [positionResult, employeeResult] = await Promise.all([
-      callApi(
-        isKoLocale ? "Load positions" : "Load positions",
-        "GET",
-        `/api/people/positions${query}`
-      ),
-      callApi(
-        isKoLocale ? "Load employees" : "Load employees",
-        "GET",
-        `/api/people/employees${query}`
-      )
+      callApi(text.loadPositions, "GET", `/api/people/positions${query}`),
+      callApi(text.loadEmployees, "GET", `/api/people/employees${query}`)
     ]);
 
     if (!positionResult.response.ok || !employeeResult.response.ok) {
-      setStatusMessage(
-        isKoLocale
-          ? "Failed to load positions/employees."
-          : "Failed to load positions/employees."
-      );
+      setStatusMessage(text.loadWorkspaceFailed);
       return;
     }
 
     setPositions(Array.isArray(positionResult.parsed.positions) ? positionResult.parsed.positions : []);
     setEmployees(Array.isArray(employeeResult.parsed.employees) ? employeeResult.parsed.employees : []);
     setStatusMessage("");
-  }, [callApi, isKoLocale, organizationId, usesBearerToken]);
+  }, [callApi, organizationId, text, usesBearerToken]);
 
   useEffect(() => {
     if (autoLoadAttempted || (!organizationId && !usesBearerToken)) {
@@ -196,13 +261,13 @@ export default function AdminPositionManagementWorkspace() {
   async function submitPosition() {
     const normalizedTitle = formTitle.trim();
     if (!normalizedTitle) {
-      setStatusMessage(isKoLocale ? "Title is required." : "Title is required.");
+      setStatusMessage(text.titleRequired);
       return;
     }
 
     const normalizedGrade = normalizeIntegerField(formGrade);
     if (normalizedGrade === "invalid") {
-      setStatusMessage(isKoLocale ? "Grade must be an integer." : "Grade must be an integer.");
+      setStatusMessage(text.gradeMustBeInteger);
       return;
     }
 
@@ -212,7 +277,7 @@ export default function AdminPositionManagementWorkspace() {
 
     if (editingPositionId) {
       const updateResult = await callApi(
-        isKoLocale ? "Update position" : "Update position",
+        text.updatePosition,
         "PATCH",
         `/api/people/positions/${encodeURIComponent(editingPositionId)}`,
         {
@@ -223,14 +288,11 @@ export default function AdminPositionManagementWorkspace() {
       );
 
       if (!updateResult.response.ok) {
-        setStatusMessage(
-          updateResult.parsed.error ??
-            (isKoLocale ? "Failed to update position." : "Failed to update position.")
-        );
+        setStatusMessage(updateResult.parsed.error ?? text.updatePositionFailed);
         return;
       }
 
-      setStatusMessage(isKoLocale ? "Position updated." : "Position updated.");
+      setStatusMessage(text.positionUpdated);
       closeModal();
       await loadWorkspace();
       return;
@@ -247,49 +309,41 @@ export default function AdminPositionManagementWorkspace() {
     }
 
     const createResult = await callApi(
-      isKoLocale ? "Create position" : "Create position",
+      text.createPosition,
       "POST",
       "/api/people/positions",
       createPayload
     );
 
     if (!createResult.response.ok) {
-      setStatusMessage(
-        createResult.parsed.error ??
-          (isKoLocale ? "Failed to create position." : "Failed to create position.")
-      );
+      setStatusMessage(createResult.parsed.error ?? text.createPositionFailed);
       return;
     }
 
-    setStatusMessage(isKoLocale ? "Position created." : "Position created.");
+    setStatusMessage(text.positionCreated);
     closeModal();
     await loadWorkspace();
   }
 
   async function deletePosition(position: PositionItem) {
     const title = position.title || position.name;
-    const shouldDelete = window.confirm(
-      isKoLocale ? `Delete "${title}" position?` : `Delete "${title}" position?`
-    );
+    const shouldDelete = window.confirm(text.deletePositionConfirm(title));
     if (!shouldDelete) {
       return;
     }
 
     const deleteResult = await callApi(
-      isKoLocale ? "Delete position" : "Delete position",
+      text.deletePosition,
       "DELETE",
       `/api/people/positions/${encodeURIComponent(position.id)}`
     );
 
     if (!deleteResult.response.ok) {
-      setStatusMessage(
-        deleteResult.parsed.error ??
-          (isKoLocale ? "Failed to delete position." : "Failed to delete position.")
-      );
+      setStatusMessage(deleteResult.parsed.error ?? text.deletePositionFailed);
       return;
     }
 
-    setStatusMessage(isKoLocale ? "Position deleted." : "Position deleted.");
+    setStatusMessage(text.positionDeleted);
     await loadWorkspace();
   }
 
@@ -297,19 +351,15 @@ export default function AdminPositionManagementWorkspace() {
     <section id="positions" className="saas-content">
       <div className="page-header">
         <div>
-          <h1 className="page-title">{isKoLocale ? "Position Management" : "Position Management"}</h1>
-          <p className="page-subtitle">
-            {isKoLocale
-              ? "Create, list, update, and delete job titles."
-              : "Create, list, update, and delete job titles."}
-          </p>
+          <h1 className="page-title">{text.pageTitle}</h1>
+          <p className="page-subtitle">{text.pageSubtitle}</p>
         </div>
         <div className="page-actions">
           <button className="btn btn-secondary" type="button" onClick={() => void loadWorkspace()}>
-            {isKoLocale ? "Refresh" : "Refresh"}
+            {text.refresh}
           </button>
           <button className="btn btn-primary" type="button" onClick={openCreateModal}>
-            {isKoLocale ? "Add Position" : "Add Position"}
+            {text.addPosition}
           </button>
         </div>
       </div>
@@ -319,18 +369,18 @@ export default function AdminPositionManagementWorkspace() {
           <table className="compare-table">
             <thead>
               <tr>
-                <th>{isKoLocale ? "Title" : "Title"}</th>
-                <th>{isKoLocale ? "Grade" : "Grade"}</th>
-                <th>{isKoLocale ? "Description" : "Description"}</th>
-                <th>{isKoLocale ? "Employee Count" : "Employee Count"}</th>
-                <th>{isKoLocale ? "Actions" : "Actions"}</th>
+                <th>{text.title}</th>
+                <th>{text.grade}</th>
+                <th>{text.description}</th>
+                <th>{text.employeeCount}</th>
+                <th>{text.actions}</th>
               </tr>
             </thead>
             <tbody>
               {positions.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="muted">
-                    {isKoLocale ? "No positions found." : "No positions found."}
+                    {text.noPositionsFound}
                   </td>
                 </tr>
               ) : (
@@ -343,14 +393,14 @@ export default function AdminPositionManagementWorkspace() {
                     <td>
                       <div className="row-actions">
                         <button className="btn btn-secondary btn-small" type="button" onClick={() => openEditModal(position)}>
-                          {isKoLocale ? "Edit" : "Edit"}
+                          {text.edit}
                         </button>
                         <button
                           className="btn btn-danger btn-small"
                           type="button"
                           onClick={() => void deletePosition(position)}
                         >
-                          {isKoLocale ? "Delete" : "Delete"}
+                          {text.delete}
                         </button>
                       </div>
                     </td>
@@ -367,37 +417,37 @@ export default function AdminPositionManagementWorkspace() {
       {isFormOpen ? (
         <div className="approval-reject-modal-backdrop" role="dialog" aria-modal="true">
           <div className="approval-reject-modal">
-            <h3>{editingPositionId ? "Edit Position" : "Add Position"}</h3>
+            <h3>{editingPositionId ? text.editPosition : text.addPosition}</h3>
             <label>
-              {isKoLocale ? "Title" : "Title"}
+              {text.title}
               <input
                 value={formTitle}
                 onChange={(event) => setFormTitle(event.target.value)}
-                placeholder="e.g. Senior Software Engineer"
+                placeholder={text.titlePlaceholder}
               />
             </label>
             <label>
-              {isKoLocale ? "Grade" : "Grade"}
+              {text.grade}
               <input
                 value={formGrade}
                 onChange={(event) => setFormGrade(event.target.value)}
-                placeholder="e.g. 4"
+                placeholder={text.gradePlaceholder}
               />
             </label>
             <label>
-              {isKoLocale ? "Description" : "Description"}
+              {text.description}
               <textarea
                 value={formDescription}
                 onChange={(event) => setFormDescription(event.target.value)}
-                placeholder="e.g. Leads platform initiatives."
+                placeholder={text.descriptionPlaceholder}
               />
             </label>
             <div className="row-actions">
               <button className="btn btn-secondary" type="button" onClick={closeModal}>
-                {isKoLocale ? "Cancel" : "Cancel"}
+                {text.cancel}
               </button>
               <button className="btn btn-primary" type="button" onClick={() => void submitPosition()}>
-                {editingPositionId ? "Save" : "Create"}
+                {editingPositionId ? text.save : text.create}
               </button>
             </div>
           </div>
