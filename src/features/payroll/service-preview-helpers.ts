@@ -25,6 +25,9 @@ import {
 } from "@/features/payroll/service-context-helpers";
 import { calculatePayrollComputation } from "@/features/payroll/service-computation-helpers";
 
+const pendingAttendanceWarningMessage = (count: number) =>
+  `미승인 출퇴근 기록 ${count}건은 급여 계산에서 제외되었습니다.`;
+
 export async function previewPayrollFromHelper(
   context: ServiceContext,
   input: PreviewPayrollInput
@@ -105,6 +108,15 @@ export async function previewPayrollWithDeductionsFromHelper(
     : null;
 
   const computed = await calculatePayrollComputation(context.dataAccess, input, tenantScope);
+  const pendingRecordCount = (
+    await context.dataAccess.attendance.listInPeriod({
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      organizationId: tenantScope ?? undefined,
+      employeeId: input.employeeId,
+      state: "PENDING"
+    })
+  ).length;
   const deductionMode = input.deductionMode;
   const organizationId = employee?.organizationId ?? tenantScope ?? null;
   let withholdingTaxKrw = 0;
@@ -289,6 +301,9 @@ export async function previewPayrollWithDeductionsFromHelper(
     }
   });
 
+  const warnings =
+    pendingRecordCount > 0 ? [pendingAttendanceWarningMessage(pendingRecordCount)] : [];
+
   return {
     run,
     summary: {
@@ -296,6 +311,7 @@ export async function previewPayrollWithDeductionsFromHelper(
       profileId,
       profileVersion,
       sourceRecordCount: computed.recordsCount,
+      pendingRecordCount,
       totals: computed.totals,
       grossPayKrw: computed.grossPayKrw,
       withholdingTaxKrw,
@@ -305,6 +321,7 @@ export async function previewPayrollWithDeductionsFromHelper(
       totalDeductionsKrw,
       netPayKrw,
       deductionBreakdown
-    }
+    },
+    warnings
   };
 }
