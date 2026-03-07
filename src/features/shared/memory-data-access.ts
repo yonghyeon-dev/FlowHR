@@ -945,7 +945,7 @@ export const memoryDataAccess: DataAccess = {
     async create(input: CreateOrganizationInput) {
       const now = new Date();
       const entity: OrganizationEntity = {
-        id: nextId("ORG"),
+        id: input.id ?? nextId("ORG"),
         name: input.name,
         businessRegistrationNumber: null,
         fiscalYearStart: "01-01",
