@@ -260,6 +260,12 @@ export default function AdminDashboardPage() {
     void refreshSummary();
   }, [refreshSummary]);
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#approvals") {
+      window.location.replace("/admin/approval-executions");
+    }
+  }, []);
+
   const workspaceHubs = buildAdminWorkspaceHubs(isKoLocale);
   const dashboardQueueContextLinks = {
     approvalQueue: { href: "/admin/approval-executions?source=admin-dashboard" },
