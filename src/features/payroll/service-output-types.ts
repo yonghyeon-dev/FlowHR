@@ -40,6 +40,7 @@ export type PreviewPayrollWithDeductionsResult = {
     profileId: string | null;
     profileVersion: number | null;
     sourceRecordCount: number;
+    pendingRecordCount: number;
     totals: PayableMinutes;
     grossPayKrw: number;
     withholdingTaxKrw: number;
@@ -55,6 +56,7 @@ export type PreviewPayrollWithDeductionsResult = {
     netPayKrw: number;
     deductionBreakdown: Record<string, unknown>;
   };
+  warnings: string[];
 };
 
 export type PreviewPayrollInsuranceSettlementResult = {
