@@ -129,7 +129,7 @@ export function EmployeeJourneyShortcutPanel({ onJumpToSection }: EmployeeJourne
         <Link className="btn btn-secondary btn-small" href="/employee/payslips">
           {copy.payslipCta}
         </Link>
-        <Link className="btn btn-secondary btn-small" href="/admin#approvals">
+        <Link className="btn btn-secondary btn-small" href="/admin/approval-executions">
           {copy.adminApprovalCta}
         </Link>
       </div>

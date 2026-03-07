@@ -235,7 +235,7 @@ export function ApprovalQueueSearchSortPanel({
                 <button type="button" className="btn btn-secondary btn-small" onClick={() => onFocusQueue(row.queue)}>
                   {copy.focusQueue}
                 </button>
-                <Link className="btn btn-secondary btn-small" href="/admin#approvals">
+                <Link className="btn btn-secondary btn-small" href="/admin/approval-executions">
                   {copy.openQueue}
                 </Link>
               </div>
