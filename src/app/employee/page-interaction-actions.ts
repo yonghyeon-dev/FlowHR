@@ -10,8 +10,20 @@ import type {
   ResubmitCandidate
 } from "@/app/employee/page-types";
 
-export function jumpToSectionAction(sectionId: string) {
-  if (typeof document === "undefined") {
+const SECTION_JUMP_RETRY_DELAY_MS = 300;
+const SECTION_JUMP_MAX_RETRIES = 3;
+
+function isElementTopInViewport(target: HTMLElement) {
+  if (typeof window === "undefined") {
+    return true;
+  }
+  const rect = target.getBoundingClientRect();
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+  return rect.top >= 0 && rect.top <= viewportHeight && rect.bottom >= 0;
+}
+
+export function jumpToSectionAction(sectionId: string, retryCount = 0) {
+  if (typeof document === "undefined" || typeof window === "undefined") {
     return;
   }
   const target = document.getElementById(sectionId);
@@ -19,8 +31,11 @@ export function jumpToSectionAction(sectionId: string) {
     return;
   }
   target.scrollIntoView({ behavior: "smooth", block: "start" });
-  if (typeof window !== "undefined") {
-    window.history.replaceState(null, "", `#${sectionId}`);
+  window.history.replaceState(null, "", `#${sectionId}`);
+  if (!isElementTopInViewport(target) && retryCount < SECTION_JUMP_MAX_RETRIES) {
+    window.setTimeout(() => {
+      jumpToSectionAction(sectionId, retryCount + 1);
+    }, SECTION_JUMP_RETRY_DELAY_MS);
   }
 }
 
