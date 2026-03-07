@@ -48,7 +48,10 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
     { href: "/employee/year-end-input", label: t("employee.nav.yearEndInput") },
     { href: "/employee/payslips#payslip-search-sort", label: t("employee.nav.payslipSearchSort") },
     { href: "/employee/payslips#status-feedback", label: t("employee.nav.statusFeedback") },
-    { href: "/employee/payslips#compare-view", label: t("employee.nav.compareView") }
+    { href: "/employee/payslips#compare-view", label: t("employee.nav.compareView") },
+    { href: "/employee/profile", label: t("employee.nav.profile") },
+    { href: "/employee/people", label: t("employee.nav.people") },
+    { href: "/employee/settings", label: t("employee.nav.settings") }
   ];
 
   const footerLinks: SaasMobileMenuLink[] = showDevTools
@@ -98,6 +101,9 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
             <Link href="/employee/payslips#payslip-search-sort">{t("employee.nav.payslipSearchSort")}</Link>
             <Link href="/employee/payslips#status-feedback">{t("employee.nav.statusFeedback")}</Link>
             <Link href="/employee/payslips#compare-view">{t("employee.nav.compareView")}</Link>
+            <Link href="/employee/profile">{t("employee.nav.profile")}</Link>
+            <Link href="/employee/people">{t("employee.nav.people")}</Link>
+            <Link href="/employee/settings">{t("employee.nav.settings")}</Link>
           </nav>
 
           <div className="saas-sidebar-footer">

@@ -66,6 +66,9 @@ const messages = {
     "admin.nav.employeePortal": "직원 포털",
     "admin.nav.devOpsConsole": "(dev) ops 콘솔",
     "admin.nav.devLeavePromotion": "(dev) 연차촉진 공지",
+    "admin.nav.settings": "조직 설정",
+    "admin.nav.auditLogs": "감사로그",
+    "admin.nav.reports": "리포트",
 
     "employee.badge": "Employee",
     "employee.nav.aria": "직원 네비게이션",
@@ -95,6 +98,9 @@ const messages = {
     "employee.nav.payslipSearchSort": "명세서 검색/정렬",
     "employee.nav.statusFeedback": "명세서 상태 피드백",
     "employee.nav.compareView": "명세서 비교",
+    "employee.nav.profile": "내 프로필",
+    "employee.nav.people": "동료 디렉토리",
+    "employee.nav.settings": "설정",
     "employee.nav.admin": "(개발) 관리자",
 
     "login.title": "로그인",
@@ -246,6 +252,9 @@ const messages = {
     "admin.nav.employeePortal": "Employee Portal",
     "admin.nav.devOpsConsole": "(dev) ops console",
     "admin.nav.devLeavePromotion": "(dev) leave promotion notice",
+    "admin.nav.settings": "Settings",
+    "admin.nav.auditLogs": "Audit Logs",
+    "admin.nav.reports": "Reports",
 
     "employee.badge": "Employee",
     "employee.nav.aria": "Employee navigation",
@@ -275,6 +284,9 @@ const messages = {
     "employee.nav.payslipSearchSort": "Payslip Search/Sort",
     "employee.nav.statusFeedback": "Payslip Status Feedback",
     "employee.nav.compareView": "Payslip Compare",
+    "employee.nav.profile": "My Profile",
+    "employee.nav.people": "People Directory",
+    "employee.nav.settings": "Settings",
     "employee.nav.admin": "(dev) Admin",
 
     "login.title": "Log In",

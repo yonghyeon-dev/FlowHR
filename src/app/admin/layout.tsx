@@ -47,7 +47,10 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin/payroll-year-end", label: t("admin.nav.yearEnd") },
     { href: "/admin/payroll-year-end-filing", label: t("admin.nav.yearEndFiling") },
     { href: "/admin/contracts", label: t("admin.nav.contracts") },
-    { href: "/admin/approval-policy", label: t("admin.nav.approvalPolicy") }
+    { href: "/admin/approval-policy", label: t("admin.nav.approvalPolicy") },
+    { href: "/admin/settings", label: t("admin.nav.settings") },
+    { href: "/admin/audit-logs", label: t("admin.nav.auditLogs") },
+    { href: "/admin/reports", label: t("admin.nav.reports") }
   ];
 
   const mobileFooterLinks: SaasMobileMenuLink[] = [{ href: "/employee", label: t("admin.nav.employeePortal") }];
