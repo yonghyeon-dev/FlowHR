@@ -63,6 +63,7 @@ export function useAdminContractsWorkspaceActions({
   }, [accessToken, copy.loadError]);
 
   useEffect(() => {
+    if (!accessToken) return;
     reload().catch((loadError) => {
       setError(
         loadError instanceof Error
