@@ -21,6 +21,9 @@ type SupabaseSessionState = {
   loading: boolean;
 };
 
+const ensuredOrganizationKeys = new Set<string>();
+const organizationEnsureRequests = new Map<string, Promise<void>>();
+
 function readAppMetadataString(
   app: Record<string, unknown>,
   ...keys: string[]
@@ -64,6 +67,67 @@ function toSnapshot(session: Session | null): SupabaseSessionSnapshot | null {
   };
 }
 
+function toOrganizationEnsureKey(snapshot: SupabaseSessionSnapshot | null): string | null {
+  if (!snapshot?.organizationId) {
+    return null;
+  }
+
+  return `${snapshot.userId}:${snapshot.organizationId}`;
+}
+
+async function readEnsureOrganizationError(response: Response) {
+  try {
+    const body = (await response.json()) as { error?: unknown; message?: unknown };
+    if (typeof body.error === "string" && body.error.trim().length > 0) {
+      return body.error.trim();
+    }
+    if (typeof body.message === "string" && body.message.trim().length > 0) {
+      return body.message.trim();
+    }
+  } catch {
+    // Ignore non-JSON responses and fall back to the status text below.
+  }
+
+  return `organization ensure failed (${response.status})`;
+}
+
+async function ensureOrganizationForSession(session: Session | null) {
+  const snapshot = toSnapshot(session);
+  const ensureKey = toOrganizationEnsureKey(snapshot);
+  if (!snapshot?.accessToken || !ensureKey) {
+    return;
+  }
+
+  if (ensuredOrganizationKeys.has(ensureKey)) {
+    return;
+  }
+
+  const pending = organizationEnsureRequests.get(ensureKey);
+  if (pending) {
+    return pending;
+  }
+
+  const request = (async () => {
+    const response = await fetch("/api/auth/ensure-organization", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${snapshot.accessToken}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(await readEnsureOrganizationError(response));
+    }
+
+    ensuredOrganizationKeys.add(ensureKey);
+  })().finally(() => {
+    organizationEnsureRequests.delete(ensureKey);
+  });
+
+  organizationEnsureRequests.set(ensureKey, request);
+  return request;
+}
+
 export function useSupabaseSession(): SupabaseSessionState {
   const [snapshot, setSnapshot] = useState<SupabaseSessionSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,13 +138,44 @@ export function useSupabaseSession(): SupabaseSessionState {
   useEffect(() => {
     let active = true;
     let unsubscribe: (() => void) | null = null;
+    let hydrateSequence = 0;
+
+    async function applySession(session: Session | null, nextError: string | null, forceLoading: boolean) {
+      const sequence = ++hydrateSequence;
+      const nextSnapshot = toSnapshot(session);
+      const ensureKey = toOrganizationEnsureKey(nextSnapshot);
+      const shouldBlock = forceLoading || (ensureKey !== null && !ensuredOrganizationKeys.has(ensureKey));
+
+      syncAccessTokenCookie(session);
+      if (shouldBlock) {
+        setLoading(true);
+      }
+
+      try {
+        await ensureOrganizationForSession(session);
+        if (!active || sequence !== hydrateSequence) {
+          return;
+        }
+        setError(nextError);
+      } catch (error) {
+        if (!active || sequence !== hydrateSequence) {
+          return;
+        }
+        setError(error instanceof Error ? error.message : String(error));
+      } finally {
+        if (!active || sequence !== hydrateSequence) {
+          return;
+        }
+        setSnapshot(nextSnapshot);
+        setLoading(false);
+      }
+    }
 
     async function bind() {
       try {
         const supabase = getSupabaseClient();
         const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-          syncAccessTokenCookie(session);
-          setSnapshot(toSnapshot(session));
+          void applySession(session, null, false);
         });
         unsubscribe = () => listener.subscription.unsubscribe();
 
@@ -88,13 +183,7 @@ export function useSupabaseSession(): SupabaseSessionState {
         if (!active) {
           return;
         }
-        if (error) {
-          setError(error.message);
-        } else {
-          setError(null);
-        }
-        syncAccessTokenCookie(data.session);
-        setSnapshot(toSnapshot(data.session));
+        await applySession(data.session, error?.message ?? null, true);
       } catch (error) {
         if (!active) {
           return;
