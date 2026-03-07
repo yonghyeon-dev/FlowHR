@@ -15,9 +15,11 @@ export type AuditLogListItem = {
   createdAt: Date;
 };
 
+const DEFAULT_AUDIT_LOG_RANGE_MS = 30 * 24 * 60 * 60 * 1000;
+
 const listAuditLogsQuerySchema = z.object({
-  from: z.string().datetime({ offset: true }),
-  to: z.string().datetime({ offset: true }),
+  from: z.string().datetime({ offset: true }).optional(),
+  to: z.string().datetime({ offset: true }).optional(),
   entityType: z.string().trim().min(1).optional(),
   actorId: z.string().trim().min(1).optional(),
   action: z.string().trim().min(1).optional(),
@@ -43,10 +45,16 @@ function toDate(value: string) {
   return new Date(value);
 }
 
-export function parseAuditLogListQuery(url: URL) {
+function buildDefaultAuditLogRange(now: Date) {
+  const to = new Date(now.getTime());
+  const from = new Date(to.getTime() - DEFAULT_AUDIT_LOG_RANGE_MS);
+  return { from, to };
+}
+
+export function parseAuditLogListQuery(url: URL, now = new Date()) {
   const parsed = listAuditLogsQuerySchema.safeParse({
-    from: normalizeOffsetDateTime(url.searchParams.get("from")),
-    to: normalizeOffsetDateTime(url.searchParams.get("to")),
+    from: normalizeOffsetDateTime(url.searchParams.get("from")) ?? undefined,
+    to: normalizeOffsetDateTime(url.searchParams.get("to")) ?? undefined,
     entityType: url.searchParams.get("entityType") ?? undefined,
     actorId: url.searchParams.get("actorId") ?? undefined,
     action: url.searchParams.get("action") ?? undefined,
@@ -61,8 +69,9 @@ export function parseAuditLogListQuery(url: URL) {
     };
   }
 
-  const from = toDate(parsed.data.from);
-  const to = toDate(parsed.data.to);
+  const defaultRange = buildDefaultAuditLogRange(now);
+  const from = parsed.data.from ? toDate(parsed.data.from) : defaultRange.from;
+  const to = parsed.data.to ? toDate(parsed.data.to) : defaultRange.to;
   if (from.getTime() > to.getTime()) {
     return {
       ok: false as const,
