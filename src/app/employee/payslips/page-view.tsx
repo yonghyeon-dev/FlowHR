@@ -161,33 +161,35 @@ export function EmployeePayslipsPageView({
           />
         </article>
 
-        <article id="compare-view" className="panel panel-payslip-compare">
-          <div className="payslip-compare-head">
-            <h2>{pageCopy.compare.title}</h2>
-            <div className="actions">
-              <button
-                type="button"
-                className="btn btn-secondary btn-small"
-                onClick={() => void copyCompareSnapshot()}
-                disabled={!selectedRun || !compareRun}
-              >
-                {pageCopy.compare.copySnapshot}
-              </button>
+        <article className="panel panel-payslip-compare">
+          <div id="compare-view">
+            <div className="payslip-compare-head">
+              <h2>{pageCopy.compare.title}</h2>
+              <div className="actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => void copyCompareSnapshot()}
+                  disabled={!selectedRun || !compareRun}
+                >
+                  {pageCopy.compare.copySnapshot}
+                </button>
+              </div>
             </div>
+            <PayslipComparePanelContent
+              pageCopy={pageCopy}
+              selectedRun={selectedRun}
+              compareCandidates={compareCandidates}
+              compareRunId={compareRunId}
+              setCompareRunId={setCompareRunId}
+              compareWindowLabel={compareWindowLabel}
+              compareMetrics={compareMetrics}
+              compareInsightAriaLabel={compareInsightAriaLabel}
+              compareInsightTitle={compareInsightTitle}
+              compareInsightCards={compareInsightCards}
+              compareInsightClassName={compareInsightClassName}
+            />
           </div>
-          <PayslipComparePanelContent
-            pageCopy={pageCopy}
-            selectedRun={selectedRun}
-            compareCandidates={compareCandidates}
-            compareRunId={compareRunId}
-            setCompareRunId={setCompareRunId}
-            compareWindowLabel={compareWindowLabel}
-            compareMetrics={compareMetrics}
-            compareInsightAriaLabel={compareInsightAriaLabel}
-            compareInsightTitle={compareInsightTitle}
-            compareInsightCards={compareInsightCards}
-            compareInsightClassName={compareInsightClassName}
-          />
         </article>
 
         <PayslipDetailPanel

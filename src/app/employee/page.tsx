@@ -323,7 +323,7 @@ export default function EmployeeSelfServicePage() {
       }
       return;
     }
-    const timeoutId = window.setTimeout(() => jumpToSectionAction(focusSectionId), 0);
+    const timeoutId = window.setTimeout(() => jumpToSectionAction(focusSectionId), 300);
     appliedFocusSectionRef.current = focusSectionId;
     return () => window.clearTimeout(timeoutId);
   }, [focusSectionId]);
