@@ -30,9 +30,9 @@ type CreateNoticeInput = {
 type UpdateNoticeInput = {
   organizationId: string;
   noticeId: string;
-  title: string;
-  body: string;
-  audience: NoticeAudience;
+  title?: string;
+  body?: string;
+  audience?: NoticeAudience;
   targetDepartmentIds?: string[];
   publishAt?: string | null;
   actorId?: string;
@@ -327,18 +327,23 @@ export async function updateNotice(
     return { notice: null, reason: "published_locked" };
   }
 
-  const publishAtIso = input.publishAt ? toIso(input.publishAt) : null;
-  const nextStatus: NoticeStatus = publishAtIso ? "SCHEDULED" : "DRAFT";
+  const nextPublishAt =
+    input.publishAt !== undefined
+      ? input.publishAt
+        ? new Date(toIso(input.publishAt))
+        : null
+      : existing.publishAt;
+  const nextStatus: NoticeStatus = nextPublishAt ? "SCHEDULED" : "DRAFT";
   const updated = await context.dataAccess.notices.update(existing.id, {
-    title: input.title.trim(),
-    body: input.body.trim(),
+    title: input.title !== undefined ? input.title.trim() : existing.title,
+    body: input.body !== undefined ? input.body.trim() : existing.body,
     audience: input.audience,
     targetDepartmentIds:
       input.targetDepartmentIds !== undefined
         ? normalizeTargetDepartmentIds(input.targetDepartmentIds)
         : existing.targetDepartmentIds,
     status: nextStatus,
-    publishAt: publishAtIso ? new Date(publishAtIso) : null,
+    publishAt: nextPublishAt,
     publishedAt: null,
     updatedAt: new Date()
   });

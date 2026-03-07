@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.3.17
+version: 0.3.18
 scope:
   in:
     - organization master data (create/read/list)
@@ -40,6 +40,8 @@ entities:
     description: Organization-scoped benefits request read model linked to benefit catalog items.
   - name: InAppNotification
     description: Organization-scoped in-app notification center read model for employee/admin self-service alerts.
+  - name: Notice
+    description: Organization-scoped announcement read model supporting draft/scheduled partial updates before publish lock.
   - name: OnboardingTask
     description: Employee onboarding checklist task projection copied from onboarding task templates.
   - name: OnboardingTaskTemplate
@@ -118,6 +120,9 @@ api:
     - method: GET
       path: /benefits/catalog
       description: List organization-scoped benefits catalog items.
+    - method: PATCH
+      path: /notices/{noticeId}
+      description: Partially update draft/scheduled notices; at least one field is required and omitted fields are preserved.
     - method: POST
       path: /benefits/catalog
       description: Create organization-scoped benefits catalog item.
@@ -238,6 +243,7 @@ test_plan:
     - benefits catalog status endpoint rejects INACTIVE transition while submitted requests remain
     - benefits request list supports `sort=pending_priority` for submitted-first queue ordering
     - recruitment referral list supports `sort=stalled_priority` for stalled active-referral-first queue ordering
+    - notice patch supports partial draft/scheduled updates and rejects empty payloads with 400
   regression:
     - existing attendance/leave/payroll flows remain unchanged
   authorization:
@@ -274,7 +280,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "People contract v0.3.17 additively introduces onboarding default task template persistence and ACTIVE-state auto-assignment while preserving backward compatibility for existing people APIs."
+consumer_impact: "People contract v0.3.18 additively documents notice partial-update PATCH semantics while preserving backward compatibility for existing people APIs."
 references:
   - work-items/WI-0034-employee-organization-master-model.md
   - work-items/WI-0102-people-department-position-model.md
@@ -293,6 +299,7 @@ references:
   - work-items/WI-0940-position-management.md
   - work-items/WI-0952-employee-status-transitions.md
   - work-items/WI-0998-onboarding-default-tasks-seed.md
+  - work-items/WI-1030-announcement-partial-update.md
   - docs/data-ownership.md
 approval:
   spec_owner: people-agent

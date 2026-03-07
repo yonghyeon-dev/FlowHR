@@ -28,11 +28,21 @@ export const publishNoticeSchema = z.object({
 
 export const updateNoticeSchema = z.object({
   noticeId: z.string().trim().min(1),
-  title: z.string().trim().min(2).max(120),
-  body: z.string().trim().min(4).max(2000),
-  audience: noticeAudienceSchema,
+  title: z.string().trim().min(2).max(120).optional(),
+  body: z.string().trim().min(4).max(2000).optional(),
+  audience: noticeAudienceSchema.optional(),
   targetDepartmentIds: z.array(z.string().trim().min(1)).max(200).optional(),
   publishAt: z.string().datetime().nullable().optional()
+}).refine((payload) => {
+  return (
+    payload.title !== undefined ||
+    payload.body !== undefined ||
+    payload.audience !== undefined ||
+    payload.targetDepartmentIds !== undefined ||
+    payload.publishAt !== undefined
+  );
+}, {
+  message: "at least one field is required"
 });
 
 export const deleteNoticeSchema = z.object({
