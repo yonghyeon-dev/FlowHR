@@ -30,6 +30,7 @@ type AdminApprovalExecutionsPageViewProps = {
   requiresLoginSession: boolean;
   summary: ApprovalExecutionSummary;
   asOfDate: Date;
+  asOfIso: string;
   runtimeLocale: string;
   stalledHoursMin: string;
   escalationResult: EscalationResultDto | null;
@@ -85,6 +86,7 @@ export function AdminApprovalExecutionsPageView(props: AdminApprovalExecutionsPa
     requiresLoginSession,
     summary,
     asOfDate,
+    asOfIso,
     runtimeLocale,
     stalledHoursMin,
     escalationResult,
@@ -211,7 +213,7 @@ export function AdminApprovalExecutionsPageView(props: AdminApprovalExecutionsPa
         <ApprovalExecutionSummaryPanel
           isKoLocale={isKoLocale}
           summary={summary}
-          asOfIso={asOfDate.toISOString()}
+          asOfIso={asOfIso}
           runtimeLocale={runtimeLocale}
           stalledHoursMin={stalledHoursMin}
         />

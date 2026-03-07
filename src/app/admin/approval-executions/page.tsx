@@ -50,7 +50,7 @@ export default function AdminApprovalExecutionsPage() {
   const [state, setState] = useState<ApprovalExecutionState | "">("PENDING");
   const [sort, setSort] = useState<ApprovalExecutionSort>("priority_desc");
   const [stalledHoursMin, setStalledHoursMin] = useState("24");
-  const [asOfInput, setAsOfInput] = useState(() => toLocalInputValue(new Date()));
+  const [asOfInput, setAsOfInput] = useState("");
   const [targetEntityType, setTargetEntityType] = useState("");
   const [targetEntityId, setTargetEntityId] = useState("");
   const [limit, setLimit] = useState("100");
@@ -95,6 +95,10 @@ export default function AdminApprovalExecutionsPage() {
   }, [searchParams]);
 
   useEffect(() => {
+    setAsOfInput(toLocalInputValue(new Date()));
+  }, []);
+
+  useEffect(() => {
     if (
       source === "admin-dashboard" &&
       searchParams.get("stalledHoursMin") === null &&
@@ -108,6 +112,8 @@ export default function AdminApprovalExecutionsPage() {
     const parsed = new Date(asOfInput);
     return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
   }, [asOfInput]);
+
+  const asOfIso = useMemo(() => (asOfInput.trim() ? toIso(asOfInput) : ""), [asOfInput]);
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -385,6 +391,7 @@ export default function AdminApprovalExecutionsPage() {
       requiresLoginSession={requiresLoginSession}
       summary={summary}
       asOfDate={asOfDate}
+      asOfIso={asOfIso}
       runtimeLocale={runtimeLocale}
       stalledHoursMin={stalledHoursMin}
       escalationResult={escalationResult}
