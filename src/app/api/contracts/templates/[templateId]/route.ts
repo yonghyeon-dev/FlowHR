@@ -1,5 +1,8 @@
 import { updateContractTemplateSchema } from "@/features/contracts/schemas";
-import { updateContractTemplate } from "@/features/contracts/service";
+import {
+  archiveContractTemplate,
+  updateContractTemplate
+} from "@/features/contracts/service";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { isServiceError } from "@/features/shared/service-error";
 import { readActor } from "@/lib/actor";
@@ -37,6 +40,26 @@ export async function PATCH(request: Request, context: RouteContext) {
         body: parsed.data.body,
         status: parsed.data.status
       }
+    );
+    return ok(result);
+  } catch (error) {
+    if (isServiceError(error)) {
+      return fail(error.status, error.message, error.details);
+    }
+    throw error;
+  }
+}
+
+export async function DELETE(request: Request, context: RouteContext) {
+  const { templateId } = await context.params;
+
+  try {
+    const result = await archiveContractTemplate(
+      {
+        actor: await readActor(request),
+        dataAccess: getRuntimeDataAccess()
+      },
+      templateId
     );
     return ok(result);
   } catch (error) {

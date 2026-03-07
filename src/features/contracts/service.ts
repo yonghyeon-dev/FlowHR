@@ -39,6 +39,7 @@ type ContractTemplateRecord = {
   category: ContractTemplateCategory;
   body: string;
   status: ContractTemplateStatus;
+  isArchived: boolean;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -181,7 +182,8 @@ const CONTRACT_APPROVAL_DOMAIN = "PAYROLL";
 
 const CONTRACT_TEMPLATE_ACTIONS = {
   created: "contract.template.created",
-  updated: "contract.template.updated"
+  updated: "contract.template.updated",
+  archived: "contract.template.archived"
 } as const;
 
 const CONTRACT_TEMPLATE_VERSION_UNKNOWN_ACTOR = "unknown";
@@ -356,6 +358,7 @@ function templateFromAudit(entry: AuditLogEntity): ContractTemplateRecord | null
   const category = readString(template.category) as ContractTemplateCategory | null;
   const body = readString(template.body);
   const status = readString(template.status) as ContractTemplateStatus | null;
+  const isArchived = readBoolean(template.isArchived) ?? false;
   const version = readNumber(template.version);
   const createdAt = readString(template.createdAt);
   const updatedAt = readString(template.updatedAt);
@@ -382,6 +385,7 @@ function templateFromAudit(entry: AuditLogEntity): ContractTemplateRecord | null
     category,
     body,
     status,
+    isArchived,
     version,
     createdAt,
     updatedAt,
@@ -586,13 +590,14 @@ function buildContractSignatureEvidenceArtifact(
 async function findTemplateForActor(
   context: ServiceContext,
   templateId: string,
-  requestedOrganizationId?: string
+  requestedOrganizationId?: string,
+  options?: { includeArchived?: boolean }
 ): Promise<ContractTemplateRecord> {
   const actor = requireActor(context);
   const organizationFilter = resolveOptionalOrganizationFilter(actor, requestedOrganizationId);
   const templates = await listTemplateSnapshots(context.dataAccess, organizationFilter);
   const matched = templates.find((template) => template.id === templateId);
-  if (!matched) {
+  if (!matched || (!options?.includeArchived && matched.isArchived)) {
     throw new ServiceError(404, "contract template not found");
   }
   return matched;
@@ -621,7 +626,7 @@ export async function listContractTemplates(
   const organizationFilter = resolveOptionalOrganizationFilter(actor, input.organizationId);
   const templates = await listTemplateSnapshots(context.dataAccess, organizationFilter);
 
-  let rows = templates;
+  let rows = templates.filter((template) => !template.isArchived);
   if (actor.role === "employee") {
     rows = rows.filter((template) => template.status === "ACTIVE");
   }
@@ -657,6 +662,7 @@ export async function createContractTemplate(
     category: input.category,
     body: input.body.trim(),
     status: input.status ?? "DRAFT",
+    isArchived: false,
     version: 1,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -668,6 +674,32 @@ export async function createContractTemplate(
     entityType: CONTRACT_TEMPLATE_ENTITY_TYPE,
     entityId: template.id,
     organizationId,
+    payload: { template }
+  });
+
+  return { template };
+}
+
+export async function archiveContractTemplate(
+  context: ServiceContext,
+  templateId: string
+): Promise<{ template: ContractTemplateRecord }> {
+  const actor = requireContractAdmin(context);
+  const existing = await findTemplateForActor(context, templateId);
+  const archivedAt = nowIso();
+
+  const template: ContractTemplateRecord = {
+    ...existing,
+    isArchived: true,
+    updatedAt: archivedAt,
+    updatedByActorId: actor.id
+  };
+
+  await appendAudit(context, {
+    action: CONTRACT_TEMPLATE_ACTIONS.archived,
+    entityType: CONTRACT_TEMPLATE_ENTITY_TYPE,
+    entityId: template.id,
+    organizationId: template.organizationId,
     payload: { template }
   });
 

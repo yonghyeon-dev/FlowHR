@@ -9,31 +9,31 @@ datasource db {
 }
 
 model Organization {
-  id                         String   @id @default(cuid())
+  id                         String    @id @default(cuid())
   name                       String
   businessRegistrationNumber String?
-  fiscalYearStart            String   @default("01-01")
-  fiscalYearStartMonth       Int      @default(1)
-  workHoursPerDay            Float    @default(8)
-  standardWorkHoursPerDay    Float    @default(8)
-  standardWorkDaysPerWeek    Int      @default(5)
-  overtimeThreshold          Float    @default(8)
-  overtimeThresholdHours     Float    @default(8)
+  fiscalYearStart            String    @default("01-01")
+  fiscalYearStartMonth       Int       @default(1)
+  workHoursPerDay            Float     @default(8)
+  standardWorkHoursPerDay    Float     @default(8)
+  standardWorkDaysPerWeek    Int       @default(5)
+  overtimeThreshold          Float     @default(8)
+  overtimeThresholdHours     Float     @default(8)
   payPeriod                  PayPeriod @default(MONTHLY)
   industry                   String?
   representativeName         String?
   workStartTime              String?
   workEndTime                String?
-  workDays                   Int[]    @default([])
+  workDays                   Int[]     @default([])
   timezone                   String?
-  currency                   String   @default("KRW")
+  currency                   String    @default("KRW")
   insuranceRateNps           Float?
   insuranceRateNhi           Float?
   insuranceRateEi            Float?
   insuranceRateWci           Float?
-  isOnboardingComplete       Boolean  @default(false)
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  isOnboardingComplete       Boolean   @default(false)
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
 
   employees                Employee[]
   departments              Department[]
@@ -58,10 +58,11 @@ model Organization {
   workScheduleTemplates    WorkScheduleTemplate[]
   scheduleAnomalyIncidents ScheduleAnomalyIncident[]
   auditLogs                AuditLog[]
+  contractTemplates        ContractTemplate[]
 }
 
 model Employee {
-  id             String   @id
+  id             String         @id
   organizationId String?
   departmentId   String?
   positionId     String?
@@ -70,8 +71,8 @@ model Employee {
   phone          String?
   address        String?
   status         EmployeeStatus @default(ACTIVE)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   organization         Organization?           @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   department           Department?             @relation(fields: [departmentId], references: [id], onDelete: SetNull)
@@ -724,6 +725,23 @@ model AuditLog {
   @@index([action, createdAt])
   @@index([entityType, entityId])
   @@index([organizationId, createdAt])
+}
+
+model ContractTemplate {
+  id             String   @id
+  organizationId String
+  name           String
+  category       String
+  body           String
+  status         String
+  version        Int      @default(1)
+  isArchived     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, isArchived, updatedAt])
 }
 
 model PersonalDataConsent {
