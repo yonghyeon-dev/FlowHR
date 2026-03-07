@@ -11,7 +11,7 @@ import type {
 } from "@/app/employee/page-types";
 
 const SECTION_JUMP_MAX_RETRIES = 3;
-const SECTION_JUMP_WAIT_TIMEOUT_MS = 500;
+const SECTION_JUMP_WAIT_TIMEOUT_MS = 2000;
 type SectionJumpBehavior = "instant" | "smooth";
 
 function isElementTopInViewport(target: HTMLElement) {
