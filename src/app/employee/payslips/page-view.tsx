@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import {
   formatKrw,
@@ -80,6 +80,8 @@ export function EmployeePayslipsPageView({
   copySelectedRunId,
   deductionExplainSections
 }: EmployeePayslipsPageViewProps) {
+  const hasAppliedPayslipSearchSortHashRef = useRef(false);
+  const selectedRunKey = selectedRun?.id ?? "";
   const selectedRunStateLabel = selectedRun
     ? resolvePayslipRunStateLabel(selectedRun.state, isKoLocale)
     : "-";
@@ -91,11 +93,21 @@ export function EmployeePayslipsPageView({
       return;
     }
     const hash = window.location.hash.replace(/^#/, "").trim();
-    if (!hash) {
+    if (hash !== "payslip-search-sort") {
+      hasAppliedPayslipSearchSortHashRef.current = false;
       return;
     }
-    document.getElementById(hash)?.scrollIntoView({ block: "start" });
-  }, []);
+    if (hasAppliedPayslipSearchSortHashRef.current) {
+      return;
+    }
+    if (runs.length > 0 && !selectedRunKey) {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      document.getElementById("payslip-search-sort")?.scrollIntoView({ behavior: "auto", block: "start" });
+    });
+    hasAppliedPayslipSearchSortHashRef.current = true;
+  }, [runs.length, selectedRunKey]);
 
   return (
     <main className="saas-content">
