@@ -344,7 +344,12 @@ export default function EmployeeSelfServicePage() {
       return;
     }
     appliedFocusSectionRef.current = focusSectionId;
-    jumpToSectionAction(focusSectionId, 0, "instant");
+    const timeoutId = window.setTimeout(() => {
+      jumpToSectionAction(focusSectionId, 0, "instant");
+    }, 0);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [focusSectionId, snapshotLoaded]);
   useApplyAttendanceSchedulePrefillEffect({ attendanceSchedulePrefill, attendance, appliedAttendanceSchedulePrefillRef, setCheckInAt, setCheckOutAt, setAttendanceNotes, applyAttendanceRecordToCorrectionForm });
 

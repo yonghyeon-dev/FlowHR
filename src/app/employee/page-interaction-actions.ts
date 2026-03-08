@@ -22,6 +22,38 @@ function isElementTopInViewport(target: HTMLElement) {
   return rect.top >= -1 && rect.top <= viewportHeight && rect.bottom >= 0;
 }
 
+function waitForPaintThenScroll(sectionId: string, behavior: SectionJumpBehavior, startedAt: number) {
+  if (typeof document === "undefined" || typeof window === "undefined") {
+    return;
+  }
+  const elapsed = window.performance.now() - startedAt;
+  if (elapsed >= SECTION_JUMP_SETTLE_TIMEOUT_MS) {
+    return;
+  }
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      const target = document.getElementById(sectionId);
+      if (!target) {
+        return;
+      }
+      const rect = target.getBoundingClientRect();
+      const absoluteTop = window.scrollY + rect.top;
+      window.scrollTo({ top: absoluteTop, behavior: behavior === "instant" ? "auto" : behavior });
+      window.history.replaceState(null, "", `#${sectionId}`);
+      window.setTimeout(() => {
+        const retryTarget = document.getElementById(sectionId);
+        if (!retryTarget || isElementTopInViewport(retryTarget)) {
+          return;
+        }
+        const retryElapsed = window.performance.now() - startedAt;
+        if (retryElapsed < SECTION_JUMP_SETTLE_TIMEOUT_MS) {
+          waitForPaintThenScroll(sectionId, behavior, startedAt);
+        }
+      }, 200);
+    });
+  });
+}
+
 export function jumpToSectionAction(
   sectionId: string,
   retryCount = 0,
@@ -43,17 +75,7 @@ export function jumpToSectionAction(
     }, 100);
     return;
   }
-  const rect = target.getBoundingClientRect();
-  const absoluteTop = window.scrollY + rect.top;
-  window.scrollTo({ top: absoluteTop, behavior: behavior === "instant" ? "auto" : behavior });
-  window.history.replaceState(null, "", `#${sectionId}`);
-  window.setTimeout(() => {
-    const retryTarget = document.getElementById(sectionId);
-    if (!retryTarget || isElementTopInViewport(retryTarget)) {
-      return;
-    }
-    jumpToSectionAction(sectionId, retryCount + 1, behavior, startedAt);
-  }, 100);
+  waitForPaintThenScroll(sectionId, behavior, startedAt);
 }
 
 export function pushMobileFlowFeedbackAction(
