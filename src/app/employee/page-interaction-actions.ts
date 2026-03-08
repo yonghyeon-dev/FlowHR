@@ -10,7 +10,7 @@ import type {
   ResubmitCandidate
 } from "@/app/employee/page-types";
 
-const SECTION_JUMP_MAX_RETRIES = 3;
+const SECTION_JUMP_MAX_RETRIES = 10;
 const SECTION_JUMP_WAIT_TIMEOUT_MS = 2000;
 type SectionJumpBehavior = "instant" | "smooth";
 
@@ -43,17 +43,29 @@ export function jumpToSectionAction(
     }
     return;
   }
+  const scrollBefore = window.scrollY;
   const rect = target.getBoundingClientRect();
   const absoluteTop = window.scrollY + rect.top;
   window.scrollTo({ top: absoluteTop, behavior: behavior === "instant" ? "auto" : behavior });
   window.history.replaceState(null, "", `#${sectionId}`);
-  window.requestAnimationFrame(() => {
+  window.setTimeout(() => {
     const retryTarget = document.getElementById(sectionId);
-    if (!retryTarget || isElementTopInViewport(retryTarget) || retryCount >= SECTION_JUMP_MAX_RETRIES) {
+    if (!retryTarget) {
       return;
     }
-    jumpToSectionAction(sectionId, retryCount + 1, behavior, window.performance.now());
-  });
+    if (isElementTopInViewport(retryTarget)) {
+      return;
+    }
+    if (retryCount >= SECTION_JUMP_MAX_RETRIES) {
+      return;
+    }
+    if (window.scrollY === scrollBefore && absoluteTop > 1 && shouldKeepWaiting) {
+      const freshRect = retryTarget.getBoundingClientRect();
+      const freshAbsoluteTop = window.scrollY + freshRect.top;
+      window.scrollTo({ top: freshAbsoluteTop, behavior: "auto" });
+    }
+    jumpToSectionAction(sectionId, retryCount + 1, behavior, startedAt);
+  }, 50);
 }
 
 export function pushMobileFlowFeedbackAction(
