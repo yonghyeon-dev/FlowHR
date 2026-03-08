@@ -63,6 +63,7 @@ export default function AdminDashboardPage() {
   const [pendingLeaveQueue, setPendingLeaveQueue] = useState<LeaveRequestDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
   const focusCards = useMemo(() => buildAdminDashboardFocusCards(summary), [summary]);
   const focusPriority = useMemo(() => summarizeAdminDashboardFocusCards(focusCards), [focusCards]);
   const topFocusCard = focusCards[0] ?? null;
@@ -257,23 +258,29 @@ export default function AdminDashboardPage() {
     });
 
   useEffect(() => {
-    void refreshSummary();
-  }, [refreshSummary]);
-
-  useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.location.hash === "#approvals") {
-      window.location.href = "/admin/approval-executions";
-      return;
-    }
-    const handleHashChange = () => {
+    const checkAndRedirect = () => {
       if (window.location.hash === "#approvals") {
-        window.location.href = "/admin/approval-executions";
+        setRedirecting(true);
+        window.location.replace("/admin/approval-executions");
       }
     };
-    window.addEventListener("hashchange", handleHashChange);
-    return () => window.removeEventListener("hashchange", handleHashChange);
+
+    checkAndRedirect();
+    window.addEventListener("hashchange", checkAndRedirect);
+    return () => window.removeEventListener("hashchange", checkAndRedirect);
   }, []);
+
+  useEffect(() => {
+    if (redirecting) {
+      return;
+    }
+    void refreshSummary();
+  }, [redirecting, refreshSummary]);
+
+  if (redirecting) {
+    return null;
+  }
 
   const workspaceHubs = buildAdminWorkspaceHubs(isKoLocale);
   const dashboardQueueContextLinks = {
