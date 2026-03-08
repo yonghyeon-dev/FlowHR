@@ -43,7 +43,13 @@ export async function POST(request: Request) {
         name: parsed.data.name
       }
     );
-    return ok({ organization }, 201);
+    return ok(
+      {
+        organization,
+        organizationId: organization.id
+      },
+      201
+    );
   } catch (error) {
     if (isServiceError(error)) {
       return fail(error.status, error.message, error.details);
