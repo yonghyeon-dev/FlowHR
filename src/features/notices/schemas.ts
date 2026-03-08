@@ -19,7 +19,7 @@ export const createNoticeSchema = z.object({
   body: z.string().trim().min(4).max(2000),
   audience: noticeAudienceSchema,
   targetDepartmentIds: z.array(z.string().trim().min(1)).max(200).optional(),
-  publishAt: z.string().datetime().nullable().optional()
+  publishAt: z.string().datetime({ offset: true }).nullable().optional()
 });
 
 export const publishNoticeSchema = z.object({
@@ -32,7 +32,7 @@ export const updateNoticeSchema = z.object({
   body: z.string().trim().min(4).max(2000).optional(),
   audience: noticeAudienceSchema.optional(),
   targetDepartmentIds: z.array(z.string().trim().min(1)).max(200).optional(),
-  publishAt: z.string().datetime().nullable().optional()
+  publishAt: z.string().datetime({ offset: true }).nullable().optional()
 }).refine((payload) => {
   return (
     payload.title !== undefined ||
