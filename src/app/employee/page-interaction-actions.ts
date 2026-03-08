@@ -10,8 +10,7 @@ import type {
   ResubmitCandidate
 } from "@/app/employee/page-types";
 
-const SECTION_JUMP_MAX_RETRIES = 10;
-const SECTION_JUMP_WAIT_TIMEOUT_MS = 2000;
+const SECTION_JUMP_SETTLE_TIMEOUT_MS = 3000;
 type SectionJumpBehavior = "instant" | "smooth";
 
 function isElementTopInViewport(target: HTMLElement) {
@@ -20,7 +19,7 @@ function isElementTopInViewport(target: HTMLElement) {
   }
   const rect = target.getBoundingClientRect();
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-  return rect.top >= 0 && rect.top <= viewportHeight && rect.bottom >= 0;
+  return rect.top >= -1 && rect.top <= viewportHeight && rect.bottom >= 0;
 }
 
 export function jumpToSectionAction(
@@ -33,39 +32,28 @@ export function jumpToSectionAction(
     return;
   }
   const startedAt = waitStartedAt ?? window.performance.now();
-  const target = document.getElementById(sectionId);
-  const shouldKeepWaiting = window.performance.now() - startedAt < SECTION_JUMP_WAIT_TIMEOUT_MS;
-  if (!target || target.offsetHeight === 0) {
-    if (shouldKeepWaiting) {
-      window.requestAnimationFrame(() => {
-        jumpToSectionAction(sectionId, retryCount, behavior, startedAt);
-      });
-    }
+  const elapsed = window.performance.now() - startedAt;
+  if (elapsed >= SECTION_JUMP_SETTLE_TIMEOUT_MS) {
     return;
   }
-  const scrollBefore = window.scrollY;
+  const target = document.getElementById(sectionId);
+  if (!target || target.offsetHeight === 0) {
+    window.setTimeout(() => {
+      jumpToSectionAction(sectionId, retryCount, behavior, startedAt);
+    }, 100);
+    return;
+  }
   const rect = target.getBoundingClientRect();
   const absoluteTop = window.scrollY + rect.top;
   window.scrollTo({ top: absoluteTop, behavior: behavior === "instant" ? "auto" : behavior });
   window.history.replaceState(null, "", `#${sectionId}`);
   window.setTimeout(() => {
     const retryTarget = document.getElementById(sectionId);
-    if (!retryTarget) {
+    if (!retryTarget || isElementTopInViewport(retryTarget)) {
       return;
-    }
-    if (isElementTopInViewport(retryTarget)) {
-      return;
-    }
-    if (retryCount >= SECTION_JUMP_MAX_RETRIES) {
-      return;
-    }
-    if (window.scrollY === scrollBefore && absoluteTop > 1 && shouldKeepWaiting) {
-      const freshRect = retryTarget.getBoundingClientRect();
-      const freshAbsoluteTop = window.scrollY + freshRect.top;
-      window.scrollTo({ top: freshAbsoluteTop, behavior: "auto" });
     }
     jumpToSectionAction(sectionId, retryCount + 1, behavior, startedAt);
-  }, 50);
+  }, 100);
 }
 
 export function pushMobileFlowFeedbackAction(
