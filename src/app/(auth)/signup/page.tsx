@@ -94,12 +94,40 @@ async function createOrganizationRecord(accessToken: string, name: string): Prom
     throw new Error(toApiErrorMessage(body, "organization create failed"));
   }
 
-  const organization = (body as { organization?: { id?: unknown } } | null)?.organization;
-  const organizationId = typeof organization?.id === "string" ? organization.id.trim() : "";
+  const payload = body as
+    | {
+        organizationId?: unknown;
+        organization?: { id?: unknown };
+      }
+    | null;
+  const organizationId =
+    typeof payload?.organizationId === "string"
+      ? payload.organizationId.trim()
+      : typeof payload?.organization?.id === "string"
+        ? payload.organization.id.trim()
+        : "";
   if (!organizationId) {
     throw new Error("organization create failed");
   }
   return organizationId;
+}
+
+async function syncOrganizationClaim(input: { accessToken: string; organizationId: string }) {
+  const response = await fetch("/api/auth/sync-org-claim", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${input.accessToken}`
+    },
+    body: JSON.stringify({
+      organization_id: input.organizationId
+    })
+  });
+
+  const body = await readResponseBody(response);
+  if (!response.ok) {
+    throw new Error(toApiErrorMessage(body, "organization claim sync failed"));
+  }
 }
 
 async function createEmployeeRecord(input: {
@@ -248,11 +276,27 @@ export default function SignupPage() {
         let organizationId = existingOrganizationId;
         let actorId: string | undefined;
         let role: MetadataRole = existingRole;
+        let currentAccessToken = accessToken;
 
         if (!organizationId) {
           organizationId = await createOrganizationRecord(accessToken, trimmedOrganization);
-          actorId = await createEmployeeRecord({
+          await syncOrganizationClaim({
             accessToken,
+            organizationId
+          });
+
+          const { data: refreshedSessionData, error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            throw refreshError;
+          }
+
+          const refreshedAccessToken = refreshedSessionData.session?.access_token?.trim() ?? "";
+          if (refreshedAccessToken) {
+            currentAccessToken = refreshedAccessToken;
+          }
+
+          actorId = await createEmployeeRecord({
+            accessToken: currentAccessToken,
             organizationId,
             email: trimmedEmail.toLowerCase(),
             employeeId: createEmployeeId()
@@ -261,7 +305,7 @@ export default function SignupPage() {
         }
 
         await setupMetadata({
-          accessToken,
+          accessToken: currentAccessToken,
           role,
           organizationId,
           actorId,
