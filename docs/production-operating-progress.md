@@ -64,6 +64,11 @@ Phase 0: establish a compact execution system that stays referenced while produc
   - admin people profile updates now ask for confirmation before commit
   - admin/employee notification pages now show visible success feedback after read actions
   - employee payslip comparison copy now exports a human-readable summary instead of raw JSON
+- Added `WI-1056` regression guards and attached them to `test:integration` so CI now enforces:
+  - employee dashboard dev-only shortcuts remain gated by `showDevTools`
+  - admin people profile updates keep their confirmation dialog
+  - admin/employee notifications keep visible read-success feedback
+  - employee payslip compare copy stays on a human-readable summary instead of raw JSON
 - Removed a remaining shared-session dev remnant by replacing raw organization ID output in `src/components/SessionMenu.tsx` with role/account status language and user-facing session errors.
 - Adjusted notice compose behavior so `publishAt` no longer defaults to a filled value; notice creation now defaults to draft and explains when to use scheduled or immediate publish.
 - Verified the current implementation pass with `npm run typecheck`.
@@ -107,9 +112,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close `WI-1054` through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`) now that the payload contract is covered by regression tests.
-2. Continue `WI-1056` on the remaining weak feedback/dev-remnant surfaces that still affect production UX.
-3. Start `WI-1055` discovery on which admin operational settings can be productized without reopening ops-only routes.
+1. Close `WI-1056` through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`) now that its UX guarantees are enforced in CI.
+2. Start `WI-1055` discovery on which admin operational settings can be productized without reopening ops-only routes.
+3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 
 ## 5. Blockers Or Watch Items
 
