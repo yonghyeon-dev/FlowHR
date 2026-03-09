@@ -574,11 +574,23 @@ function toOrganizationEntity(record: {
   insuranceRateNhi: number | null;
   insuranceRateEi: number | null;
   insuranceRateWci: number | null;
+  attendanceGpsRequired?: boolean | null;
+  attendanceGeofenceEnabled?: boolean | null;
+  attendanceGeofenceLatitude?: number | null;
+  attendanceGeofenceLongitude?: number | null;
+  attendanceGeofenceRadiusMeters?: number | null;
   isOnboardingComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
 }): OrganizationEntity {
-  return record;
+  return {
+    ...record,
+    attendanceGpsRequired: record.attendanceGpsRequired ?? false,
+    attendanceGeofenceEnabled: record.attendanceGeofenceEnabled ?? false,
+    attendanceGeofenceLatitude: record.attendanceGeofenceLatitude ?? null,
+    attendanceGeofenceLongitude: record.attendanceGeofenceLongitude ?? null,
+    attendanceGeofenceRadiusMeters: record.attendanceGeofenceRadiusMeters ?? null
+  };
 }
 
 function toDepartmentEntity(record: {
@@ -1082,25 +1094,32 @@ function toScheduleAnomalyIncidentEntity(record: {
 
 const organizations: OrganizationStore = {
   async create(input: CreateOrganizationInput) {
+    const data = {
+      ...(input.id ? { id: input.id } : {}),
+      name: input.name,
+      fiscalYearStart: "01-01",
+      fiscalYearStartMonth: 1,
+      workHoursPerDay: 8,
+      standardWorkHoursPerDay: 8,
+      standardWorkDaysPerWeek: 5,
+      overtimeThreshold: 8,
+      overtimeThresholdHours: 8,
+      payPeriod: "MONTHLY",
+      currency: "KRW",
+      insuranceRateNps: null,
+      insuranceRateNhi: null,
+      insuranceRateEi: null,
+      insuranceRateWci: null,
+      attendanceGpsRequired: false,
+      attendanceGeofenceEnabled: false,
+      attendanceGeofenceLatitude: null,
+      attendanceGeofenceLongitude: null,
+      attendanceGeofenceRadiusMeters: null,
+      isOnboardingComplete: false
+    } as Prisma.OrganizationUncheckedCreateInput;
+
     const record = await prisma.organization.create({
-      data: {
-        ...(input.id ? { id: input.id } : {}),
-        name: input.name,
-        fiscalYearStart: "01-01",
-        fiscalYearStartMonth: 1,
-        workHoursPerDay: 8,
-        standardWorkHoursPerDay: 8,
-        standardWorkDaysPerWeek: 5,
-        overtimeThreshold: 8,
-        overtimeThresholdHours: 8,
-        payPeriod: "MONTHLY",
-        currency: "KRW",
-        insuranceRateNps: null,
-        insuranceRateNhi: null,
-        insuranceRateEi: null,
-        insuranceRateWci: null,
-        isOnboardingComplete: false
-      }
+      data
     });
     return toOrganizationEntity(record);
   },
@@ -1189,6 +1208,21 @@ const organizations: OrganizationStore = {
           : {}),
         ...(input.insuranceRateWci !== undefined
           ? { insuranceRateWci: input.insuranceRateWci }
+          : {}),
+        ...(input.attendanceGpsRequired !== undefined
+          ? { attendanceGpsRequired: input.attendanceGpsRequired }
+          : {}),
+        ...(input.attendanceGeofenceEnabled !== undefined
+          ? { attendanceGeofenceEnabled: input.attendanceGeofenceEnabled }
+          : {}),
+        ...(input.attendanceGeofenceLatitude !== undefined
+          ? { attendanceGeofenceLatitude: input.attendanceGeofenceLatitude }
+          : {}),
+        ...(input.attendanceGeofenceLongitude !== undefined
+          ? { attendanceGeofenceLongitude: input.attendanceGeofenceLongitude }
+          : {}),
+        ...(input.attendanceGeofenceRadiusMeters !== undefined
+          ? { attendanceGeofenceRadiusMeters: input.attendanceGeofenceRadiusMeters }
           : {}),
         ...(input.isOnboardingComplete !== undefined
           ? { isOnboardingComplete: input.isOnboardingComplete }

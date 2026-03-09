@@ -36,6 +36,7 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
         links: [
           { href: "/admin/scheduling", label: "근무 일정" },
           { href: "/admin/leave-policies", label: "휴가 정책" },
+          { href: "/admin/attendance-security", label: "출퇴근 보안" },
           { href: "/admin/leave-calendar", label: "휴가 캘린더" }
         ]
       },
@@ -96,12 +97,13 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
     {
       key: "worktime",
       title: "Scheduling and leave",
-      description: "Operate schedules and leave policy/calendar flows.",
-      links: [
-        { href: "/admin/scheduling", label: "Scheduling" },
-        { href: "/admin/leave-policies", label: "Leave policies" },
-        { href: "/admin/leave-calendar", label: "Leave calendar" }
-      ]
+        description: "Operate schedules and leave policy/calendar flows.",
+        links: [
+          { href: "/admin/scheduling", label: "Scheduling" },
+          { href: "/admin/leave-policies", label: "Leave policies" },
+          { href: "/admin/attendance-security", label: "Attendance security" },
+          { href: "/admin/leave-calendar", label: "Leave calendar" }
+        ]
     },
     {
       key: "payroll",

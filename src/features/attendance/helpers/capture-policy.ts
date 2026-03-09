@@ -1,5 +1,9 @@
 import type { Actor } from "@/lib/actor";
-import type { AttendanceCaptureChannel, AttendanceRecordEntity } from "@/features/shared/data-access";
+import type {
+  AttendanceCaptureChannel,
+  AttendanceRecordEntity,
+  OrganizationEntity
+} from "@/features/shared/data-access";
 import { ServiceError } from "@/features/shared/service-error";
 
 type CreateAttendanceInput = {
@@ -74,6 +78,12 @@ type GeofenceConfig = {
   latitude: number;
   longitude: number;
   radiusMeters: number;
+};
+
+export type AttendanceSecurityPolicy = {
+  gpsRequired: boolean;
+  geofenceEnabled: boolean;
+  geofence: GeofenceConfig | null;
 };
 
 type GeofenceSiteConfig = {
@@ -964,6 +974,63 @@ function loadGeofenceConfig(): GeofenceConfig {
   };
 }
 
+function validateGeofenceConfig(
+  latitude: number | null,
+  longitude: number | null,
+  radiusMeters: number | null,
+  invalidMessage: string
+): GeofenceConfig {
+  if (latitude === null || longitude === null || radiusMeters === null) {
+    throw new ServiceError(500, invalidMessage);
+  }
+
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 || radiusMeters <= 0) {
+    throw new ServiceError(500, invalidMessage);
+  }
+
+  return {
+    latitude,
+    longitude,
+    radiusMeters
+  };
+}
+
+export function resolveAttendanceSecurityPolicy(
+  organization: Pick<
+    OrganizationEntity,
+    | "attendanceGpsRequired"
+    | "attendanceGeofenceEnabled"
+    | "attendanceGeofenceLatitude"
+    | "attendanceGeofenceLongitude"
+    | "attendanceGeofenceRadiusMeters"
+  > | null
+): AttendanceSecurityPolicy {
+  const envGpsRequired = isAttendanceGpsPolicyEnabled();
+  const envGeofenceEnabled = isAttendanceGeofencePolicyEnabled();
+
+  const orgGpsRequired = organization?.attendanceGpsRequired ?? false;
+  const orgGeofenceEnabled = organization?.attendanceGeofenceEnabled ?? false;
+
+  if (orgGeofenceEnabled && organization) {
+    return {
+      gpsRequired: orgGpsRequired || envGpsRequired,
+      geofenceEnabled: true,
+      geofence: validateGeofenceConfig(
+        organization.attendanceGeofenceLatitude,
+        organization.attendanceGeofenceLongitude,
+        organization.attendanceGeofenceRadiusMeters,
+        "attendance geofence policy is enabled but organization configuration is invalid"
+      )
+    };
+  }
+
+  return {
+    gpsRequired: orgGpsRequired || envGpsRequired,
+    geofenceEnabled: envGeofenceEnabled,
+    geofence: envGeofenceEnabled ? loadGeofenceConfig() : null
+  };
+}
+
 function parseMultiSiteGeofenceConfig(): GeofenceSiteConfig[] {
   const raw = process.env.FLOWHR_ATTENDANCE_MULTI_SITE_GEOFENCE_SITES ?? "";
   const entries = raw
@@ -1041,8 +1108,13 @@ function haversineDistanceMeters(
   return earthRadiusMeters * c;
 }
 
-export function assertGpsCapturePolicyForCreate(actor: Actor, input: CreateAttendanceInput) {
-  if (!isAttendanceGpsPolicyEnabled() || actor.role !== "employee") {
+export function assertGpsCapturePolicyForCreate(
+  actor: Actor,
+  input: CreateAttendanceInput,
+  policy?: AttendanceSecurityPolicy
+) {
+  const gpsRequired = policy?.gpsRequired ?? isAttendanceGpsPolicyEnabled();
+  if (!gpsRequired || actor.role !== "employee") {
     return;
   }
 
@@ -1059,9 +1131,11 @@ export function assertGpsCapturePolicyForCreate(actor: Actor, input: CreateAtten
 export function assertGpsCapturePolicyForUpdate(
   actor: Actor,
   existing: AttendanceRecordEntity,
-  input: UpdateAttendanceInput
+  input: UpdateAttendanceInput,
+  policy?: AttendanceSecurityPolicy
 ) {
-  if (!isAttendanceGpsPolicyEnabled() || actor.role !== "employee") {
+  const gpsRequired = policy?.gpsRequired ?? isAttendanceGpsPolicyEnabled();
+  if (!gpsRequired || actor.role !== "employee") {
     return;
   }
 
@@ -1076,8 +1150,11 @@ export function assertGpsCapturePolicyForUpdate(
   }
 }
 
-function assertGeofenceForCoordinates(latitude: number, longitude: number) {
-  const geofence = loadGeofenceConfig();
+function assertGeofenceForCoordinates(
+  latitude: number,
+  longitude: number,
+  geofence: GeofenceConfig = loadGeofenceConfig()
+) {
   const distanceMeters = haversineDistanceMeters(
     latitude,
     longitude,
@@ -1106,8 +1183,12 @@ function assertMultiSiteGeofenceForCoordinates(latitude: number, longitude: numb
   }
 }
 
-export function assertGeofencePolicyForCreate(actor: Actor, input: CreateAttendanceInput) {
-  const geofencePolicyEnabled = isAttendanceGeofencePolicyEnabled();
+export function assertGeofencePolicyForCreate(
+  actor: Actor,
+  input: CreateAttendanceInput,
+  policy?: AttendanceSecurityPolicy
+) {
+  const geofencePolicyEnabled = policy?.geofenceEnabled ?? isAttendanceGeofencePolicyEnabled();
   const multiSitePolicyEnabled = isAttendanceMultiSiteGeofencePolicyEnabled();
 
   if ((!geofencePolicyEnabled && !multiSitePolicyEnabled) || actor.role !== "employee") {
@@ -1125,15 +1206,16 @@ export function assertGeofencePolicyForCreate(actor: Actor, input: CreateAttenda
     return;
   }
 
-  assertGeofenceForCoordinates(latitude, longitude);
+  assertGeofenceForCoordinates(latitude, longitude, policy?.geofence ?? undefined);
 }
 
 export function assertGeofencePolicyForUpdate(
   actor: Actor,
   existing: AttendanceRecordEntity,
-  input: UpdateAttendanceInput
+  input: UpdateAttendanceInput,
+  policy?: AttendanceSecurityPolicy
 ) {
-  const geofencePolicyEnabled = isAttendanceGeofencePolicyEnabled();
+  const geofencePolicyEnabled = policy?.geofenceEnabled ?? isAttendanceGeofencePolicyEnabled();
   const multiSitePolicyEnabled = isAttendanceMultiSiteGeofencePolicyEnabled();
 
   if ((!geofencePolicyEnabled && !multiSitePolicyEnabled) || actor.role !== "employee") {
@@ -1161,7 +1243,7 @@ export function assertGeofencePolicyForUpdate(
     return;
   }
 
-  assertGeofenceForCoordinates(nextLatitude, nextLongitude);
+  assertGeofenceForCoordinates(nextLatitude, nextLongitude, policy?.geofence ?? undefined);
 }
 
 export function assertTrustedDevicePolicyForCreate(actor: Actor, input: CreateAttendanceInput) {

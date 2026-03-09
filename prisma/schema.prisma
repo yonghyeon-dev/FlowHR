@@ -31,6 +31,11 @@ model Organization {
   insuranceRateNhi           Float?
   insuranceRateEi            Float?
   insuranceRateWci           Float?
+  attendanceGpsRequired      Boolean   @default(false)
+  attendanceGeofenceEnabled  Boolean   @default(false)
+  attendanceGeofenceLatitude Float?
+  attendanceGeofenceLongitude Float?
+  attendanceGeofenceRadiusMeters Int?
   isOnboardingComplete       Boolean   @default(false)
   createdAt                  DateTime  @default(now())
   updatedAt                  DateTime  @updatedAt
