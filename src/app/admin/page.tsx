@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   buildQuery,
@@ -34,6 +35,7 @@ import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const { locale } = useI18n();
   const resolveContractStepForRegression = resolveAdminContractDocumentNextStep;
   void resolveContractStepForRegression;
@@ -262,14 +264,14 @@ export default function AdminDashboardPage() {
     const checkAndRedirect = () => {
       if (window.location.hash === "#approvals") {
         setRedirecting(true);
-        window.location.replace("/admin/approval-executions");
+        router.replace("/admin/approval-executions");
       }
     };
 
     checkAndRedirect();
     window.addEventListener("hashchange", checkAndRedirect);
     return () => window.removeEventListener("hashchange", checkAndRedirect);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (redirecting) {
