@@ -58,3 +58,10 @@ Move required customer-admin operating controls into productized admin settings 
 - Regression coverage is attached to the integration chain:
   - `scripts/tests/e2e-wi1055-admin-attendance-security-productization.test.ts`
   - `package.json` `test:integration`
+
+## Data Changes (Tables and Migrations)
+
+- Tables:
+  - `Organization`
+- Migrations:
+  - `202603090002_wi1055_attendance_security_productization`
