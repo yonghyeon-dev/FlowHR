@@ -910,6 +910,18 @@ function updateOrganizationEntity(
       input.leavePromotionUseOperatorAlertWebhook !== undefined
         ? input.leavePromotionUseOperatorAlertWebhook
         : existing.leavePromotionUseOperatorAlertWebhook,
+    approvalEscalationDefaultStalledHoursMin:
+      input.approvalEscalationDefaultStalledHoursMin !== undefined
+        ? input.approvalEscalationDefaultStalledHoursMin
+        : existing.approvalEscalationDefaultStalledHoursMin,
+    approvalEscalationDefaultLimit:
+      input.approvalEscalationDefaultLimit !== undefined
+        ? input.approvalEscalationDefaultLimit
+        : existing.approvalEscalationDefaultLimit,
+    approvalEscalationDefaultNotificationChannel:
+      input.approvalEscalationDefaultNotificationChannel !== undefined
+        ? input.approvalEscalationDefaultNotificationChannel
+        : existing.approvalEscalationDefaultNotificationChannel,
     leavePromotionEmailTemplateUrl:
       input.leavePromotionEmailTemplateUrl !== undefined
         ? input.leavePromotionEmailTemplateUrl
@@ -1073,6 +1085,9 @@ export const memoryDataAccess: DataAccess = {
         operatorAlertWebhookProvider: null,
         approvalEscalationUseOperatorAlertWebhook: true,
         leavePromotionUseOperatorAlertWebhook: true,
+        approvalEscalationDefaultStalledHoursMin: null,
+        approvalEscalationDefaultLimit: null,
+        approvalEscalationDefaultNotificationChannel: null,
         leavePromotionEmailTemplateUrl: null,
         leavePromotionEmailFrom: null,
         leavePromotionEmailTemplateToken: null,

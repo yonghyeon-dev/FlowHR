@@ -22,6 +22,7 @@ import {
   toApprovalExecutionEscalationItems,
   type ApprovalExecutionEscalationItem
 } from "@/features/approval/execution-escalation-core-helpers";
+import { resolveOrganizationApprovalEscalationSettings } from "@/features/approval/escalation-settings";
 import { resolveOperatorAlertWebhookConfig } from "@/features/people/operator-alert-settings";
 import {
   normalizeApprovalExecutionListOptions,
@@ -1267,13 +1268,17 @@ export async function triggerApprovalExecutionEscalation(
   if (!Number.isFinite(asOf.getTime())) {
     throw new ServiceError(400, "asOf must be a valid datetime");
   }
+  const organization = await context.dataAccess.organizations.findById(organizationId);
+  const escalationDefaults =
+    organization ? resolveOrganizationApprovalEscalationSettings(organization).policy : undefined;
 
   const { stalledHoursMin, limit, dryRun, notificationChannel } =
     normalizeApprovalExecutionEscalationPolicy({
       stalledHoursMin: input.stalledHoursMin,
       limit: input.limit,
       dryRun: input.dryRun,
-      notificationChannel: input.notificationChannel
+      notificationChannel: input.notificationChannel,
+      defaults: escalationDefaults
     });
 
   let executions = await context.dataAccess.approvals.listExecutions(
@@ -1297,7 +1302,6 @@ export async function triggerApprovalExecutionEscalation(
     dryRun
   });
 
-  const organization = await context.dataAccess.organizations.findById(organizationId);
   const webhook = resolveApprovalEscalationWebhookConfig(
     process.env,
     organization

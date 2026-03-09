@@ -45,6 +45,9 @@ model Organization {
   operatorAlertWebhookProvider String?
   approvalEscalationUseOperatorAlertWebhook Boolean @default(true)
   leavePromotionUseOperatorAlertWebhook Boolean @default(true)
+  approvalEscalationDefaultStalledHoursMin Int?
+  approvalEscalationDefaultLimit Int?
+  approvalEscalationDefaultNotificationChannel String?
   leavePromotionEmailTemplateUrl String?
   leavePromotionEmailFrom String?
   leavePromotionEmailTemplateToken String?
