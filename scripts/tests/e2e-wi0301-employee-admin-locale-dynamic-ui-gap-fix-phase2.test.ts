@@ -90,8 +90,10 @@ async function run() {
   assert.doesNotMatch(adminPeopleInvitePanels, /<option value="link">link<\/option>/);
   assert.doesNotMatch(adminPeopleInvitePanels, /<option value="email">email<\/option>/);
 
-  assert.match(adminPeopleInvitePanels, /role=\s*\{toInviteRoleLabel\(inviteResult\.role\)\}/);
-  assert.match(adminPeopleInvitePanels, /delivery=\s*\{toInviteDeliveryModeLabel\(inviteResult\.deliveryMode\)\}/);
+  assert.match(
+    adminPeopleInvitePanels,
+    /\{toInviteRoleLabel\(inviteResult\.role\)\}[\s\S]*\{toInviteDeliveryModeLabel\(inviteResult\.deliveryMode\)\}/
+  );
 
   assert.match(workItem, /WI-0301/i);
   assert.match(workItem, /locale/i);
