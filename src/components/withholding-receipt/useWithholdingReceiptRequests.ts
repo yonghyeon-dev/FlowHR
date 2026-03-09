@@ -5,6 +5,7 @@ import {
   parseRequiredInt,
   type WithholdingReceiptCopy
 } from "@/components/withholding-receipt/copy-runtime";
+import { buildWithholdingFailureMessage } from "@/components/payroll-year-end/request-failure-guidance";
 import type {
   ApiLog,
   FinalizedYearEndSettlementResponse,
@@ -124,7 +125,14 @@ export function useWithholdingReceiptRequests({
         const payload = (await response.json()) as T | { error: string };
         appendLog(label, response);
         if (!response.ok || isErrorPayload(payload)) {
-          setStatusMessage(copy.requestFailedCheckLogsStatus);
+          setStatusMessage(
+            buildWithholdingFailureMessage({
+              status: response.status,
+              body: payload,
+              locale,
+              fallback: copy.requestFailedCheckLogsStatus
+            })
+          );
           return null;
         }
         return payload as T;

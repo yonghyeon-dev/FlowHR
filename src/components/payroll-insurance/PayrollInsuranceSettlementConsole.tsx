@@ -20,6 +20,7 @@ import {
   toSeoulEndIso,
   toSeoulStartIso
 } from "@/components/payroll-insurance/types";
+import { normalizePayrollYearEndRuntimeMessage } from "@/components/payroll-year-end/runtime-copy-helpers";
 
 function parseRequiredInt(value: string, fieldLabel: string, nonNegativeIntegerLabel: string) {
   const parsed = Number(value);
@@ -99,6 +100,16 @@ export default function PayrollInsuranceSettlementConsole() {
     const success = logs.filter((log) => log.ok).length;
     return { total, success, fail: total - success };
   }, [logs]);
+  const normalizedSupabaseSessionError = useMemo(() => {
+    if (!supabaseSessionError) {
+      return null;
+    }
+    return normalizePayrollYearEndRuntimeMessage(
+      supabaseSessionError,
+      locale,
+      copy.statusRequestFailed
+    );
+  }, [copy.statusRequestFailed, locale, supabaseSessionError]);
 
   async function runPreview() {
     if (!organizationId.trim()) {
@@ -233,7 +244,11 @@ export default function PayrollInsuranceSettlementConsole() {
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      setStatusMessage(
+        error instanceof Error
+          ? normalizePayrollYearEndRuntimeMessage(error.message, locale, copy.statusInvalidInput)
+          : copy.statusInvalidInput
+      );
     } finally {
       setPendingLabel(null);
     }
@@ -296,7 +311,7 @@ export default function PayrollInsuranceSettlementConsole() {
           pendingLabel={pendingLabel}
           runPreview={() => void runPreview()}
           statusMessage={statusMessage}
-          supabaseSessionError={supabaseSessionError}
+          supabaseSessionError={normalizedSupabaseSessionError}
         />
 
         <PayrollInsuranceSummaryPanel copy={copy} result={result} runtimeLocale={runtimeLocale} />

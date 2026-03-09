@@ -11,6 +11,10 @@ import type {
   ApprovalGatePreviewDto,
   ApprovalLineTemplateDto
 } from "@/app/admin/approval-templates/page-types";
+import {
+  formatActorRoleLabel,
+  formatPublicEmployeeNumber
+} from "@/lib/product-language";
 
 type PreviewPanelProps = {
   copy: AdminApprovalTemplatesLocaleCopy;
@@ -80,7 +84,7 @@ export function ApprovalTemplatePreviewPanel({
         <select value={previewActorRole} onChange={(event) => setPreviewActorRole(event.target.value)}>
           {actorRoles.map((role) => (
             <option key={role} value={role}>
-              {role}
+              {formatActorRoleLabel(role, runtimeLocale)}
             </option>
           ))}
         </select>
@@ -110,12 +114,13 @@ export function ApprovalTemplatePreviewPanel({
         <div className="small" style={{ display: "grid", gap: 8 }}>
           <p>
             {copy.preview.result}: <strong>{gatePreview.allowed ? copy.preview.allowed : copy.preview.blocked}</strong> (
-            {gatePreview.allowedReason}) / {copy.preview.expected}: {gatePreview.expectedRoles.join(", ") || "-"} /{" "}
-            {copy.preview.fallback}: {gatePreview.fallbackRole}
+            {gatePreview.allowedReason}) / {copy.preview.expected}:{" "}
+            {gatePreview.expectedRoles.map((role) => formatActorRoleLabel(role, runtimeLocale)).join(", ") || "-"} /{" "}
+            {copy.preview.fallback}: {formatActorRoleLabel(gatePreview.fallbackRole, runtimeLocale)}
           </p>
           <p>
-            {copy.preview.actor}: {gatePreview.actorRole}
-            {gatePreview.actorId ? ` (${gatePreview.actorId})` : ""}
+            {copy.preview.actor}: {formatActorRoleLabel(gatePreview.actorRole, runtimeLocale)}
+            {gatePreview.actorId ? ` · ${formatPublicEmployeeNumber(gatePreview.actorId)}` : ""}
             {gatePreview.payrollGrossPayKrw !== null
               ? ` / ${copy.preview.gross} ${formatApprovalTemplateKrw(gatePreview.payrollGrossPayKrw, runtimeLocale)} KRW`
               : ""}
@@ -127,7 +132,8 @@ export function ApprovalTemplatePreviewPanel({
             <ul className="simple-list">
               {gatePreview.matchedTemplates.map((template) => (
                 <li key={template.id}>
-                  {template.name} / {copy.templateList.roles}: {template.approverRoles.join(", ")} /{" "}
+                  {template.name} / {copy.templateList.roles}:{" "}
+                  {template.approverRoles.map((role) => formatActorRoleLabel(role, runtimeLocale)).join(", ")} /{" "}
                   {copy.templateList.stages}: {template.approvalStages.length} / {copy.templateList.gross}{" "}
                   {formatApprovalTemplateKrw(template.payrollGrossPayMinKrw, runtimeLocale)} ~{" "}
                   {formatApprovalTemplateKrw(template.payrollGrossPayMaxKrw, runtimeLocale)}
@@ -143,7 +149,8 @@ export function ApprovalTemplatePreviewPanel({
               <ul className="simple-list">
                 {gatePreview.activeDelegations.map((delegation) => (
                   <li key={delegation.id}>
-                    {delegation.delegatorRole} =&gt; {delegation.delegateActorId} /{" "}
+                    {formatActorRoleLabel(delegation.delegatorRole, runtimeLocale)} =&gt;{" "}
+                    {formatPublicEmployeeNumber(delegation.delegateActorId)} /{" "}
                     {formatApprovalTemplateDateTime(delegation.startsAt, runtimeLocale)} ~{" "}
                     {formatApprovalTemplateDateTime(delegation.endsAt, runtimeLocale)}
                   </li>
@@ -178,7 +185,8 @@ export function ApprovalTemplateListPanel({
             <li key={template.id}>
               <strong>{template.name}</strong>{" "}
               <span className="muted">
-                [{copy.domainLabels[template.domain]}] / {copy.templateList.roles}: {template.approverRoles.join(", ")} /{" "}
+                [{copy.domainLabels[template.domain]}] / {copy.templateList.roles}:{" "}
+                {template.approverRoles.map((role) => formatActorRoleLabel(role, runtimeLocale)).join(", ")} /{" "}
                 {copy.templateList.stages}: {template.approvalStages.length} /{" "}
                 {template.active ? copy.templateList.active : copy.templateList.inactive}
                 {template.domain === "PAYROLL" &&
@@ -235,5 +243,3 @@ export function ApprovalTemplateLogsPanel({ copy, stats, pendingLabel, logs }: L
     </article>
   );
 }
-
-

@@ -6,6 +6,10 @@ import { useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatActorRoleLabel,
+  formatUserFacingErrorMessage
+} from "@/lib/product-language";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type SessionMenuProps = {
@@ -15,8 +19,17 @@ type SessionMenuProps = {
 export default function SessionMenu({ className }: SessionMenuProps) {
   const router = useRouter();
   const { snapshot, error, loading } = useSupabaseSession();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [pending, setPending] = useState(false);
+  const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const sessionStatusLabel = snapshot?.organizationId
+    ? runtimeLocale === "ko-KR"
+      ? "조직이 연결된 계정"
+      : "Organization connected"
+    : runtimeLocale === "ko-KR"
+      ? "조직 연결 확인 필요"
+      : "Organization check required";
+  const roleLabel = formatActorRoleLabel(snapshot?.role ?? "unknown", runtimeLocale);
 
   async function signOut() {
     setPending(true);
@@ -34,15 +47,13 @@ export default function SessionMenu({ className }: SessionMenuProps) {
     <div className={className ?? "session-menu"} aria-label={t("sessionMenu.aria")}>
       {snapshot ? (
         <>
-          <div className="session-meta">
-            <div className="session-id">
-              <strong>{snapshot.email ?? snapshot.userId}</strong>
-              <span className="session-pill">{snapshot.role ?? "unknown"}</span>
+            <div className="session-meta">
+              <div className="session-id">
+                <strong>{snapshot.email ?? snapshot.userId}</strong>
+                <span className="session-pill">{roleLabel}</span>
+              </div>
+              <div className="session-sub">{sessionStatusLabel}</div>
             </div>
-            <div className="session-sub">
-              org <code>{snapshot.organizationId ?? "-"}</code>
-            </div>
-          </div>
           <button className="btn btn-secondary btn-small" onClick={() => void signOut()} disabled={pending}>
             {t("sessionMenu.signOut")}
           </button>
@@ -66,7 +77,11 @@ export default function SessionMenu({ className }: SessionMenuProps) {
           </Link>
         </>
       )}
-      {error ? <div className="session-error">{t("sessionMenu.errorPrefix")}: {error}</div> : null}
+      {error ? (
+        <div className="session-error">
+          {t("sessionMenu.errorPrefix")}: {formatUserFacingErrorMessage(error, runtimeLocale)}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -192,8 +192,8 @@ async function run() {
 
     const webhookPayload = JSON.parse(webhookServer.capturedRequests[0].body) as Record<string, unknown>;
     assert.equal(typeof webhookPayload.content, "string", "discord payload must use content");
-    assert.match(String(webhookPayload.content), /결재 실행 정체 에스컬레이션/);
-    assert.match(String(webhookPayload.content), /candidateCount: 2/);
+    assert.match(String(webhookPayload.content), /결재 지연 알림/);
+    assert.match(String(webhookPayload.content), /확인 대상: 2건/);
 
     const eventNames = getRuntimeMemoryDomainEvents().map((event) => event.name);
     assert.ok(

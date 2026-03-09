@@ -1,26 +1,11 @@
-﻿"use client";
+"use client";
 
-import Link from "next/link";
+import { formatNotificationChannelLabel, formatUserFacingErrorMessage } from "@/lib/product-language";
 
-import {
-  formatDateTime,
-  getCompletedStages,
-  getProgressPercent,
-  getStalledHours,
-  resolveQuickJumpLabel,
-  resolveQuickJumpPath,
-  toTargetKey
-} from "@/app/admin/approval-executions/page-helpers";
 import type {
-  ApiLog,
-  ApiLogStats,
   ApprovalDomain,
-  ApprovalExecutionDto,
   ApprovalExecutionSort,
-  ApprovalExecutionState,
-  ApprovalExecutionSummary,
-  ApprovalStageHistoryDto,
-  EscalationResultDto
+  ApprovalExecutionState
 } from "@/app/admin/approval-executions/page-types";
 import { domainOptions, stateOptions } from "@/app/admin/approval-executions/page-types";
 
@@ -127,7 +112,7 @@ export function ApprovalExecutionWorkConditionsPanel(props: WorkConditionsPanelP
           <input type="datetime-local" value={asOfInput} onChange={(event) => setAsOfInput(event.target.value)} />
         </label>
         <label>
-          {isKoLocale ? "도메인" : "Domain"}
+          {isKoLocale ? "요청 유형" : "Request type"}
           <select value={domain} onChange={(event) => setDomain(event.target.value as ApprovalDomain | "")}>
             {domainOptions.map((option) => (
               <option key={option || "all"} value={option}>
@@ -148,19 +133,23 @@ export function ApprovalExecutionWorkConditionsPanel(props: WorkConditionsPanelP
         </label>
       </div>
       <details className="details">
-        <summary>{isKoLocale ? "고급 조건" : "Advanced options"}</summary>
+        <summary>{isKoLocale ? "세부 조건" : "Advanced options"}</summary>
         <div className="input-grid" style={{ marginTop: 12 }}>
           <label>
-            {isKoLocale ? "대상 엔티티 타입" : "Target entity type"}
+            {isKoLocale ? "요청 분류" : "Request subtype"}
             <input
               value={targetEntityType}
               onChange={(event) => setTargetEntityType(event.target.value)}
-              placeholder="AttendanceRecord / LeaveRequest / PayrollRun"
+              placeholder={isKoLocale ? "예: 출퇴근 정정, 휴가 신청, 급여 승인" : "Attendance correction / Leave request / Payroll approval"}
             />
           </label>
           <label>
-            {isKoLocale ? "대상 엔티티 ID" : "Target entity ID"}
-            <input value={targetEntityId} onChange={(event) => setTargetEntityId(event.target.value)} />
+            {isKoLocale ? "요청 번호" : "Request number"}
+            <input
+              value={targetEntityId}
+              onChange={(event) => setTargetEntityId(event.target.value)}
+              placeholder={isKoLocale ? "특정 요청만 확인할 때 입력" : "Optional request reference"}
+            />
           </label>
           <label>
             {isKoLocale ? "실행 조회 개수" : "Execution limit"}
@@ -177,11 +166,11 @@ export function ApprovalExecutionWorkConditionsPanel(props: WorkConditionsPanelP
             />
           </label>
           <label>
-            {isKoLocale ? "에스컬레이션 채널" : "Escalation channel"}
+            {isKoLocale ? "알림 채널" : "Notification channel"}
             <input
               value={notificationChannel}
               onChange={(event) => setNotificationChannel(event.target.value)}
-              placeholder="approval-stalled-queue"
+              placeholder={formatNotificationChannelLabel("approval-stalled-queue", "ko-KR")}
             />
           </label>
         </div>
@@ -195,7 +184,7 @@ export function ApprovalExecutionWorkConditionsPanel(props: WorkConditionsPanelP
           onClick={onEscalationDryRun}
           disabled={!organizationId.trim() || pendingLabel !== null}
         >
-          {isKoLocale ? "에스컬레이션 드라이런" : "Run dry escalation"}
+          {isKoLocale ? "에스컬레이션 미리보기" : "Run dry escalation"}
         </button>
         <button
           className="btn btn-primary"
@@ -208,7 +197,7 @@ export function ApprovalExecutionWorkConditionsPanel(props: WorkConditionsPanelP
       {statusMessage ? <p className="small">{statusMessage}</p> : null}
       {supabaseSessionError ? (
         <p className="small fail">
-          {isKoLocale ? "세션 오류" : "Session error"}: {supabaseSessionError}
+          {formatUserFacingErrorMessage(supabaseSessionError, isKoLocale ? "ko-KR" : "en-US")}
         </p>
       ) : null}
     </article>

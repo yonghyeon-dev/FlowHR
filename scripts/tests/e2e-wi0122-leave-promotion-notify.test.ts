@@ -229,8 +229,8 @@ async function run() {
     const webhookPayload = JSON.parse(webhookServer.capturedRequests[0].body) as Record<string, unknown>;
     assert.equal(typeof webhookPayload.content, "string", "discord payload must use content field");
     assert.equal(webhookPayload.text, undefined, "discord payload must not use slack text field");
-    assert.match(String(webhookPayload.content), /\[FlowHR\] 연차 촉진 공지 발송/);
-    assert.match(String(webhookPayload.content), /대상자/);
+    assert.match(String(webhookPayload.content), /\[FlowHR\] 연차 촉진 안내/);
+    assert.match(String(webhookPayload.content), /대상자 요약/);
 
     runtimeEnv.FLOWHR_LEAVE_PROMOTION_WEBHOOK_URL = "";
     const missingWebhookResponse = await leavePromotionNotifyRoute.POST(

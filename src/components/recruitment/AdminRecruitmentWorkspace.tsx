@@ -343,6 +343,7 @@ export default function AdminRecruitmentWorkspace() {
   return (
     <AdminRecruitmentWorkspaceView
       copy={copy}
+      isKoLocale={locale === "ko"}
       sourceHint={sourceHint}
       analyticsBackHref={analyticsBackHref}
       analyticsBackLabel={analyticsBackLabel}

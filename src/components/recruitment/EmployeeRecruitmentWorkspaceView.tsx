@@ -16,6 +16,7 @@ import type {
   RecruitmentReferralItem,
   RecruitmentReferralStage
 } from "@/features/recruitment/types";
+import { formatPublicEmployeeNumber } from "@/lib/product-language";
 
 type EmployeeRecruitmentCopy = ReturnType<typeof resolveEmployeeRecruitmentCopy>;
 
@@ -100,6 +101,10 @@ export default function EmployeeRecruitmentWorkspaceView({
 }: EmployeeRecruitmentWorkspaceViewProps) {
   const searchParams = useSearchParams();
   const sourceEntry = resolveEmployeeRecruitmentSourceEntry(searchParams.get("source"), isKoLocale);
+  const publicEmployeeNumber = formatPublicEmployeeNumber(sessionEmployeeId);
+  const devSessionLabel = isKoLocale
+    ? `세션 연결됨 · 사번 ${publicEmployeeNumber}`
+    : `Session connected · Employee ${publicEmployeeNumber}`;
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -128,12 +133,7 @@ export default function EmployeeRecruitmentWorkspaceView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.sessionTitle}</h2>
-          {showDevTools ? (
-            <p className="small muted">
-              {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
-              <code>{sessionEmployeeId || "-"}</code>
-            </p>
-          ) : null}
+          {showDevTools ? <p className="small muted">{devSessionLabel}</p> : null}
           <label>
             {copy.stageFilterLabel}
             <select

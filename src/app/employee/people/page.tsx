@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { apiClientFetch, parseApiResponseBody } from "@/lib/api-client";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
+import { formatEmployeeStatusLabel, formatUserFacingErrorMessage } from "@/lib/product-language";
 
 type EmployeeListItem = {
   id: string;
@@ -34,13 +35,15 @@ export default function EmployeePeoplePage() {
       const response = await apiClientFetch({ method: "GET", path: "/api/people/employees?active=true" });
       const body = (await parseApiResponseBody(response)) as {
         employees?: EmployeeListItem[];
+        error?: string;
       };
       if (!response.ok) {
-        throw new Error("Failed to load employees");
+        throw new Error(formatUserFacingErrorMessage(body?.error ?? "Failed to load employees", "ko-KR"));
       }
       setEmployees(body?.employees ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const message = err instanceof Error ? err.message : String(err);
+      setError(formatUserFacingErrorMessage(message, "ko-KR"));
     } finally {
       setIsLoading(false);
     }
@@ -55,11 +58,7 @@ export default function EmployeePeoplePage() {
   const filtered = useMemo(() => {
     if (!search.trim()) return employees;
     const q = search.trim().toLowerCase();
-    return employees.filter(
-      (e) =>
-        (e.name ?? "").toLowerCase().includes(q) ||
-        (e.email ?? "").toLowerCase().includes(q)
-    );
+    return employees.filter((employee) => (employee.name ?? "").toLowerCase().includes(q) || (employee.email ?? "").toLowerCase().includes(q));
   }, [employees, search]);
 
   if (sessionLoading) return null;
@@ -70,10 +69,8 @@ export default function EmployeePeoplePage() {
     <main className="saas-content">
       <header className="page-header">
         <div>
-          <h1 className="page-title">{l("동료 디렉토리", "People Directory")}</h1>
-          <p className="page-subtitle">
-            {l("같은 조직의 동료 정보를 조회합니다.", "Browse your organization's people directory.")}
-          </p>
+          <h1 className="page-title">{l("동료 디렉터리", "People Directory")}</h1>
+          <p className="page-subtitle">{l("같은 조직의 동료 정보를 조회합니다.", "Browse your organization's people directory.")}</p>
         </div>
       </header>
 
@@ -87,7 +84,7 @@ export default function EmployeePeoplePage() {
               type="text"
               placeholder={l("이름 또는 이메일", "Name or email")}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(event) => setSearch(event.target.value)}
             />
           </label>
         </div>
@@ -108,16 +105,16 @@ export default function EmployeePeoplePage() {
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="muted" style={{ textAlign: "center" }}>
-                    {l("직원이 없습니다.", "No employees found.")}
+                    {l("직원을 찾을 수 없습니다.", "No employees found.")}
                   </td>
                 </tr>
               ) : (
-                filtered.map((emp) => (
-                  <tr key={emp.id}>
-                    <td>{emp.name ?? "-"}</td>
-                    <td>{emp.email ?? "-"}</td>
-                    <td>{emp.phone ?? "-"}</td>
-                    <td>{emp.status}</td>
+                filtered.map((employee) => (
+                  <tr key={employee.id}>
+                    <td>{employee.name ?? "-"}</td>
+                    <td>{employee.email ?? "-"}</td>
+                    <td>{employee.phone ?? "-"}</td>
+                    <td>{formatEmployeeStatusLabel(employee.status, "ko-KR")}</td>
                   </tr>
                 ))
               )}

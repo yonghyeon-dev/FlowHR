@@ -1,9 +1,13 @@
-﻿import type {
+import type {
   EmployeeSummary,
   InviteDeliveryMode,
   InviteResultDto,
   InviteRole
 } from "@/app/admin/page-types";
+import {
+  formatEmployeeDisplayName,
+  formatPublicEmployeeNumber
+} from "@/lib/product-language";
 
 type InviteRoleLabels = Record<InviteRole, string>;
 type InviteDeliveryModeLabels = Record<InviteDeliveryMode, string>;
@@ -71,18 +75,20 @@ export function AdminPeopleInvitePanels({
   onOrganizationIdChange,
   onCreateInvite
 }: AdminPeopleInvitePanelsProps) {
+  const locale = isKoLocale ? "ko-KR" : "en-US";
+
   return (
     <>
       <article className="panel" id="people">
         <h2>{isKoLocale ? "직원 관리" : "Employee Management"}</h2>
         <p className="small">
           {isKoLocale
-            ? "출퇴근/휴가/급여는 Employee 마스터가 있어야 동작합니다. 먼저 직원을 생성하세요."
-            : "Attendance/leave/payroll flows require employee master data. Create employees first."}
+            ? "출퇴근, 휴가, 급여 흐름은 직원 마스터가 있어야 정상 동작합니다. 먼저 직원 정보를 준비하세요."
+            : "Attendance, leave, and payroll flows require employee master data. Create employees first."}
         </p>
         <div className="input-grid">
           <label>
-            {isKoLocale ? "직원 번호" : "Employee ID"}
+            {isKoLocale ? "직원 번호" : "Employee number"}
             <input value={employeeId} onChange={(event) => onEmployeeIdChange(event.target.value)} />
           </label>
           <label>
@@ -94,19 +100,19 @@ export function AdminPeopleInvitePanels({
             <input value={employeeEmail} onChange={(event) => onEmployeeEmailChange(event.target.value)} />
           </label>
           <label>
-            {isKoLocale ? "활성" : "Active"}
+            {isKoLocale ? "계정 상태" : "Account status"}
             <select value={employeeActive ? "yes" : "no"} onChange={(event) => onEmployeeActiveChange(event.target.value === "yes")}>
-              <option value="yes">{isKoLocale ? "예" : "Yes"}</option>
-              <option value="no">{isKoLocale ? "아니오" : "No"}</option>
+              <option value="yes">{isKoLocale ? "사용 중" : "Active"}</option>
+              <option value="no">{isKoLocale ? "비활성" : "Inactive"}</option>
             </select>
           </label>
         </div>
         <div className="actions">
           <button className="btn btn-primary" onClick={onCreateEmployee} disabled={!employeeId.trim() || !organizationId.trim()}>
-            {isKoLocale ? "직원 생성" : "Create Employee"}
+            {isKoLocale ? "직원 생성" : "Create employee"}
           </button>
           <button className="btn btn-secondary" onClick={onListEmployees}>
-            {isKoLocale ? "직원 목록 조회" : "List Employees"}
+            {isKoLocale ? "직원 목록 조회" : "List employees"}
           </button>
         </div>
         {employees.length > 0 ? (
@@ -114,15 +120,15 @@ export function AdminPeopleInvitePanels({
             {employees.map((employee) => (
               <li key={employee.id}>
                 <span>
-                  <strong>{employee.id}</strong>{" "}
+                  <strong>{formatPublicEmployeeNumber(employee.id)}</strong>{" "}
                   <span className="muted">
-                    {employee.active ? (isKoLocale ? "활성" : "Active") : isKoLocale ? "비활성" : "Inactive"} / {employee.organizationId ?? "-"}
-                    {employee.name ? ` / ${employee.name}` : ""}
+                    {employee.active ? (isKoLocale ? "사용 중" : "Active") : isKoLocale ? "비활성" : "Inactive"}
+                    {employee.name ? ` / ${formatEmployeeDisplayName(employee.name, locale)}` : ""}
                     {employee.email ? ` / ${employee.email}` : ""}
                   </span>
                 </span>
                 <button type="button" className="btn btn-secondary btn-small" onClick={() => onApplyEmployee(employee.id)}>
-                  {isKoLocale ? "이 직원으로 적용" : "Apply This Employee"}
+                  {isKoLocale ? "이 직원으로 적용" : "Apply this employee"}
                 </button>
               </li>
             ))}
@@ -131,15 +137,15 @@ export function AdminPeopleInvitePanels({
       </article>
 
       <article className="panel" id="invites">
-        <h2>{isKoLocale ? "초대/가입" : "Invite/Sign-up"}</h2>
+        <h2>{isKoLocale ? "초대 및 가입" : "Invite and sign-up"}</h2>
         <p className="small">
           {isKoLocale
-            ? "직원에게 전달할 초대 링크를 생성합니다. 액터 식별자에 직원 번호를 넣으면 직원 포털이 해당 직원으로 매핑됩니다."
-            : "Generate invite links for employees. If actor ID contains the employee ID, the employee portal maps to that employee."}
+            ? "직원에게 전달할 초대 링크를 생성합니다. 직원 번호를 함께 넣으면 가입 후 직원 포털이 바로 연결됩니다."
+            : "Generate invite links for employees. Include the employee number to map the employee portal immediately after sign-up."}
         </p>
         <div className="input-grid">
           <label className="full">
-            {isKoLocale ? "초대 이메일" : "Invite Email"}
+            {isKoLocale ? "초대 이메일" : "Invite email"}
             <input
               value={inviteEmail}
               onChange={(event) => onInviteEmailChange(event.target.value)}
@@ -156,14 +162,14 @@ export function AdminPeopleInvitePanels({
             </select>
           </label>
           <label>
-            {isKoLocale ? "전달 방식" : "Delivery Mode"}
+            {isKoLocale ? "전달 방식" : "Delivery mode"}
             <select value={inviteDeliveryMode} onChange={(event) => onInviteDeliveryModeChange(event.target.value as InviteDeliveryMode)}>
               <option value="link">{inviteDeliveryModeLabels.link}</option>
               <option value="email">{inviteDeliveryModeLabels.email}</option>
             </select>
           </label>
           <label>
-            {isKoLocale ? "액터 식별자 (선택)" : "Actor ID (optional)"}
+            {isKoLocale ? "직원 번호 (선택)" : "Employee number (optional)"}
             <input
               value={inviteActorId}
               onChange={(event) => onInviteActorIdChange(event.target.value)}
@@ -171,38 +177,38 @@ export function AdminPeopleInvitePanels({
             />
           </label>
           <label className="full">
-            {isKoLocale ? "조직 식별자" : "Organization ID"}
+            {isKoLocale ? "대상 조직" : "Target organization"}
             <input value={organizationId} onChange={(event) => onOrganizationIdChange(event.target.value)} />
           </label>
         </div>
         <div className="actions">
           <button className="btn btn-primary" onClick={onCreateInvite} disabled={!inviteEmail.trim() || !organizationId.trim()}>
-            {isKoLocale ? "초대 링크 생성" : "Create Invite Link"}
+            {isKoLocale ? "초대 링크 생성" : "Create invite link"}
           </button>
         </div>
         {inviteResult ? (
           <>
             <p className="small">
-              {isKoLocale ? "생성됨" : "Created"}: <strong>{inviteResult.email}</strong> · role={toInviteRoleLabel(inviteResult.role)} · delivery=
-              {toInviteDeliveryModeLabel(inviteResult.deliveryMode)} · org={inviteResult.organizationId}
-              {inviteResult.actorId ? ` · actor=${inviteResult.actorId}` : ""}
+              {isKoLocale ? "생성됨" : "Created"}: <strong>{inviteResult.email}</strong> ·{" "}
+              {toInviteRoleLabel(inviteResult.role)} · {toInviteDeliveryModeLabel(inviteResult.deliveryMode)}
+              {inviteResult.actorId ? ` · ${formatPublicEmployeeNumber(inviteResult.actorId)}` : ""}
             </p>
             {inviteResult.actionLink ? (
               <label className="full" style={{ display: "block", marginTop: 8 }}>
-                {isKoLocale ? "초대 링크 (action_link)" : "Invite Link (action_link)"}
+                {isKoLocale ? "초대 링크" : "Invite link"}
                 <textarea readOnly rows={3} value={inviteResult.actionLink} />
               </label>
             ) : (
               <p className="small muted" style={{ marginTop: 8 }}>
                 {isKoLocale
-                  ? "이메일 발송 모드로 생성되어 action_link를 저장하지 않았습니다."
-                  : "Created in email delivery mode; action_link is not stored."}
+                  ? "이메일 발송 모드로 생성되어 링크를 별도로 저장하지 않았습니다."
+                  : "Created in email delivery mode, so the action link was not stored separately."}
               </p>
             )}
             <p className="small muted" style={{ marginTop: 8 }}>
               {isKoLocale
-                ? "링크가 `/login`으로 리다이렉트되려면 Supabase Auth의 Redirect URL에 현재 도메인이 허용되어야 합니다."
-                : "To redirect to `/login`, the current domain must be allowed in Supabase Auth Redirect URLs."}
+                ? "로그인 페이지로 연결되려면 Supabase Auth Redirect URL에 현재 도메인이 허용되어야 합니다."
+                : "The current domain must be allowed in Supabase Auth Redirect URLs for the login redirect to work."}
             </p>
           </>
         ) : (

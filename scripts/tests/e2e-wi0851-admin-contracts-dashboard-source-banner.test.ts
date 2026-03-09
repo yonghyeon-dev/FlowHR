@@ -9,15 +9,22 @@ function readUtf8(...parts: string[]) {
 function run() {
   const adminDashboardPage = readUtf8("src", "app", "admin", "page.tsx");
   const contractsWorkspace = readUtf8("src", "components", "contracts", "AdminContractsWorkspace.tsx");
+  const contractsWorkspaceHeader = readUtf8(
+    "src",
+    "components",
+    "contracts",
+    "AdminContractsWorkspaceHeader.tsx"
+  );
   const copy = readUtf8("src", "components", "contracts", "copy.ts");
   const workItem = readUtf8("work-items", "WI-0851-admin-contracts-dashboard-source-banner.md");
   const roadmap = readUtf8("ROADMAP.md");
+  const contractsAdminSurface = `${contractsWorkspace}\n${contractsWorkspaceHeader}`;
 
   assert.match(adminDashboardPage, /source=admin-dashboard/);
 
-  assert.match(contractsWorkspace, /analyticsSource === "admin-dashboard"/);
-  assert.match(contractsWorkspace, /copy\.dashboardSourceBanner/);
-  assert.match(contractsWorkspace, /copy\.dashboardSourceFocusLabel/);
+  assert.match(contractsAdminSurface, /analyticsSource === "admin-dashboard"/);
+  assert.match(contractsAdminSurface, /dashboardSourceBanner/);
+  assert.match(contractsAdminSurface, /dashboardSourceFocusLabel/);
   assert.match(contractsWorkspace, /const dashboardFocusLabel = decisionQueueOnly/);
   assert.match(contractsWorkspace, /documentStatusFilter === "SENT"/);
   assert.match(contractsWorkspace, /slaRiskFilter === "OVERDUE"/);

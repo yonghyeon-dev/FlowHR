@@ -4,9 +4,10 @@ import AdminContractsWorkspace from "@/components/contracts/AdminContractsWorksp
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 
 export default function AdminContractsPage() {
-  const { loading } = useSupabaseSession();
+  const { snapshot, loading } = useSupabaseSession();
+  const accessToken = snapshot?.accessToken?.trim() ?? "";
 
   if (loading) return null;
 
-  return <AdminContractsWorkspace />;
+  return <AdminContractsWorkspace accessToken={accessToken} />;
 }

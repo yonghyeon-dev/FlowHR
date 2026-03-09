@@ -8,7 +8,13 @@ import {
   contractTemplateBuilderCopyByLocale,
   type ContractCategory
 } from "@/components/contracts/copy";
-import { readJson, setContractsRuntimeLocale } from "@/components/contracts/http";
+import {
+  normalizeContractsErrorMessageForRuntime,
+  readJson,
+  requireContractsAccessToken,
+  setContractsRuntimeLocale
+} from "@/components/contracts/http";
+import { formatContractsPublicReference } from "@/components/contracts/runtime-copy-helpers";
 import {
   buildTemplateBody,
   buildTemplateBodyDiffSummary,
@@ -118,6 +124,7 @@ export default function ContractTemplateBuilder() {
     setStatusMessage(null);
     setCreatedTemplate(null);
     try {
+      const sessionToken = requireContractsAccessToken(accessToken);
       const payload = {
         name: templateName.trim(),
         category,
@@ -128,7 +135,7 @@ export default function ContractTemplateBuilder() {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          ...(accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {})
+          authorization: `Bearer ${sessionToken}`
         },
         body: JSON.stringify(payload)
       });
@@ -136,9 +143,15 @@ export default function ContractTemplateBuilder() {
         template: CreatedTemplate;
       };
       setCreatedTemplate(body.template);
-      setStatusMessage(`${copy.templateCreatedPrefix}: ${body.template.id} (v${body.template.version})`);
+      setStatusMessage(
+        `${copy.templateCreatedPrefix}: ${formatContractsPublicReference(body.template.id, "template", locale === "ko")} (v${body.template.version})`
+      );
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : copy.templateCreateError);
+      setError(
+        createError instanceof Error
+          ? normalizeContractsErrorMessageForRuntime(createError.message, copy.templateCreateError)
+          : copy.templateCreateError
+      );
     } finally {
       setPending(false);
     }
@@ -283,7 +296,10 @@ export default function ContractTemplateBuilder() {
           )}
           {createdTemplate ? (
             <ul className="simple-list">
-              <li><span>{copy.templateIdLabel}</span><strong>{createdTemplate.id}</strong></li>
+              <li>
+                <span>{copy.templateIdLabel}</span>
+                <strong>{formatContractsPublicReference(createdTemplate.id, "template", locale === "ko")}</strong>
+              </li>
               <li><span>{copy.versionLabel}</span><strong>{createdTemplate.version}</strong></li>
               <li><span>{copy.statusLabel}</span><strong>{templateStatusLabels[createdTemplate.status]}</strong></li>
               <li><span>{copy.categoryValueLabel}</span><strong>{categoryLabels[createdTemplate.category]}</strong></li>

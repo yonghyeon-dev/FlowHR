@@ -66,6 +66,16 @@ function toSeoulIsoForNextWeekday(
   return new Date(Date.UTC(year, month, day + daysUntilTarget, utcHour, minute, 0)).toISOString();
 }
 
+function addSeoulDays(baseIso: string, dayOffset: number, hour = 9, minute = 0) {
+  const base = new Date(baseIso);
+  const seoulBase = new Date(base.getTime() + SEOUL_OFFSET_MS);
+  const year = seoulBase.getUTCFullYear();
+  const month = seoulBase.getUTCMonth();
+  const day = seoulBase.getUTCDate() + dayOffset;
+  const utcHour = hour - 9;
+  return new Date(Date.UTC(year, month, day, utcHour, minute, 0)).toISOString();
+}
+
 async function run() {
   const { memoryDataAccess, resetMemoryDataAccess } = await import(
     "../../src/features/shared/memory-data-access.ts"
@@ -131,6 +141,8 @@ async function run() {
   );
   assert.equal(noticeDeniedResponse.status, 409, "request should fail min notice policy");
 
+  const capStartDate = toSeoulIsoForNextWeekday(1, { weekOffset: 1, hour: 9, minute: 0 });
+  const capEndDate = addSeoulDays(capStartDate, 3, 18, 0);
   const capDeniedResponse = await leaveCreateRoute.POST(
     jsonRequest(
       "POST",
@@ -139,8 +151,8 @@ async function run() {
         employeeId,
         leaveType: "ANNUAL",
         unit: "FULL_DAY",
-        startDate: toSeoulIsoForNextWeekday(1, { weekOffset: 1, hour: 9, minute: 0 }),
-        endDate: toSeoulIsoForNextWeekday(4, { weekOffset: 1, hour: 18, minute: 0 }),
+        startDate: capStartDate,
+        endDate: capEndDate,
         reason: "consecutive cap should fail"
       },
       actorHeaders("employee", employeeId)
@@ -148,6 +160,8 @@ async function run() {
   );
   assert.equal(capDeniedResponse.status, 409, "request should fail max consecutive policy");
 
+  const allowedStartDate = toSeoulIsoForNextWeekday(1, { weekOffset: 1, hour: 9, minute: 0 });
+  const allowedEndDate = addSeoulDays(allowedStartDate, 2, 18, 0);
   const allowedCreateResponse = await leaveCreateRoute.POST(
     jsonRequest(
       "POST",
@@ -156,8 +170,8 @@ async function run() {
         employeeId,
         leaveType: "ANNUAL",
         unit: "FULL_DAY",
-        startDate: toSeoulIsoForNextWeekday(1, { weekOffset: 1, hour: 9, minute: 0 }),
-        endDate: toSeoulIsoForNextWeekday(3, { weekOffset: 1, hour: 18, minute: 0 }),
+        startDate: allowedStartDate,
+        endDate: allowedEndDate,
         reason: "within policy"
       },
       actorHeaders("employee", employeeId)
@@ -213,6 +227,8 @@ async function run() {
   );
   assert.equal(clearCapResponse.status, 200, "policy should support null maxConsecutiveDays");
 
+  const longLeaveStartDate = toSeoulIsoForNextWeekday(1, { weekOffset: 3, hour: 9, minute: 0 });
+  const longLeaveEndDate = addSeoulDays(longLeaveStartDate, 4, 18, 0);
   const longLeaveAllowedResponse = await leaveCreateRoute.POST(
     jsonRequest(
       "POST",
@@ -221,8 +237,8 @@ async function run() {
         employeeId,
         leaveType: "ANNUAL",
         unit: "FULL_DAY",
-        startDate: toSeoulIsoForNextWeekday(1, { weekOffset: 3, hour: 9, minute: 0 }),
-        endDate: toSeoulIsoForNextWeekday(5, { weekOffset: 3, hour: 18, minute: 0 }),
+        startDate: longLeaveStartDate,
+        endDate: longLeaveEndDate,
         reason: "cap cleared"
       },
       actorHeaders("employee", employeeId)

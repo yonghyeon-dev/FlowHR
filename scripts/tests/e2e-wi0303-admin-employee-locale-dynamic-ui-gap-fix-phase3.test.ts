@@ -40,8 +40,13 @@ async function run() {
 
   assert.match(adminChrome, /\{isKoLocale \? "현재 환경은 " : "Current environment is "\}/);
   assert.match(adminChrome, /<p>\{isKoLocale \? "API 호출" : "API calls"\}<\/p>/);
-  assert.match(adminOnboardingAccountPanels, /\{isKoLocale \? "조직 식별자" : "Organization ID"\}/);
-  assert.match(adminPeopleInvitePanels, /\{isKoLocale \? "액터 식별자 \(선택\)" : "Actor ID \(optional\)"\}/);
+  assert.match(adminOnboardingAccountPanels, /\{isKoLocale \? "현재 선택 조직" : "Current organization"\}/);
+  assert.match(adminOnboardingAccountPanels, /\{isKoLocale \? "작업 조직" : "Working organization"\}/);
+  assert.match(
+    adminOnboardingAccountPanels,
+    /\{isKoLocale \? "Bearer 액세스 토큰\(재정의\)" : "Bearer access token \(override\)"\}/
+  );
+  assert.match(adminPeopleInvitePanels, /\{isKoLocale \? "직원 번호 \(선택\)" : "Employee number \(optional\)"\}/);
   assert.match(
     adminPayrollPanel,
     /\{isKoLocale \? "법정공제\(한국 기준\)" : "Statutory deductions \(KR baseline\)"\}/

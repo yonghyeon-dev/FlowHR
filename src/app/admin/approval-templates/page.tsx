@@ -19,6 +19,10 @@ import { actorRoles } from "@/lib/actor";
 import { apiClientFetch, parseApiResponseBody } from "@/lib/api-client";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatActorRoleLabel,
+  formatUserFacingErrorMessage
+} from "@/lib/product-language";
 
 const domainOptions: ApprovalDomain[] = ["ATTENDANCE", "LEAVE", "PAYROLL"];
 
@@ -117,7 +121,25 @@ export default function AdminApprovalTemplatesPage() {
       ]);
 
       const body = await parseApiResponseBody(response);
+      if (!response.ok) {
+        throw new Error(typeof body === "string" ? body : label);
+      }
       return { response, body };
+    } catch (error) {
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label,
+          ok: false,
+          status: 0,
+          at: new Date().toLocaleString(runtimeLocale)
+        },
+        ...prev
+      ]);
+      return {
+        response: { ok: false, status: 0 } as Response,
+        body: formatUserFacingErrorMessage(error instanceof Error ? error.message : String(error), runtimeLocale)
+      };
     } finally {
       setPendingLabel(null);
     }
@@ -247,7 +269,7 @@ export default function AdminApprovalTemplatesPage() {
           </div>
           {supabaseSessionError ? (
             <p className="small fail">
-              {copy.context.sessionError}: {supabaseSessionError}
+              {copy.context.sessionError}: {formatUserFacingErrorMessage(supabaseSessionError, runtimeLocale)}
             </p>
           ) : null}
         </article>
@@ -305,7 +327,7 @@ export default function AdminApprovalTemplatesPage() {
                     checked={selectedRoles.includes(role)}
                     onChange={(event) => toggleRole(role, event.target.checked)}
                   />
-                  {role}
+                  {formatActorRoleLabel(role, runtimeLocale)}
                 </label>
               ))}
             </div>

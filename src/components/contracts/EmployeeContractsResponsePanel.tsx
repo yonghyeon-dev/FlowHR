@@ -3,7 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
 import { type ContractDocumentStatus, type EmployeeContractsCopy, toDateText } from "@/components/contracts/copy";
 import { resolveDueSoonPendingDays, resolveOverduePendingDays } from "@/components/contracts/employee-inbox-filter-helpers";
-import { normalizeContractsEvidenceFileName } from "@/components/contracts/runtime-copy-helpers";
+import {
+  formatContractsPublicReference,
+  normalizeContractsEvidenceFileName
+} from "@/components/contracts/runtime-copy-helpers";
 import { resolveContractDocumentStatusLabel } from "@/components/contracts/status-label-helpers";
 import { type ContractSignatureEvidenceResponse, type EmployeeContractDocument } from "@/components/contracts/types";
 type ResponseHistoryEntryType = "SIGNED" | "REJECTED" | "EVIDENCE";
@@ -192,7 +195,10 @@ export function EmployeeContractsResponsePanel({
       ) : (
         <>
           <ul className="contract-template-detail-list" aria-label={copy.detailAria}>
-            <li><span>{copy.idLabel}</span><strong>{selected.id}</strong></li>
+            <li>
+              <span>{copy.idLabel}</span>
+              <strong>{formatContractsPublicReference(selected.id, "document", isKoLocale)}</strong>
+            </li>
             <li><span>{copy.statusLabel}</span><strong>{resolveContractDocumentStatusLabel(selected.status, documentStatusLabels, isKoLocale)}</strong></li>
             <li><span>{copy.hashLabel}</span><strong>{selected.documentHash.slice(0, 16)}...</strong></li>
             <li><span>{copy.updatedLabel}</span><strong>{toDateText(selected.updatedAt, runtimeLocale)}</strong></li>

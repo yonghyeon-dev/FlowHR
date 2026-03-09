@@ -3,6 +3,7 @@ import {
   type QueueBadgeSummary,
   type QueueFocus
 } from "./approval-queue-types";
+import { formatApprovalQueueRequestLabel } from "@/lib/product-language";
 
 type ApprovalQueueActivitySectionProps = {
   copy: {
@@ -27,6 +28,10 @@ type ApprovalQueueActivitySectionProps = {
   onClearApprovalActivities: () => void;
 };
 
+function detectLocale(copy: ApprovalQueueActivitySectionProps["copy"]) {
+  return copy.ok === "성공" ? "ko-KR" : "en-US";
+}
+
 export function ApprovalQueueActivitySection({
   copy,
   activeQueueBadgeSummary,
@@ -36,6 +41,8 @@ export function ApprovalQueueActivitySection({
   approvalActivities,
   onClearApprovalActivities
 }: ApprovalQueueActivitySectionProps) {
+  const locale = detectLocale(copy);
+
   return (
     <>
       <p className="small" style={{ marginTop: 10 }}>
@@ -84,10 +91,9 @@ export function ApprovalQueueActivitySection({
             <li key={activity.id}>
               <span>
                 <span className={activity.ok ? "ok" : "fail"}>{activity.ok ? copy.ok : copy.fail}</span>{" "}
-                <strong>[{activity.queue}]</strong> {activity.action}
-                {copy.summaryConnector}
-                {activity.itemId}{" "}
+                <strong>{formatApprovalQueueRequestLabel(activity.queue, locale)}</strong> {activity.action}
                 <span className="muted">
+                  {" "}
                   ({activity.status}
                   {copy.summaryConnector}
                   {activity.at})

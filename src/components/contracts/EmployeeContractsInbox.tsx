@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -8,6 +7,7 @@ import {
   employeeContractsCopyByLocale,
   toDateText
 } from "@/components/contracts/copy";
+import { EmployeeContractsInboxHeader } from "@/components/contracts/EmployeeContractsInboxHeader";
 import { EmployeeContractsInboxList } from "@/components/contracts/EmployeeContractsInboxList";
 import { EmployeeContractsResponsePanel } from "@/components/contracts/EmployeeContractsResponsePanel";
 import { canEmployeeRespondToContractDocument } from "@/components/contracts/document-action-policy";
@@ -26,17 +26,23 @@ import {
   sortInboxDocumentsByRisk
 } from "@/components/contracts/employee-inbox-filter-helpers";
 import { resolveEmployeeContractsNextActionHint } from "@/components/contracts/employee-inbox-journey-helpers";
-import { normalizeContractsErrorMessageForRuntime, readJson, setContractsRuntimeLocale } from "@/components/contracts/http";
+import {
+  normalizeContractsErrorMessageForRuntime,
+  readJson,
+  requireContractsAccessToken,
+  setContractsRuntimeLocale
+} from "@/components/contracts/http";
 import { type ContractSignatureEvidenceResponse, type EmployeeContractDocument as ContractDocument } from "@/components/contracts/types";
 import { resolveEmployeeContractsSourceEntry } from "@/components/contracts/employee-source-context";
-import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
-export default function EmployeeContractsInbox() {
+type EmployeeContractsInboxProps = {
+  accessToken: string;
+};
+
+export default function EmployeeContractsInbox({ accessToken }: EmployeeContractsInboxProps) {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
-  const { snapshot } = useSupabaseSession();
-  const accessToken = snapshot?.accessToken?.trim() ?? "";
   const isKoLocale = locale === "ko";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = employeeContractsCopyByLocale[locale];
@@ -82,9 +88,10 @@ export default function EmployeeContractsInbox() {
   const nextActionHint = useMemo(() => resolveEmployeeContractsNextActionHint(selected, copy), [copy, selected]);
   const reload = useCallback(async () => {
     setError(null);
+    const sessionToken = requireContractsAccessToken(accessToken);
     const data = (await fetch("/api/contracts/documents", {
       cache: "no-store",
-      headers: accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {}
+      headers: { authorization: `Bearer ${sessionToken}` }
     }).then((response) => readJson(response, copy.loadError))) as { documents?: ContractDocument[] };
     setDocuments(data.documents ?? []);
   }, [accessToken, copy.loadError]);
@@ -113,11 +120,12 @@ export default function EmployeeContractsInbox() {
       return;
     }
     try {
+      const sessionToken = requireContractsAccessToken(accessToken);
       await fetch(`/api/contracts/documents/${selected.id}/respond`, {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          ...(accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {})
+          authorization: `Bearer ${sessionToken}`
         },
         body: JSON.stringify({
           action,
@@ -170,11 +178,12 @@ export default function EmployeeContractsInbox() {
     setError(null);
     setMessage(null);
     try {
+      const sessionToken = requireContractsAccessToken(accessToken);
       const response = await fetch(
         `/api/contracts/documents/${selected.id}/signature-evidence?format=${format}`,
         {
           method: "GET",
-          headers: accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {}
+          headers: { authorization: `Bearer ${sessionToken}` }
         }
       );
       const body = (await readJson(response, copy.evidenceLoadError)) as ContractSignatureEvidenceResponse;
@@ -190,20 +199,12 @@ export default function EmployeeContractsInbox() {
   }
   return (
     <main className="saas-content">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">{copy.title}</h1>
-          <p className="page-subtitle">{copy.description}</p>
-          {sourceEntry ? <p className="small muted">{sourceEntry.hint}</p> : null}
-        </div>
-        <div className="page-actions">
-          {sourceEntry ? (
-            <Link className="btn btn-secondary" href="/employee">
-              {sourceEntry.returnLabel}
-            </Link>
-          ) : null}
-        </div>
-      </header>
+      <EmployeeContractsInboxHeader
+        title={copy.title}
+        description={copy.description}
+        sourceHint={sourceEntry?.hint ?? null}
+        returnLabel={sourceEntry?.returnLabel ?? null}
+      />
       {error ? <p className="inline-error">{error}</p> : null}
       {message ? <p className="small">{message}</p> : null}
       <section className="panel-grid">

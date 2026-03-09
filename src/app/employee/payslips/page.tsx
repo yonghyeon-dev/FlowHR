@@ -14,6 +14,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import {
   type DeductionDescriptionMap,
   extractErrorMessage,
+  formatKrw,
   normalizeRuntimeDiagnosticMessage,
   resolveDeductionDescriptionMap,
   resolvePayslipPageCopy,
@@ -235,24 +236,33 @@ export default function EmployeePayslipsPage() {
       return;
     }
 
-    const payload = {
-      selectedRunId: selectedRun.id,
-      compareRunId: compareRun.id,
-      window: compareWindowLabel,
-      metrics: compareMetrics.map((metric) => ({
-        id: metric.id,
-        diffValue: metric.diffValue,
-        diffRate: metric.diffRate
-      })),
-      insights: compareInsightCards.map((card) => ({
-        title: card.title,
-        message: card.message
-      }))
-    };
+    const summary = [
+      isKoLocale ? "급여 비교 요약" : "Payslip comparison summary",
+      `${isKoLocale ? "기준 명세서" : "Selected payslip"}: ${selectedRun.id}`,
+      `${isKoLocale ? "비교 명세서" : "Compared payslip"}: ${compareRun.id}`,
+      `${pageCopy.compare.window}: ${compareWindowLabel}`,
+      "",
+      ...(compareMetrics.length > 0
+        ? compareMetrics.map((metric) => {
+          const selectedValue = metric.selectedValue === null ? "-" : formatKrw(metric.selectedValue);
+          const compareValue = metric.compareValue === null ? "-" : formatKrw(metric.compareValue);
+          const diffValue = metric.diffValue === null ? "-" : formatKrw(metric.diffValue);
+          return `${metric.label}: ${selectedValue} -> ${compareValue} (${pageCopy.compare.headers.diff} ${diffValue})`;
+        })
+        : [isKoLocale ? "비교 지표가 없습니다." : "No comparison metrics available."]),
+      "",
+      ...(compareInsightCards.length > 0
+        ? compareInsightCards.map((card) => `- ${card.title}: ${card.message}`)
+        : [isKoLocale ? "비교 인사이트가 없습니다." : "No comparison insights available."])
+    ].join("\n");
 
     try {
-      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-      appendClientLog(pageCopy.logs.copyCompareSnapshot, true, 200, payload);
+      await navigator.clipboard.writeText(summary);
+      appendClientLog(pageCopy.logs.copyCompareSnapshot, true, 200, {
+        selectedRunId: selectedRun.id,
+        compareRunId: compareRun.id,
+        copiedFormat: "text-summary"
+      });
     } catch (error) {
       appendClientLog(pageCopy.logs.copyCompareSnapshot, false, 500, {
         error: error instanceof Error ? error.message : String(error)

@@ -1,7 +1,7 @@
 ﻿"use client";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { AdminContractsWorkspaceHeader } from "@/components/contracts/AdminContractsWorkspaceHeader";
 import {
   adminContractsCopyByLocale,
   contractApprovalStatusLabelByLocale,
@@ -26,11 +26,18 @@ import {
 } from "@/components/contracts/useAdminContractsDocumentFilters";
 import { setContractsRuntimeLocale } from "@/components/contracts/http";
 import { resolveAdminContractDocumentNextStep, resolveAllowedContractDocumentActions, type ContractDocumentNextStepKey } from "@/components/contracts/document-action-policy";
-import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-copy-helpers";
+import {
+  formatContractsPublicReference,
+  normalizeContractsEntityTitle
+} from "@/components/contracts/runtime-copy-helpers";
 import { resolveContractApprovalStatusLabel, resolveContractDocumentStatusLabel } from "@/components/contracts/status-label-helpers";
 import { formatEmployeeIdForLocaleDisplay, normalizeEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
-export default function AdminContractsWorkspace() {
+type AdminContractsWorkspaceProps = {
+  accessToken: string;
+};
+
+export default function AdminContractsWorkspace({ accessToken }: AdminContractsWorkspaceProps) {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
@@ -51,21 +58,15 @@ export default function AdminContractsWorkspace() {
   const [templateCategory, setTemplateCategory] = useState<ContractCategory>("employment");
   const [templateBody, setTemplateBody] = useState(locale === "ko" ? "직원은 직무, 보상, 기밀 유지 조항에 동의합니다." : "Employee agrees to role, compensation, and confidentiality clauses.");
   const normalizedEmployeeIdForApi = normalizeEmployeeIdForApi(employeeId, locale);
-  const actionLabelByAction = useMemo<Record<ContractDocumentAction, string>>(
-    () => ({
-      request: copy.requestApprovalAction,
-      approve: copy.approveAction,
-      reject: copy.rejectAction,
-      send: copy.sendAction,
-      expire: copy.expireAction,
-      renew: copy.renewAction
-    }),
-    [copy]
-  );
-  const nextStepLabelByKey = useMemo<Record<ContractDocumentNextStepKey, string>>(
-    () => ({ REQUEST_APPROVAL: copy.nextStepRequestApproval, APPROVE_OR_REJECT: copy.nextStepApproveOrReject, SEND_DOCUMENT: copy.nextStepSendDocument, WAIT_EMPLOYEE_RESPONSE: copy.nextStepWaitEmployeeResponse, RENEW_DOCUMENT: copy.nextStepRenewDocument, NO_ACTION: copy.nextStepNoAction }),
-    [copy]
-  );
+  const actionLabelByAction = useMemo<Record<ContractDocumentAction, string>>(() => ({
+    request: copy.requestApprovalAction,
+    approve: copy.approveAction,
+    reject: copy.rejectAction,
+    send: copy.sendAction,
+    expire: copy.expireAction,
+    renew: copy.renewAction
+  }), [copy]);
+  const nextStepLabelByKey = useMemo<Record<ContractDocumentNextStepKey, string>>(() => ({ REQUEST_APPROVAL: copy.nextStepRequestApproval, APPROVE_OR_REJECT: copy.nextStepApproveOrReject, SEND_DOCUMENT: copy.nextStepSendDocument, WAIT_EMPLOYEE_RESPONSE: copy.nextStepWaitEmployeeResponse, RENEW_DOCUMENT: copy.nextStepRenewDocument, NO_ACTION: copy.nextStepNoAction }), [copy]);
   const {
     templates,
     selectedTemplateId,
@@ -76,6 +77,7 @@ export default function AdminContractsWorkspace() {
     createDraftDocument,
     runDocumentAction
   } = useAdminContractsWorkspaceActions({
+    accessToken,
     copy,
     locale,
     templateName,
@@ -84,6 +86,7 @@ export default function AdminContractsWorkspace() {
     normalizedEmployeeIdForApi,
     actionLabelByAction
   });
+  const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? null;
   const { documentSearchQuery, setDocumentSearchQuery, documentStatusFilter, setDocumentStatusFilter, expirationWindowDays, setExpirationWindowDays, slaRiskFilter, setSlaRiskFilter, renewalCandidateOnly, setRenewalCandidateOnly, decisionQueueOnly, setDecisionQueueOnly, nextStepFilter, setNextStepFilter, expiringSoonCount, dueSoonSlaCount, overdueSlaCount, decisionQueueCount, nextStepCounts, renewalCandidateCount, visibleDocuments, isDueSoonSlaRisk, isOverdueSlaRisk } = useAdminContractsDocumentFilters({
     documents,
     locale,
@@ -118,41 +121,30 @@ export default function AdminContractsWorkspace() {
   }, [locale]);
   return (
     <main className="saas-content">
-      <header className="page-header">
-        <div>
-          <p className="page-eyebrow">{copy.heroEyebrow}</p>
-          <h1 className="page-title">{copy.title}</h1>
-          <p className="page-subtitle">{copy.description}</p>
-          {analyticsSource === "admin-analytics" ? <p className="small muted">{copy.analyticsSourceBanner} · {copy.analyticsSourceFocusLabel}: {analyticsFocusLabel}</p> : null}
-          {analyticsSource === "admin-dashboard" ? <p className="small muted">{copy.dashboardSourceBanner} · {copy.dashboardSourceFocusLabel}: {dashboardFocusLabel}</p> : null}
-          <div className="contract-action-row">
-            {analyticsBackHref ? (
-              <Link href={analyticsBackHref} className="btn btn-secondary btn-small">
-                {analyticsBackLabel}
-              </Link>
-            ) : null}
-            <Link href="/admin/contracts/builder" className="btn btn-secondary btn-small">
-              {copy.openTemplateBuilderAction}
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AdminContractsWorkspaceHeader
+        heroEyebrow={copy.heroEyebrow}
+        title={copy.title}
+        description={copy.description}
+        analyticsSource={analyticsSource}
+        analyticsFocusLabel={analyticsFocusLabel}
+        analyticsSourceBanner={copy.analyticsSourceBanner}
+        analyticsSourceFocusLabel={copy.analyticsSourceFocusLabel}
+        dashboardSourceBanner={copy.dashboardSourceBanner}
+        dashboardSourceFocusLabel={copy.dashboardSourceFocusLabel}
+        dashboardFocusLabel={dashboardFocusLabel}
+        analyticsBackHref={analyticsBackHref}
+        analyticsBackLabel={analyticsBackLabel}
+        openTemplateBuilderAction={copy.openTemplateBuilderAction}
+        summaryKpiAria={copy.summaryKpiAria}
+        templatesKpiLabel={copy.templatesKpiLabel}
+        templatesCount={templates.length}
+        documentsKpiLabel={copy.documentsKpiLabel}
+        documentsCount={documents.length}
+        pendingApprovalKpiLabel={copy.pendingApprovalKpiLabel}
+        pendingApprovalCount={documents.filter((item) => item.approvalStatus === "PENDING").length}
+      />
       {error ? <p className="inline-error">{error}</p> : null}
       {message ? <p className="small">{message}</p> : null}
-      <section className="kpi-strip" aria-label={copy.summaryKpiAria}>
-        <article className="kpi-card">
-          <span>{copy.templatesKpiLabel}</span>
-          <strong>{templates.length}</strong>
-        </article>
-        <article className="kpi-card">
-          <span>{copy.documentsKpiLabel}</span>
-          <strong>{documents.length}</strong>
-        </article>
-        <article className="kpi-card">
-          <span>{copy.pendingApprovalKpiLabel}</span>
-          <strong>{documents.filter((item) => item.approvalStatus === "PENDING").length}</strong>
-        </article>
-      </section>
       <section className="panel-grid">
         <article id="contract-template-library" className="panel panel-contract-template-library">
           <h2>{copy.templateLibraryTitle}</h2>
@@ -194,7 +186,9 @@ export default function AdminContractsWorkspace() {
                   <span className="queue-history-chip">v{template.version}</span>
                 </div>
                 <div className="contract-template-meta">
-                  <span className="queue-history-chip">{template.id}</span>
+                  <span className="queue-history-chip">
+                    {formatContractsPublicReference(template.id, "template", isKoLocale)}
+                  </span>
                   <span className="queue-history-chip">{categoryLabels[template.category]}</span>
                   <span className="queue-history-chip">{templateStatusLabels[template.status]}</span>
                   <span className="queue-history-chip">
@@ -218,7 +212,15 @@ export default function AdminContractsWorkspace() {
             </label>
             <label>
               {copy.selectedTemplateLabel}
-              <input value={selectedTemplateId} disabled />
+              <input
+                value={
+                  selectedTemplate
+                    ? normalizeContractsEntityTitle(selectedTemplate.name, selectedTemplate.id, isKoLocale)
+                    : ""
+                }
+                placeholder={copy.selectedTemplateLabel}
+                disabled
+              />
             </label>
           </div>
           <div className="contract-action-row">
@@ -267,7 +269,7 @@ export default function AdminContractsWorkspace() {
                     <span className="queue-history-chip">{resolveContractDocumentStatusLabel(document.status, documentStatusLabels, isKoLocale)}</span>
                   </div>
                   <p>
-                    {document.id} | {copy.employeePrefix}{" "}
+                    {formatContractsPublicReference(document.id, "document", isKoLocale)} | {copy.employeePrefix}{" "}
                     {formatEmployeeIdForLocaleDisplay(document.employeeId, locale)} | {copy.approvalPrefix}{" "}
                     {resolveContractApprovalStatusLabel(document.approvalStatus, approvalStatusLabels, isKoLocale)} | {copy.expiresPrefix}{" "}
                     {toDateText(document.expiresAt, runtimeLocale)}

@@ -60,7 +60,7 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(adminApprovalExecutionsPage, /const \{ locale \} = useI18n\(\);/);
-  assert.match(adminApprovalExecutionsSurface, /Escalation channel/);
+  assert.match(adminApprovalExecutionsSurface, /Notification channel/);
   assert.match(adminApprovalExecutionsSurface, /requestedAt/);
   assert.match(adminApprovalExecutionsSurface, /toDomainLabel\(execution\.domain\)/);
   assert.match(adminApprovalExecutionsSurface, /toStateLabel\(execution\.state\)/);

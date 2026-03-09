@@ -1,28 +1,12 @@
-﻿"use client";
+"use client";
 
-import Link from "next/link";
-
+import { formatDateTime } from "@/app/admin/approval-executions/page-helpers";
+import type { EscalationResultDto, ApprovalExecutionSummary } from "@/app/admin/approval-executions/page-types";
 import {
-  formatDateTime,
-  getCompletedStages,
-  getProgressPercent,
-  getStalledHours,
-  resolveQuickJumpLabel,
-  resolveQuickJumpPath,
-  toTargetKey
-} from "@/app/admin/approval-executions/page-helpers";
-import type {
-  ApiLog,
-  ApiLogStats,
-  ApprovalDomain,
-  ApprovalExecutionDto,
-  ApprovalExecutionSort,
-  ApprovalExecutionState,
-  ApprovalExecutionSummary,
-  ApprovalStageHistoryDto,
-  EscalationResultDto
-} from "@/app/admin/approval-executions/page-types";
-import { domainOptions, stateOptions } from "@/app/admin/approval-executions/page-types";
+  formatApprovalDomainLabel,
+  formatApprovalEntityTypeLabel,
+  formatNotificationChannelLabel
+} from "@/lib/product-language";
 
 type SummaryPanelProps = {
   isKoLocale: boolean;
@@ -48,7 +32,7 @@ export function ApprovalExecutionSummaryPanel({
           <strong>{summary.total}</strong>
         </div>
         <div className="summary-card">
-          <p>{isKoLocale ? "진행중" : "In progress"}</p>
+          <p>{isKoLocale ? "진행 중" : "In progress"}</p>
           <strong>{summary.pendingCount}</strong>
         </div>
         <div className="summary-card">
@@ -57,13 +41,13 @@ export function ApprovalExecutionSummaryPanel({
         </div>
         <div className="summary-card">
           <p>
-            {isKoLocale ? "주의 정체" : "Watch queue"} ({">="} {summary.watchThresholdHours}h)
+            {isKoLocale ? "주의 항목" : "Watch queue"} ({">="} {summary.watchThresholdHours}h)
           </p>
           <strong>{summary.watchCount}</strong>
         </div>
         <div className="summary-card">
           <p>
-            {isKoLocale ? "긴급 정체" : "Critical queue"} ({">="} {summary.criticalThresholdHours}h)
+            {isKoLocale ? "긴급 항목" : "Critical queue"} ({">="} {summary.criticalThresholdHours}h)
           </p>
           <strong>{summary.criticalCount}</strong>
         </div>
@@ -72,15 +56,15 @@ export function ApprovalExecutionSummaryPanel({
           <strong>{summary.maxStalledHours.toFixed(1)}h</strong>
         </div>
         <div className="summary-card">
-          <p>{isKoLocale ? "급여 진행중" : "Payroll pending"}</p>
+          <p>{isKoLocale ? "급여 진행 중" : "Payroll pending"}</p>
           <strong>{summary.payrollPendingCount}</strong>
         </div>
         <div className="summary-card">
-          <p>{isKoLocale ? "휴가 진행중" : "Leave pending"}</p>
+          <p>{isKoLocale ? "휴가 진행 중" : "Leave pending"}</p>
           <strong>{summary.leavePendingCount}</strong>
         </div>
         <div className="summary-card">
-          <p>{isKoLocale ? "근태 진행중" : "Attendance pending"}</p>
+          <p>{isKoLocale ? "근태 진행 중" : "Attendance pending"}</p>
           <strong>{summary.attendancePendingCount}</strong>
         </div>
       </div>
@@ -109,6 +93,8 @@ export function ApprovalExecutionEscalationResultPanel({
   runtimeLocale,
   escalationResult
 }: EscalationResultPanelProps) {
+  const locale = isKoLocale ? "ko-KR" : "en-US";
+
   return (
     <article className="panel">
       <h2>{isKoLocale ? "에스컬레이션 결과" : "Escalation result"}</h2>
@@ -118,59 +104,55 @@ export function ApprovalExecutionEscalationResultPanel({
         <>
           <ul className="simple-list">
             <li>
-              <span>{isKoLocale ? "요청 시각" : "requestedAt"}</span>
+              <span>{isKoLocale ? "요청 시각" : "Requested at"}</span>
               <strong>{formatDateTime(escalationResult.requestedAt, runtimeLocale)}</strong>
             </li>
             <li>
-              <span>{isKoLocale ? "드라이런" : "dryRun"}</span>
-              <strong>{escalationResult.dryRun ? (isKoLocale ? "예" : "yes") : isKoLocale ? "아니오" : "no"}</strong>
+              <span>{isKoLocale ? "실행 방식" : "Run mode"}</span>
+              <strong>{escalationResult.dryRun ? (isKoLocale ? "미리보기" : "Dry run") : isKoLocale ? "실행" : "Dispatch"}</strong>
             </li>
             <li>
-              <span>{isKoLocale ? "후보 / 요청됨" : "candidates / requested"}</span>
+              <span>{isKoLocale ? "후보 / 요청됨" : "Candidates / requested"}</span>
               <strong>
                 {escalationResult.counts.candidates} / {escalationResult.counts.requested}
               </strong>
             </li>
             <li>
-              <span>{isKoLocale ? "웹훅 설정" : "webhook configured"}</span>
+              <span>{isKoLocale ? "웹훅 연결" : "Webhook configured"}</span>
               <strong>
-                {escalationResult.policy.webhookConfigured ? (isKoLocale ? "예" : "yes") : isKoLocale ? "아니오" : "no"}
+                {escalationResult.policy.webhookConfigured ? (isKoLocale ? "연결됨" : "Configured") : isKoLocale ? "미연결" : "Not configured"}
               </strong>
             </li>
             <li>
-              <span>{isKoLocale ? "제공자" : "provider"}</span>
-              <strong>{escalationResult.policy.provider ?? "-"}</strong>
-            </li>
-            <li>
-              <span>{isKoLocale ? "웹훅 소스" : "webhook source"}</span>
-              <strong>{escalationResult.policy.webhookSource ?? "-"}</strong>
+              <span>{isKoLocale ? "알림 채널" : "Notification channel"}</span>
+              <strong>{formatNotificationChannelLabel(escalationResult.policy.notificationChannel, locale)}</strong>
             </li>
           </ul>
           <p className="small">
-            {isKoLocale ? "채널" : "channel"} {escalationResult.policy.notificationChannel} /{" "}
-            {isKoLocale ? "임계값" : "threshold"} {escalationResult.policy.stalledHoursMin}h /{" "}
-            {isKoLocale ? "제한" : "limit"} {escalationResult.policy.limit}
+            {isKoLocale ? "정체 기준" : "Threshold"} {escalationResult.policy.stalledHoursMin}h /{" "}
+            {isKoLocale ? "처리 한도" : "Limit"} {escalationResult.policy.limit}
           </p>
           {escalationResult.items.length > 0 ? (
             <ul className="simple-list">
               {escalationResult.items.map((item) => (
                 <li key={item.executionId}>
                   <span>
-                    <strong>{item.domain}</strong> / {item.targetEntityType}:{item.targetEntityId}
+                    <strong>{formatApprovalDomainLabel(item.domain, locale)}</strong> ·{" "}
+                    {formatApprovalEntityTypeLabel(item.targetEntityType, locale)}
                     <br />
                     <span className="small">
-                      {isKoLocale ? "정체" : "stalled"} {item.stalledHours.toFixed(1)}h /{" "}
-                      {isKoLocale ? "단계" : "stage"} {item.currentStageIndex}/{item.totalStages}
+                      {isKoLocale ? "정체" : "Stalled"} {item.stalledHours.toFixed(1)}h /{" "}
+                      {isKoLocale ? "단계" : "Stage"} {item.currentStageIndex}/{item.totalStages}
                     </span>
                   </span>
                   <span className={item.decision === "REQUESTED" ? "ok" : "muted"}>
                     {item.decision === "REQUESTED"
                       ? isKoLocale
                         ? "요청됨"
-                        : "REQUESTED"
+                        : "Requested"
                       : isKoLocale
-                        ? "드라이런"
-                        : "DRY_RUN"}
+                        ? "미리보기"
+                        : "Dry run"}
                   </span>
                 </li>
               ))}

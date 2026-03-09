@@ -9,17 +9,17 @@ type FilingExportBundleProps = {
 export default function FilingExportBundle({ metadata, onMetadataChange }: FilingExportBundleProps) {
   return (
     <article className="panel" id="filing-workflow-export-bundle">
-      <h3>Workflow Metadata</h3>
+      <h3>Workflow overview</h3>
       <div className={styles.controlGrid}>
         <label>
-          Metric
+          Tracking item
           <input
             value={metadata.metric}
             onChange={(event) => onMetadataChange({ metric: event.target.value })}
           />
         </label>
         <label>
-          Alert Level
+          Alert severity
           <select
             value={metadata.level}
             onChange={(event) =>
@@ -28,19 +28,19 @@ export default function FilingExportBundle({ metadata, onMetadataChange }: Filin
               })
             }
           >
-            <option value="watch">watch</option>
-            <option value="critical">critical</option>
+            <option value="watch">Watch</option>
+            <option value="critical">Critical</option>
           </select>
         </label>
         <label>
-          Owner Role
+          Owner role
           <input
             value={metadata.ownerRole}
             onChange={(event) => onMetadataChange({ ownerRole: event.target.value })}
           />
         </label>
         <label>
-          Owner Actor ID
+          Owner
           <input
             value={metadata.ownerActorId}
             onChange={(event) => onMetadataChange({ ownerActorId: event.target.value })}
@@ -63,7 +63,7 @@ export default function FilingExportBundle({ metadata, onMetadataChange }: Filin
         </label>
       </div>
       <p className="small">
-        Metadata is shared across all flat workflow steps through `FilingWorkflowContext`.
+        This summary is reused across the filing workflow steps.
       </p>
     </article>
   );

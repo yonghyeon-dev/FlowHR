@@ -29,7 +29,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         title: "조회 조건",
         organizationIdOptional: "로그인 조직",
         organizationIdPlaceholder: "예: 조직-00001",
-        employeeId: "로그인 직원",
+        employeeId: "직원 번호",
         periodStart: "기간 시작",
         periodEnd: "기간 종료",
         actions: {
@@ -47,8 +47,8 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         bearerPlaceholder: "비워두면 세션 기반 요청 헤더 모드를 사용합니다.",
         bearerStatusLabel: "토큰 모드",
         sessionRoleLabel: "권한",
-        sessionOrganizationLabel: "조직 식별자",
-        sessionActorLabel: "액터 식별자",
+        sessionOrganizationLabel: "로그인 조직",
+        sessionActorLabel: "세션 계정",
         callCount: "호출",
         current: "현재",
         session: "세션",
@@ -98,7 +98,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         successSuffix: "요청이 정상 처리되었습니다.",
         failureSuffix: "요청이 실패했습니다.",
         guideIfNoFailure: "실패 이력이 없으면 최신 명세서를 선택해 후속 작업을 진행하세요.",
-        guideIfFailure: "실패 원인을 확인하고 조회 기간/직원/조직 식별자를 점검한 뒤 다시 조회하세요."
+        guideIfFailure: "실패 원인을 확인하고 조회 기간, 직원 번호, 로그인 조직을 점검한 뒤 다시 조회하세요."
       },
       compare: {
         title: "명세서 비교 조회",
@@ -195,9 +195,9 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
     },
     filters: {
       title: "Filters",
-      organizationIdOptional: "Organization ID (optional)",
+      organizationIdOptional: "Signed-in organization",
       organizationIdPlaceholder: "e.g. ORG-00001",
-      employeeId: "My employee ID",
+      employeeId: "Employee number",
       periodStart: "Period start",
       periodEnd: "Period end",
       actions: {
@@ -215,8 +215,8 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
       bearerPlaceholder: "When empty, x-actor-* header mode is used.",
       bearerStatusLabel: "Bearer mode",
       sessionRoleLabel: "Role",
-      sessionOrganizationLabel: "Organization",
-      sessionActorLabel: "Actor",
+      sessionOrganizationLabel: "Signed-in organization",
+      sessionActorLabel: "Session account",
       callCount: "Calls",
       current: "Current",
       session: "Session",
@@ -266,7 +266,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
       successSuffix: "request completed successfully.",
       failureSuffix: "request failed.",
       guideIfNoFailure: "When there is no failure, select the latest payslip and continue delivery prep.",
-      guideIfFailure: "Review the failure cause, verify period/employee/organization, then query again."
+      guideIfFailure: "Review the failure cause, verify period, employee number, and signed-in organization, then query again."
     },
     compare: {
       title: "Payslip comparison",
@@ -301,7 +301,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
       sheetEyebrow: "FlowHR Payslip",
       sheetTitleSuffix: "Payslip",
       payPeriod: "Pay period",
-      employeeId: "Employee ID",
+      employeeId: "Employee number",
       payslipId: "Payslip ID",
       confirmedDate: "Confirmed at",
       settlementState: "Settlement state",

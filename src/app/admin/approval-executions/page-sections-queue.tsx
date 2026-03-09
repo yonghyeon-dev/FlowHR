@@ -20,6 +20,12 @@ import type {
   ApprovalExecutionState,
   ApprovalStageHistoryDto
 } from "@/app/admin/approval-executions/page-types";
+import {
+  formatActorRoleLabel,
+  formatApprovalDomainLabel,
+  formatApprovalEntityTypeLabel,
+  formatApprovalStageResolutionLabel
+} from "@/lib/product-language";
 
 type ExecutionListPanelProps = {
   isKoLocale: boolean;
@@ -51,6 +57,7 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
     onApproveExecution,
     onRejectExecution
   } = props;
+  const locale = isKoLocale ? "ko-KR" : "en-US";
   const [rejectTarget, setRejectTarget] = useState<ApprovalExecutionDto | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejectError, setRejectError] = useState("");
@@ -59,7 +66,7 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
   const rejectModalTitle =
     rejectTarget?.domain === "ATTENDANCE"
       ? isKoLocale
-        ? "출퇴근 기록 반려"
+        ? "출퇴근 정정 반려"
         : "Reject attendance record"
       : isKoLocale
         ? "휴가 요청 반려"
@@ -67,10 +74,10 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
   const rejectModalDescription =
     rejectTarget?.domain === "ATTENDANCE"
       ? isKoLocale
-        ? "반려 사유를 입력해야 출퇴근 반려 처리가 진행됩니다."
+        ? "반려 사유를 입력해야 출퇴근 정정 반려가 진행됩니다."
         : "A reason is required to reject this attendance record."
       : isKoLocale
-        ? "반려 사유를 입력해야 휴가 반려 처리가 진행됩니다."
+        ? "반려 사유를 입력해야 휴가 반려가 진행됩니다."
         : "A reason is required to reject this leave request.";
 
   function openRejectDialog(execution: ApprovalExecutionDto) {
@@ -121,6 +128,7 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
             const canReject =
               execution.state === "PENDING" &&
               (execution.domain === "LEAVE" || execution.domain === "ATTENDANCE");
+
             return (
               <li key={execution.id} className={selected ? "selected-row" : undefined}>
                 <button type="button" className="execution-row-btn" onClick={() => onSelectExecution(execution)}>
@@ -128,22 +136,20 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
                     <strong>{toDomainLabel(execution.domain)}</strong>
                     <span className={`state-chip state-${execution.state.toLowerCase()}`}>{toStateLabel(execution.state)}</span>
                   </span>
+                  <span className="muted">{formatApprovalEntityTypeLabel(execution.targetEntityType, locale)}</span>
                   <span className="muted">
-                    {execution.targetEntityType}:{execution.targetEntityId}
-                  </span>
-                  <span className="muted">
-                    {isKoLocale ? "단계" : "stage"} {getCompletedStages(execution)}/{execution.totalStages} ({progressPercent}%)
+                    {isKoLocale ? "단계" : "Stage"} {getCompletedStages(execution)}/{execution.totalStages} ({progressPercent}%)
                     {execution.state === "PENDING"
-                      ? ` / ${isKoLocale ? "정체" : "stalled"} ${stalledHours.toFixed(1)}h`
+                      ? ` / ${isKoLocale ? "정체" : "Stalled"} ${stalledHours.toFixed(1)}h`
                       : ""}
                   </span>
                   <span className="progress-track" aria-hidden>
                     <span className="progress-fill" style={{ width: `${progressPercent}%` }} />
                   </span>
                   <span className="small">
-                    {isKoLocale ? "업데이트" : "updated"} {formatDateTime(execution.updatedAt, runtimeLocale)}
+                    {isKoLocale ? "업데이트" : "Updated"} {formatDateTime(execution.updatedAt, runtimeLocale)}
                     {execution.completedAt
-                      ? ` / ${isKoLocale ? "완료" : "completed"} ${formatDateTime(execution.completedAt, runtimeLocale)}`
+                      ? ` / ${isKoLocale ? "완료" : "Completed"} ${formatDateTime(execution.completedAt, runtimeLocale)}`
                       : ""}
                   </span>
                   {isStalled ? <span className="stale-chip">{isKoLocale ? "정체" : "Stalled"}</span> : null}
@@ -182,12 +188,8 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
         <div className="approval-reject-modal-backdrop" role="dialog" aria-modal="true">
           <div className="approval-reject-modal">
             <h3>{rejectModalTitle}</h3>
-            <p className="small muted">
-              {rejectModalDescription}
-            </p>
-            <p className="small">
-              {rejectTarget.targetEntityType}:{rejectTarget.targetEntityId}
-            </p>
+            <p className="small muted">{rejectModalDescription}</p>
+            <p className="small">{formatApprovalEntityTypeLabel(rejectTarget.targetEntityType, locale)}</p>
             <label>
               {isKoLocale ? "반려 사유" : "Rejection reason"}
               <textarea
@@ -232,35 +234,39 @@ export function ApprovalExecutionHistoryPanel({
   selectedExecution,
   stageHistory
 }: StageHistoryPanelProps) {
+  const locale = isKoLocale ? "ko-KR" : "en-US";
+
   return (
     <article className="panel">
       <h2>
-        {isKoLocale ? "단계 로그" : "Stage history"} {selectedExecution ? `(${selectedExecution.targetEntityId})` : ""}
+        {isKoLocale ? "단계 이력" : "Stage history"}{" "}
+        {selectedExecution ? `(${formatApprovalEntityTypeLabel(selectedExecution.targetEntityType, locale)})` : ""}
       </h2>
       {selectedExecution === null ? (
         <p className="small">
-          {isKoLocale ? "실행 항목을 선택하면 단계별 처리 로그를 표시합니다." : "Select an execution to view stage history."}
+          {isKoLocale ? "실행 항목을 선택하면 단계별 처리 이력을 보여줍니다." : "Select an execution to view stage history."}
         </p>
       ) : stageHistory.length === 0 ? (
-        <p className="small">{isKoLocale ? "해당 실행의 단계 로그가 없습니다." : "No stage history for this execution."}</p>
+        <p className="small">{isKoLocale ? "해당 실행의 단계 이력이 없습니다." : "No stage history for this execution."}</p>
       ) : (
         <ul className="simple-list">
           {stageHistory.map((entry) => (
             <li key={entry.id}>
               <span>
                 <span className={entry.allowed ? "ok" : "fail"}>
-                  {entry.allowed ? (isKoLocale ? "허용" : "ALLOW") : isKoLocale ? "거부" : "DENY"} ({entry.resolution})
+                  {entry.allowed ? (isKoLocale ? "통과" : "Allow") : isKoLocale ? "거절" : "Deny"} (
+                  {formatApprovalStageResolutionLabel(entry.resolution, locale)})
                 </span>
                 {" / "}
-                {isKoLocale ? "단계" : "stage"} {entry.stageIndex} ({entry.stageLabel})
+                {isKoLocale ? "단계" : "Stage"} {entry.stageIndex} ({entry.stageLabel})
                 <br />
-                {isKoLocale ? "액터" : "actor"} {entry.actorRole}
-                {entry.actorId ? ` (${entry.actorId})` : ""}
+                {isKoLocale ? "수행 주체" : "Actor"} {formatActorRoleLabel(entry.actorRole, locale)}
                 {" / "}
-                {isKoLocale ? "필요 역할" : "required"} [{entry.requiredRoles.join(", ")}]
+                {isKoLocale ? "필수 역할" : "Required"} [
+                {entry.requiredRoles.map((role) => formatActorRoleLabel(role, locale)).join(", ")}]
                 <br />
                 <span className="small">
-                  {isKoLocale ? "평가 시각" : "evaluated"} {formatDateTime(entry.evaluatedAt, runtimeLocale)}
+                  {isKoLocale ? "평가 시각" : "Evaluated"} {formatDateTime(entry.evaluatedAt, runtimeLocale)}
                 </span>
               </span>
             </li>
@@ -287,7 +293,7 @@ export function ApprovalExecutionLogsPanel({ isKoLocale, stats, pendingLabel, lo
         {isKoLocale ? "건 / 성공" : " / success"} {stats.success}
         {isKoLocale ? "건 / 실패" : " / fail"} {stats.fail}
         {isKoLocale ? "건" : ""}
-        {pendingLabel ? ` / ${isKoLocale ? "진행중" : "running"}: ${pendingLabel}` : ""}
+        {pendingLabel ? ` / ${isKoLocale ? "진행 중" : "Running"}: ${pendingLabel}` : ""}
       </p>
       {logs.length === 0 ? (
         <p className="small">{isKoLocale ? "아직 API 호출 이력이 없습니다." : "No API call history yet."}</p>
@@ -296,7 +302,7 @@ export function ApprovalExecutionLogsPanel({ isKoLocale, stats, pendingLabel, lo
           {logs.map((log) => (
             <li key={log.id}>
               <span className={log.ok ? "ok" : "fail"}>
-                {log.ok ? (isKoLocale ? "성공" : "OK") : isKoLocale ? "실패" : "FAIL"}
+                {log.ok ? (isKoLocale ? "성공" : "OK") : isKoLocale ? "실패" : "Fail"}
               </span>{" "}
               {log.label} / {log.status}
               <time>{log.at}</time>
