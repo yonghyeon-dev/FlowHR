@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Leave API
-  version: 1.15.1
+  version: 1.15.2
 paths:
   /leave/requests:
     get:
@@ -343,6 +343,43 @@ paths:
       responses:
         "200":
           description: Leave promotion retry delivery result
+  /admin/leave-promotion-email-settings:
+    get:
+      summary: Read organization-managed leave promotion email template settings
+      responses:
+        "200":
+          description: Leave promotion email settings snapshot
+    put:
+      summary: Update organization-managed leave promotion email template settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                emailTemplate:
+                  type: object
+                  properties:
+                    url:
+                      type: string
+                      format: uri
+                      nullable: true
+                    from:
+                      type: string
+                      format: email
+                      nullable: true
+                    defaultTemplateId:
+                      type: string
+                      nullable: true
+                    token:
+                      type: string
+                      nullable: true
+                    clearToken:
+                      type: boolean
+      responses:
+        "200":
+          description: Leave promotion email settings updated
   /leave/accrual/settle:
     post:
       summary: Settle annual leave accrual and carry-over

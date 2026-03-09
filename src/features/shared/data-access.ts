@@ -202,6 +202,10 @@ export type OrganizationEntity = {
   operatorAlertWebhookProvider: WebhookProvider | null;
   approvalEscalationUseOperatorAlertWebhook: boolean;
   leavePromotionUseOperatorAlertWebhook: boolean;
+  leavePromotionEmailTemplateUrl: string | null;
+  leavePromotionEmailFrom: string | null;
+  leavePromotionEmailTemplateToken: string | null;
+  leavePromotionEmailTemplateId: string | null;
   isOnboardingComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -752,6 +756,10 @@ export type UpdateOrganizationInput = {
   operatorAlertWebhookProvider?: WebhookProvider | null;
   approvalEscalationUseOperatorAlertWebhook?: boolean;
   leavePromotionUseOperatorAlertWebhook?: boolean;
+  leavePromotionEmailTemplateUrl?: string | null;
+  leavePromotionEmailFrom?: string | null;
+  leavePromotionEmailTemplateToken?: string | null;
+  leavePromotionEmailTemplateId?: string | null;
   isOnboardingComplete?: boolean;
 };
 

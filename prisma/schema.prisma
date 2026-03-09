@@ -45,6 +45,10 @@ model Organization {
   operatorAlertWebhookProvider String?
   approvalEscalationUseOperatorAlertWebhook Boolean @default(true)
   leavePromotionUseOperatorAlertWebhook Boolean @default(true)
+  leavePromotionEmailTemplateUrl String?
+  leavePromotionEmailFrom String?
+  leavePromotionEmailTemplateToken String?
+  leavePromotionEmailTemplateId String?
   isOnboardingComplete       Boolean   @default(false)
   createdAt                  DateTime  @default(now())
   updatedAt                  DateTime  @updatedAt

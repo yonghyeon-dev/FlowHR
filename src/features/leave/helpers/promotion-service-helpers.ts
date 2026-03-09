@@ -15,6 +15,7 @@ import {
   resolvePromotionEmailTemplateConfig,
   resolvePromotionWebhookConfig
 } from "@/features/leave/promotion-delivery-helpers";
+import { resolveOrganizationPromotionEmailTemplateOverride } from "@/features/leave/promotion-email-settings";
 import { resolveOperatorAlertWebhookConfig } from "@/features/people/operator-alert-settings";
 import {
   toPromotionDeliveryRecipientView,
@@ -329,8 +330,6 @@ export async function dispatchAnnualLeavePromotionNoticeImpl(
   const includeUpcoming = Boolean(input.includeUpcoming);
   const channel = input.deliveryChannel ?? "webhook";
   const requestedTemplateId = input.emailTemplateId?.trim() || "";
-  const configuredTemplateId = (process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID ?? "").trim();
-  const emailTemplateId = requestedTemplateId || configuredTemplateId || null;
   const targetSnapshots = toPromotionTargetSnapshots(preview.targets);
   const recipientStats = resolvePromotionRecipientStats(targetSnapshots);
   const targetCount = recipientStats.targetCount;
@@ -350,7 +349,13 @@ export async function dispatchAnnualLeavePromotionNoticeImpl(
         )
       : null;
   const emailTemplateConfig =
-    channel === "email_template" ? resolvePromotionEmailTemplateConfig() : null;
+    channel === "email_template"
+      ? resolvePromotionEmailTemplateConfig(
+          organization ? resolveOrganizationPromotionEmailTemplateOverride(organization) : null
+        )
+      : null;
+  const configuredTemplateId = emailTemplateConfig?.defaultTemplateId?.trim() ?? "";
+  const emailTemplateId = requestedTemplateId || configuredTemplateId || null;
   const attempted = !dryRun && (channel === "webhook" ? targetCount > 0 : recipientCount > 0);
 
   const provider: PromotionDeliveryProvider | null =
@@ -382,7 +387,7 @@ export async function dispatchAnnualLeavePromotionNoticeImpl(
     });
     throw new ServiceError(
       400,
-      "emailTemplateId is required for deliveryChannel=email_template (or set FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID)"
+      "emailTemplateId is required for deliveryChannel=email_template (request body, admin leave promotion email settings, or FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID)"
     );
   }
 
@@ -434,7 +439,7 @@ export async function dispatchAnnualLeavePromotionNoticeImpl(
     });
     throw new ServiceError(
       503,
-      "leave promotion email template dispatch is not configured (set FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_URL and FLOWHR_LEAVE_PROMOTION_EMAIL_FROM)"
+      "leave promotion email template dispatch is not configured (save leave promotion email settings in admin settings or configure the FLOWHR_LEAVE_PROMOTION_EMAIL_* / FLOWHR_ALERT_EMAIL_* env fallback)"
     );
   }
 
@@ -855,9 +860,12 @@ export async function retryLeavePromotionDeliveryImpl(
   const attempted = !dryRun && recipientCount > 0;
   const requestedTemplateId = input.emailTemplateId?.trim() || "";
   const sourceTemplateId = sourceDelivery.emailTemplateId?.trim() || "";
-  const configuredTemplateId = (process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID ?? "").trim();
+  const organization = await context.dataAccess.organizations.findById(sourceDelivery.organizationId);
+  const emailTemplateConfig = resolvePromotionEmailTemplateConfig(
+    organization ? resolveOrganizationPromotionEmailTemplateOverride(organization) : null
+  );
+  const configuredTemplateId = emailTemplateConfig?.defaultTemplateId?.trim() ?? "";
   const emailTemplateId = requestedTemplateId || sourceTemplateId || configuredTemplateId || null;
-  const emailTemplateConfig = resolvePromotionEmailTemplateConfig();
   const provider: PromotionDeliveryProvider | null = emailTemplateConfig ? "email_template" : null;
   const retryCountByEmployeeId = toRetryCountByEmployeeId(sourceRecipients);
 
@@ -906,7 +914,7 @@ export async function retryLeavePromotionDeliveryImpl(
     });
     throw new ServiceError(
       400,
-      "emailTemplateId is required for retry (request body, source delivery, or FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID)"
+      "emailTemplateId is required for retry (request body, source delivery, admin leave promotion email settings, or FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID)"
     );
   }
 
@@ -935,7 +943,7 @@ export async function retryLeavePromotionDeliveryImpl(
     });
     throw new ServiceError(
       503,
-      "leave promotion email template retry is not configured (set FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_URL and FLOWHR_LEAVE_PROMOTION_EMAIL_FROM)"
+      "leave promotion email template retry is not configured (save leave promotion email settings in admin settings or configure the FLOWHR_LEAVE_PROMOTION_EMAIL_* / FLOWHR_ALERT_EMAIL_* env fallback)"
     );
   }
 

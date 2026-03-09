@@ -36,6 +36,7 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
         links: [
           { href: "/admin/scheduling", label: "근무 일정" },
           { href: "/admin/leave-policies", label: "휴가 정책" },
+          { href: "/admin/leave-promotion-email", label: "연차 촉진 이메일" },
           { href: "/admin/attendance-security", label: "출퇴근 보안" },
           { href: "/admin/leave-calendar", label: "휴가 캘린더" }
         ]
@@ -103,6 +104,7 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
         links: [
           { href: "/admin/scheduling", label: "Scheduling" },
           { href: "/admin/leave-policies", label: "Leave policies" },
+          { href: "/admin/leave-promotion-email", label: "Leave promotion email" },
           { href: "/admin/attendance-security", label: "Attendance security" },
           { href: "/admin/leave-calendar", label: "Leave calendar" }
         ]

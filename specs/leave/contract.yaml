@@ -1,5 +1,5 @@
 owner: leave-agent
-version: 1.15.1
+version: 1.15.2
 scope:
   in:
     - leave request create/update/cancel flow
@@ -12,6 +12,7 @@ scope:
     - annual leave promotion preview and internal notice draft policy
     - annual leave promotion notice dispatch automation via webhook (Discord/Slack) and email-template channel
     - annual leave promotion delivery history list/detail and per-recipient retry
+    - organization-level leave promotion email template settings for admin-managed delivery defaults
     - organization-level annual leave accrual auto-grant dry-run/apply workflow
     - organization-level leave calendar occupancy read model with department filter and overlap warnings
     - employee self-service department leave calendar view (own + same department) with pending/approved/rejected status
@@ -98,6 +99,12 @@ api:
     - method: POST
       path: /leave/policy/promotion-deliveries/{deliveryId}/retry
       description: Retry annual leave promotion email-template delivery for failed or selected recipients.
+    - method: GET
+      path: /admin/leave-promotion-email-settings
+      description: Read organization-managed leave promotion email template settings.
+    - method: PUT
+      path: /admin/leave-promotion-email-settings
+      description: Update organization-managed leave promotion email template settings.
     - method: POST
       path: /leave/accrual/settle
       description: Settle annual leave accrual and carry-over for an employee.
@@ -147,6 +154,8 @@ db_changes:
       description: Extend LeaveType enum with MATERNITY/PATERNITY for statutory day-limit validation.
     - id: 202603070001_wi1012_maternity_paternity_policy_migration
       description: Seed MATERNITY/PATERNITY statutory leave policies for existing organizations.
+    - id: 202603090005_wi1055_leave_promotion_email_settings_productization
+      description: Add organization-level leave promotion email template settings for admin-managed defaults.
   backward_compatible: true
   notes: Additive schema changes with numeric widening (`Int -> Decimal(6,2)`) for leave day precision.
 invariants:
@@ -171,6 +180,7 @@ invariants:
   - Annual leave promotion preview can include upcoming targets before notice window opens, but immediate targets require notice window open.
   - Annual leave promotion notice dispatch requires leave accrual settle permission and tenant scope validation.
   - Annual leave promotion notice dry-run never triggers external delivery side effects.
+  - Organization-managed leave promotion email settings can provide the default endpoint, sender, auth token, and template id before env fallback is used.
   - Email-template channel dispatch requires template id resolution and configured endpoint/from address.
   - Promotion notify writes delivery history rows for dry-run/skipped/dispatched/failed outcomes.
   - Promotion retry is allowed only for email-template deliveries and persists retry chain linkage.
@@ -220,6 +230,7 @@ test_plan:
     - annual leave promotion preview returns threshold-filtered targets and rendered announcement draft
     - annual leave promotion notify dispatch triggers webhook when `deliveryChannel=webhook` and eligible targets exist
     - annual leave promotion notify dispatch triggers email-template endpoint when `deliveryChannel=email_template` and recipients with email exist
+    - admin leave promotion email settings read/update persists organization-scoped delivery defaults
     - annual leave promotion notify dry-run and no-target/no-recipient run never call external delivery endpoints
     - annual leave promotion delivery history list/detail APIs return persisted delivery and recipient snapshots
     - annual leave promotion retry dry-run preserves side-effect free behavior and emits retry history row
@@ -299,7 +310,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.14.0 adds employee self-service department leave calendar API (`GET /leave/calendar/employee`) for own + same-department monthly visibility with pending/approved/rejected states, while preserving existing leave request/policy/promotion/accrual APIs."
+consumer_impact: "Contract v1.15.2 adds admin-managed leave promotion email settings (`GET/PUT /admin/leave-promotion-email-settings`) so annual leave promotion email-template delivery no longer depends only on env configuration, while preserving existing leave request/policy/promotion/accrual APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
