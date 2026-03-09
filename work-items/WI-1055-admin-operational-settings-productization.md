@@ -58,6 +58,18 @@ Move required customer-admin operating controls into productized admin settings 
 - Regression coverage is attached to the integration chain:
   - `scripts/tests/e2e-wi1055-admin-attendance-security-productization.test.ts`
   - `package.json` `test:integration`
+- Third execution slice productizes durable notification defaults and employee preference persistence:
+  - `src/app/admin/notification-defaults/page.tsx`
+  - `src/app/api/admin/notification-defaults/route.ts`
+  - `src/app/api/employee/notification-preferences/route.ts`
+  - `prisma/migrations/202603090003_wi1055_notification_durability_productization/migration.sql`
+- Notification defaults now move employee notification settings out of browser-only localStorage:
+  - organization default email / in-app channels
+  - organization default leave / attendance / payroll categories
+  - employee-specific durable overrides with reset-to-default support
+- Regression coverage is attached to the integration chain:
+  - `scripts/tests/e2e-wi1055-notification-durability-productization.test.ts`
+  - `package.json` `test:integration`
 
 ## Data Changes (Tables and Migrations)
 
@@ -65,3 +77,4 @@ Move required customer-admin operating controls into productized admin settings 
   - `Organization`
 - Migrations:
   - `202603090002_wi1055_attendance_security_productization`
+  - `202603090003_wi1055_notification_durability_productization`

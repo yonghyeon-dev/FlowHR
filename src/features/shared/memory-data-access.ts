@@ -744,6 +744,26 @@ function updateEmployeeEntity(existing: EmployeeEntity, input: UpdateEmployeeInp
     email: input.email !== undefined ? input.email : existing.email,
     phone: input.phone !== undefined ? input.phone : existing.phone,
     address: input.address !== undefined ? input.address : existing.address,
+    notificationEmailEnabled:
+      input.notificationEmailEnabled !== undefined
+        ? input.notificationEmailEnabled
+        : existing.notificationEmailEnabled,
+    notificationInAppEnabled:
+      input.notificationInAppEnabled !== undefined
+        ? input.notificationInAppEnabled
+        : existing.notificationInAppEnabled,
+    notificationLeaveEnabled:
+      input.notificationLeaveEnabled !== undefined
+        ? input.notificationLeaveEnabled
+        : existing.notificationLeaveEnabled,
+    notificationAttendanceEnabled:
+      input.notificationAttendanceEnabled !== undefined
+        ? input.notificationAttendanceEnabled
+        : existing.notificationAttendanceEnabled,
+    notificationPayrollEnabled:
+      input.notificationPayrollEnabled !== undefined
+        ? input.notificationPayrollEnabled
+        : existing.notificationPayrollEnabled,
     status,
     active: status === "ACTIVE",
     updatedAt: new Date()
@@ -854,6 +874,26 @@ function updateOrganizationEntity(
       input.attendanceGeofenceRadiusMeters !== undefined
         ? input.attendanceGeofenceRadiusMeters
         : existing.attendanceGeofenceRadiusMeters,
+    notificationDefaultEmailEnabled:
+      input.notificationDefaultEmailEnabled !== undefined
+        ? input.notificationDefaultEmailEnabled
+        : existing.notificationDefaultEmailEnabled,
+    notificationDefaultInAppEnabled:
+      input.notificationDefaultInAppEnabled !== undefined
+        ? input.notificationDefaultInAppEnabled
+        : existing.notificationDefaultInAppEnabled,
+    notificationDefaultLeaveEnabled:
+      input.notificationDefaultLeaveEnabled !== undefined
+        ? input.notificationDefaultLeaveEnabled
+        : existing.notificationDefaultLeaveEnabled,
+    notificationDefaultAttendanceEnabled:
+      input.notificationDefaultAttendanceEnabled !== undefined
+        ? input.notificationDefaultAttendanceEnabled
+        : existing.notificationDefaultAttendanceEnabled,
+    notificationDefaultPayrollEnabled:
+      input.notificationDefaultPayrollEnabled !== undefined
+        ? input.notificationDefaultPayrollEnabled
+        : existing.notificationDefaultPayrollEnabled,
     isOnboardingComplete:
       input.isOnboardingComplete !== undefined
         ? input.isOnboardingComplete
@@ -992,6 +1032,11 @@ export const memoryDataAccess: DataAccess = {
         attendanceGeofenceLatitude: null,
         attendanceGeofenceLongitude: null,
         attendanceGeofenceRadiusMeters: null,
+        notificationDefaultEmailEnabled: true,
+        notificationDefaultInAppEnabled: true,
+        notificationDefaultLeaveEnabled: true,
+        notificationDefaultAttendanceEnabled: true,
+        notificationDefaultPayrollEnabled: true,
         isOnboardingComplete: false,
         createdAt: now,
         updatedAt: now
@@ -1561,6 +1606,13 @@ export const memoryDataAccess: DataAccess = {
         phone: input.phone,
         address: input.address,
         status,
+        notificationEmailEnabled: input.notificationEmailEnabled === undefined ? null : input.notificationEmailEnabled,
+        notificationInAppEnabled: input.notificationInAppEnabled === undefined ? null : input.notificationInAppEnabled,
+        notificationLeaveEnabled: input.notificationLeaveEnabled === undefined ? null : input.notificationLeaveEnabled,
+        notificationAttendanceEnabled:
+          input.notificationAttendanceEnabled === undefined ? null : input.notificationAttendanceEnabled,
+        notificationPayrollEnabled:
+          input.notificationPayrollEnabled === undefined ? null : input.notificationPayrollEnabled,
         active: status === "ACTIVE",
         createdAt: now,
         updatedAt: now

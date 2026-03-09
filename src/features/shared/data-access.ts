@@ -192,6 +192,11 @@ export type OrganizationEntity = {
   attendanceGeofenceLatitude: number | null;
   attendanceGeofenceLongitude: number | null;
   attendanceGeofenceRadiusMeters: number | null;
+  notificationDefaultEmailEnabled: boolean;
+  notificationDefaultInAppEnabled: boolean;
+  notificationDefaultLeaveEnabled: boolean;
+  notificationDefaultAttendanceEnabled: boolean;
+  notificationDefaultPayrollEnabled: boolean;
   isOnboardingComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -324,6 +329,11 @@ export type EmployeeEntity = {
   phone?: string;
   address?: string;
   status: EmployeeStatus;
+  notificationEmailEnabled: boolean | null;
+  notificationInAppEnabled: boolean | null;
+  notificationLeaveEnabled: boolean | null;
+  notificationAttendanceEnabled: boolean | null;
+  notificationPayrollEnabled: boolean | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -728,6 +738,11 @@ export type UpdateOrganizationInput = {
   attendanceGeofenceLatitude?: number | null;
   attendanceGeofenceLongitude?: number | null;
   attendanceGeofenceRadiusMeters?: number | null;
+  notificationDefaultEmailEnabled?: boolean;
+  notificationDefaultInAppEnabled?: boolean;
+  notificationDefaultLeaveEnabled?: boolean;
+  notificationDefaultAttendanceEnabled?: boolean;
+  notificationDefaultPayrollEnabled?: boolean;
   isOnboardingComplete?: boolean;
 };
 
@@ -741,6 +756,11 @@ export type CreateEmployeeInput = {
   phone?: string;
   address?: string;
   status?: EmployeeStatus;
+  notificationEmailEnabled?: boolean | null;
+  notificationInAppEnabled?: boolean | null;
+  notificationLeaveEnabled?: boolean | null;
+  notificationAttendanceEnabled?: boolean | null;
+  notificationPayrollEnabled?: boolean | null;
   active?: boolean;
 };
 
@@ -753,6 +773,11 @@ export type UpdateEmployeeInput = {
   phone?: string;
   address?: string;
   status?: EmployeeStatus;
+  notificationEmailEnabled?: boolean | null;
+  notificationInAppEnabled?: boolean | null;
+  notificationLeaveEnabled?: boolean | null;
+  notificationAttendanceEnabled?: boolean | null;
+  notificationPayrollEnabled?: boolean | null;
   active?: boolean;
 };
 

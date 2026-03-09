@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.3.18
+version: 0.3.19
 scope:
   in:
     - organization master data (create/read/list)
@@ -15,6 +15,7 @@ scope:
     - benefits request queue priority sorting (`sort=pending_priority`) for submitted-first review ordering
     - recruitment referral queue priority sorting (`sort=stalled_priority`) for active stalled-referral-first review ordering
     - admin organization settings read/update API for post-onboarding organization configuration changes
+    - admin-managed notification default settings with durable employee preference overrides
     - employee lifecycle status model (`ACTIVE`/`ON_LEAVE`/`RESIGNED`) with controlled transitions and resigned-session invalidation
     - onboarding default task template persistence and ACTIVE-state auto-assignment
   out:
@@ -66,6 +67,12 @@ api:
     - method: PATCH
       path: /admin/organization/settings
       description: Update current admin organization settings for profile and work-hour policy fields.
+    - method: GET
+      path: /admin/notification-defaults
+      description: Read organization-level default notification channels and categories.
+    - method: PUT
+      path: /admin/notification-defaults
+      description: Update organization-level default notification channels and categories.
     - method: GET
       path: /people/employees
       description: "List employees (optional filters: `active`, `status`, `organizationId`)."
@@ -153,6 +160,12 @@ api:
     - method: POST
       path: /notifications/mark-all-read
       description: Mark all own in-app notifications as read.
+    - method: GET
+      path: /employee/notification-preferences
+      description: Read employee notification preferences resolved against organization defaults.
+    - method: PUT
+      path: /employee/notification-preferences
+      description: Save or reset employee notification preferences against organization defaults.
   events:
     published:
       - name: organization.created.v1
@@ -204,6 +217,8 @@ db_changes:
       description: Add organization fiscal year, work hours, overtime, pay period, and currency settings columns.
     - id: 202603060001_wi0998_onboarding_default_tasks_seed
       description: Rename onboarding task projection table and add onboarding task template persistence for default seeding.
+    - id: 202603090003_wi1055_notification_durability_productization
+      description: Add organization notification defaults and durable employee notification preference fields.
   backward_compatible: true
   notes: "Additive foundation tables only. Department/Position are organization-scoped catalogs, recruitment/benefits read models remain additive, and onboarding template persistence is added for default task seeding."
 invariants:
@@ -214,6 +229,7 @@ invariants:
   - Position code must be unique within an organization.
   - Position delete is blocked when employees are assigned to the position.
   - Employee department and position assignments must match employee organization scope.
+  - Employee notification preferences inherit organization defaults when employee-specific values are null.
   - Employee status transitions are restricted to ACTIVE<->ON_LEAVE and ACTIVE/ON_LEAVE->RESIGNED.
   - RESIGNED is terminal and cannot transition to another status.
 risk:
@@ -244,6 +260,9 @@ test_plan:
     - benefits request list supports `sort=pending_priority` for submitted-first queue ordering
     - recruitment referral list supports `sort=stalled_priority` for stalled active-referral-first queue ordering
     - notice patch supports partial draft/scheduled updates and rejects empty payloads with 400
+    - admin notification-defaults read/update persists organization-scoped defaults
+    - employee notification-preferences read resolves employee values against organization defaults
+    - employee notification-preferences reset clears employee overrides back to organization defaults
   regression:
     - existing attendance/leave/payroll flows remain unchanged
   authorization:
@@ -280,7 +299,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "People contract v0.3.18 additively documents notice partial-update PATCH semantics while preserving backward compatibility for existing people APIs."
+consumer_impact: "People contract v0.3.19 additively documents admin notification-default management and durable employee notification preferences while preserving backward compatibility for existing people APIs."
 references:
   - work-items/WI-0034-employee-organization-master-model.md
   - work-items/WI-0102-people-department-position-model.md
@@ -300,6 +319,7 @@ references:
   - work-items/WI-0952-employee-status-transitions.md
   - work-items/WI-0998-onboarding-default-tasks-seed.md
   - work-items/WI-1030-announcement-partial-update.md
+  - work-items/WI-1055-admin-operational-settings-productization.md
   - docs/data-ownership.md
 approval:
   spec_owner: people-agent

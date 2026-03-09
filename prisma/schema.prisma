@@ -36,6 +36,11 @@ model Organization {
   attendanceGeofenceLatitude Float?
   attendanceGeofenceLongitude Float?
   attendanceGeofenceRadiusMeters Int?
+  notificationDefaultEmailEnabled Boolean @default(true)
+  notificationDefaultInAppEnabled Boolean @default(true)
+  notificationDefaultLeaveEnabled Boolean @default(true)
+  notificationDefaultAttendanceEnabled Boolean @default(true)
+  notificationDefaultPayrollEnabled Boolean @default(true)
   isOnboardingComplete       Boolean   @default(false)
   createdAt                  DateTime  @default(now())
   updatedAt                  DateTime  @updatedAt
@@ -76,6 +81,11 @@ model Employee {
   phone          String?
   address        String?
   status         EmployeeStatus @default(ACTIVE)
+  notificationEmailEnabled Boolean?
+  notificationInAppEnabled Boolean?
+  notificationLeaveEnabled Boolean?
+  notificationAttendanceEnabled Boolean?
+  notificationPayrollEnabled Boolean?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 

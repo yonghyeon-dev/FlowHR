@@ -74,6 +74,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Wired `WI-1055` into admin navigation and workspace hubs and attached a regression guard to `test:integration`.
 - Continued `WI-1055` with a dedicated `/admin/attendance-security` product surface and org-level persistence for GPS-required and geofence controls.
 - Wired `WI-1055` attendance security into admin navigation, workspace hubs, integration regression coverage, and a dedicated Prisma migration so attendance policy no longer depends on env-only toggles.
+- Closed the `WI-1055` attendance-security slice through the full GitHub flow and merged it to `main` as `8736e97161bd420ad7ed52f6362fbf3abfe89c55`, then deleted the feature branch.
+- Started the next `WI-1055` slice for notification durability by replacing localStorage-only employee notification settings with durable employee preferences plus admin-managed organization defaults.
 - Removed a remaining shared-session dev remnant by replacing raw organization ID output in `src/components/SessionMenu.tsx` with role/account status language and user-facing session errors.
 - Adjusted notice compose behavior so `publishAt` no longer defaults to a filled value; notice creation now defaults to draft and explains when to use scheduled or immediate publish.
 - Verified the current implementation pass with `npm run typecheck`.
@@ -117,8 +119,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close the current `WI-1055` attendance-security productization slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
-2. Continue `WI-1055` on notification durability and operator-controlled integrations that still depend on env-only configuration.
+1. Close the current `WI-1055` notification-durability slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
+2. Continue `WI-1055` on operator-controlled integrations that still depend on env-only configuration.
 3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 
 ## 5. Blockers Or Watch Items

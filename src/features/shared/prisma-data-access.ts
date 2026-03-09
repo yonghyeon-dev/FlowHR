@@ -579,6 +579,11 @@ function toOrganizationEntity(record: {
   attendanceGeofenceLatitude?: number | null;
   attendanceGeofenceLongitude?: number | null;
   attendanceGeofenceRadiusMeters?: number | null;
+  notificationDefaultEmailEnabled?: boolean | null;
+  notificationDefaultInAppEnabled?: boolean | null;
+  notificationDefaultLeaveEnabled?: boolean | null;
+  notificationDefaultAttendanceEnabled?: boolean | null;
+  notificationDefaultPayrollEnabled?: boolean | null;
   isOnboardingComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -589,7 +594,12 @@ function toOrganizationEntity(record: {
     attendanceGeofenceEnabled: record.attendanceGeofenceEnabled ?? false,
     attendanceGeofenceLatitude: record.attendanceGeofenceLatitude ?? null,
     attendanceGeofenceLongitude: record.attendanceGeofenceLongitude ?? null,
-    attendanceGeofenceRadiusMeters: record.attendanceGeofenceRadiusMeters ?? null
+    attendanceGeofenceRadiusMeters: record.attendanceGeofenceRadiusMeters ?? null,
+    notificationDefaultEmailEnabled: record.notificationDefaultEmailEnabled ?? true,
+    notificationDefaultInAppEnabled: record.notificationDefaultInAppEnabled ?? true,
+    notificationDefaultLeaveEnabled: record.notificationDefaultLeaveEnabled ?? true,
+    notificationDefaultAttendanceEnabled: record.notificationDefaultAttendanceEnabled ?? true,
+    notificationDefaultPayrollEnabled: record.notificationDefaultPayrollEnabled ?? true
   };
 }
 
@@ -829,12 +839,22 @@ function toEmployeeEntity(record: {
   phone: string | null;
   address: string | null;
   status: "ACTIVE" | "ON_LEAVE" | "RESIGNED";
+  notificationEmailEnabled: boolean | null;
+  notificationInAppEnabled: boolean | null;
+  notificationLeaveEnabled: boolean | null;
+  notificationAttendanceEnabled: boolean | null;
+  notificationPayrollEnabled: boolean | null;
   createdAt: Date;
   updatedAt: Date;
 }): EmployeeEntity {
   return {
     ...record,
     status: record.status as EmployeeStatus,
+    notificationEmailEnabled: record.notificationEmailEnabled,
+    notificationInAppEnabled: record.notificationInAppEnabled,
+    notificationLeaveEnabled: record.notificationLeaveEnabled,
+    notificationAttendanceEnabled: record.notificationAttendanceEnabled,
+    notificationPayrollEnabled: record.notificationPayrollEnabled,
     active: record.status === "ACTIVE",
     phone: record.phone ?? undefined,
     address: record.address ?? undefined
@@ -1115,6 +1135,11 @@ const organizations: OrganizationStore = {
       attendanceGeofenceLatitude: null,
       attendanceGeofenceLongitude: null,
       attendanceGeofenceRadiusMeters: null,
+      notificationDefaultEmailEnabled: true,
+      notificationDefaultInAppEnabled: true,
+      notificationDefaultLeaveEnabled: true,
+      notificationDefaultAttendanceEnabled: true,
+      notificationDefaultPayrollEnabled: true,
       isOnboardingComplete: false
     } as Prisma.OrganizationUncheckedCreateInput;
 
@@ -1223,6 +1248,21 @@ const organizations: OrganizationStore = {
           : {}),
         ...(input.attendanceGeofenceRadiusMeters !== undefined
           ? { attendanceGeofenceRadiusMeters: input.attendanceGeofenceRadiusMeters }
+          : {}),
+        ...(input.notificationDefaultEmailEnabled !== undefined
+          ? { notificationDefaultEmailEnabled: input.notificationDefaultEmailEnabled }
+          : {}),
+        ...(input.notificationDefaultInAppEnabled !== undefined
+          ? { notificationDefaultInAppEnabled: input.notificationDefaultInAppEnabled }
+          : {}),
+        ...(input.notificationDefaultLeaveEnabled !== undefined
+          ? { notificationDefaultLeaveEnabled: input.notificationDefaultLeaveEnabled }
+          : {}),
+        ...(input.notificationDefaultAttendanceEnabled !== undefined
+          ? { notificationDefaultAttendanceEnabled: input.notificationDefaultAttendanceEnabled }
+          : {}),
+        ...(input.notificationDefaultPayrollEnabled !== undefined
+          ? { notificationDefaultPayrollEnabled: input.notificationDefaultPayrollEnabled }
           : {}),
         ...(input.isOnboardingComplete !== undefined
           ? { isOnboardingComplete: input.isOnboardingComplete }
@@ -1691,7 +1731,17 @@ const employees: EmployeeStore = {
         email: input.email === undefined ? null : input.email,
         phone: input.phone === undefined ? null : input.phone,
         address: input.address === undefined ? null : input.address,
-        status
+        status,
+        notificationEmailEnabled:
+          input.notificationEmailEnabled === undefined ? null : input.notificationEmailEnabled,
+        notificationInAppEnabled:
+          input.notificationInAppEnabled === undefined ? null : input.notificationInAppEnabled,
+        notificationLeaveEnabled:
+          input.notificationLeaveEnabled === undefined ? null : input.notificationLeaveEnabled,
+        notificationAttendanceEnabled:
+          input.notificationAttendanceEnabled === undefined ? null : input.notificationAttendanceEnabled,
+        notificationPayrollEnabled:
+          input.notificationPayrollEnabled === undefined ? null : input.notificationPayrollEnabled
       }
     });
     return toEmployeeEntity(record);
@@ -1716,7 +1766,12 @@ const employees: EmployeeStore = {
         email: input.email,
         phone: input.phone,
         address: input.address,
-        status
+        status,
+        notificationEmailEnabled: input.notificationEmailEnabled,
+        notificationInAppEnabled: input.notificationInAppEnabled,
+        notificationLeaveEnabled: input.notificationLeaveEnabled,
+        notificationAttendanceEnabled: input.notificationAttendanceEnabled,
+        notificationPayrollEnabled: input.notificationPayrollEnabled
       }
     });
     return toEmployeeEntity(record);

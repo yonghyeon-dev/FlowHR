@@ -1,8 +1,25 @@
 openapi: 3.1.0
 info:
   title: FlowHR People API
-  version: 0.3.18
+  version: 0.3.19
 paths:
+  /admin/notification-defaults:
+    get:
+      summary: Get organization notification defaults
+      responses:
+        "200":
+          description: Notification defaults returned
+        "403":
+          description: Admin role required
+    put:
+      summary: Update organization notification defaults
+      responses:
+        "200":
+          description: Notification defaults updated
+        "400":
+          description: Invalid payload
+        "403":
+          description: Admin role required
   /people/organizations:
     get:
       summary: List organizations
@@ -425,4 +442,25 @@ paths:
           description: Request canceled
         "409":
           description: Invalid request state
+  /employee/notification-preferences:
+    get:
+      summary: Get employee notification preferences resolved against organization defaults
+      responses:
+        "200":
+          description: Notification preferences returned
+        "401":
+          description: Unauthorized
+        "403":
+          description: Employee role required
+    put:
+      summary: Save or reset employee notification preferences
+      responses:
+        "200":
+          description: Notification preferences updated
+        "400":
+          description: Invalid payload
+        "401":
+          description: Unauthorized
+        "403":
+          description: Employee role required
 
