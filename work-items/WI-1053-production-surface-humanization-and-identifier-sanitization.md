@@ -45,4 +45,5 @@ Replace internal and technical surface language with human-readable product lang
 - Reworded benefits, recruitment, and employee-guide copy from raw identifier vocabulary to workspace/account language.
 - Reworded admin onboarding, KPI, notices, attendance-live, and leave-calendar copy to the same product-facing vocabulary baseline.
 - Reworded employee onboarding recovery messages, employee session notices, payslip session copy, and approval queue search labels to the same baseline.
+- Reworded payroll close, insurance, payslip delivery, year-end, filing, and contracts copy to the same product-facing vocabulary baseline.
 - Remaining follow-up is limited to copy-level `Organization ID` / `Employee ID` wording and uncovered console-like production surfaces outside this first pass.

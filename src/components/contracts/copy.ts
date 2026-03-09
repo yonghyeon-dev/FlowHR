@@ -105,7 +105,7 @@ const adminContractsCopyEn = {
   templateListAria: "contract template list",
   updatedPrefix: "updated",
   documentLifecycleTitle: "Document Lifecycle",
-  employeeIdLabel: "Employee ID",
+  employeeIdLabel: "Employee number",
   employeeIdPlaceholder: "EMP-0001",
   selectedTemplateLabel: "Selected Template",
   createDraftAction: "Create Draft",
@@ -159,7 +159,7 @@ const adminContractsCopyEn = {
   loadError: "failed to load contracts",
   templateCreateError: "template create failed",
   draftCreateError: "document create failed",
-  requiredTemplateAndEmployeeError: "template and employeeId are required",
+  requiredTemplateAndEmployeeError: "template and employee number are required",
   manualExpireReason: "manual admin expire",
   draftTitlePrefix: "Contract"
 };

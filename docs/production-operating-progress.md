@@ -44,6 +44,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Reworded benefits, recruitment, and employee-guide copy so session and identifier language reads as workspace/account context instead of raw ID terminology.
 - Reworded admin onboarding, KPI, notices, attendance-live, and leave-calendar copy with the same workspace/account terminology.
 - Reworded employee onboarding, employee session notices, payslip session copy, and approval queue search labels away from raw ID terminology.
+- Reworded payroll close, insurance, payslip delivery, year-end, filing, and contracts copy away from employee/actor/organization ID terminology.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI
