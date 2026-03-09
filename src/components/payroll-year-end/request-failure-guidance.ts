@@ -81,6 +81,11 @@ function normalizeWithholdingFallback(message: string | null, locale: FlowLocale
 export function buildPayrollYearEndFailureMessage(input: FailureMessageInput) {
   const { status, body, locale, fallback } = input;
   const { message, details } = extractErrorPayload(body);
+  if (status === 404 && includesMessage(message, /payroll run not found/i)) {
+    return locale === "ko"
+      ? "선택한 직원과 연도에 해당하는 급여 실행을 찾지 못했습니다. 직원 번호와 연도를 확인한 뒤 다시 시도해 주세요."
+      : "No payroll run was found for the selected employee and year. Review the employee number and year, then try again.";
+  }
   if (status === 409) {
     const blockingReasons = extractBlockingReasons(details);
     const blockingSummary = buildReasonSummary(
@@ -157,6 +162,11 @@ export function buildWithholdingFailureMessage(input: FailureMessageInput) {
 export function buildFilingFailureMessage(input: FailureMessageInput) {
   const { status, body, locale, fallback } = input;
   const { message } = extractErrorPayload(body);
+  if (status === 404 && includesMessage(message, /payroll run not found/i)) {
+    return locale === "ko"
+      ? "선택한 직원과 연도에 해당하는 급여 실행을 찾지 못했습니다. 연말정산 기준 급여 실행이 먼저 준비되어 있는지 확인해 주세요."
+      : "No payroll run was found for the selected employee and year. Confirm that the year-end payroll basis exists first.";
+  }
   if (status === 409) {
     if (includesMessage(message, /payroll_year_end_filing_submission_v1 feature flag is disabled/i)) {
       return locale === "ko"
