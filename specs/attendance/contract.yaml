@@ -1,8 +1,9 @@
 owner: attendance-agent
-version: 1.17.1
+version: 1.17.2
 scope:
   in:
     - attendance record create/update
+    - admin-managed attendance GPS/geofence organization policy
     - capture channel metadata (GPS/QR/WIFI/DEVICE/MANUAL) on attendance create/update
     - feature-flag based employee GPS capture enforcement
     - feature-flag based employee geofence enforcement
@@ -69,6 +70,12 @@ api:
     - method: POST
       path: /attendance/auto-close
       description: Admin-triggered auto-close for stale open attendance records.
+    - method: GET
+      path: /admin/attendance-security
+      description: Read organization-level attendance GPS/geofence policy for admin settings.
+    - method: PUT
+      path: /admin/attendance-security
+      description: Persist organization-level attendance GPS/geofence policy for admin settings.
   events:
     published:
       - name: attendance.recorded.v1
@@ -94,6 +101,8 @@ db_changes:
       description: Add attendance capture channel/device/ip/location metadata columns.
     - id: 202603050004_wi0925_attendance_auto_close
       description: Add AttendanceRecord anomalyType field for auto-closed stale records.
+    - id: 202603090002_wi1055_attendance_security_productization
+      description: Persist organization-level attendance GPS and geofence policy fields on Organization.
   backward_compatible: true
   notes: Expand-contract pattern for future attendance payload updates.
 invariants:
@@ -108,6 +117,7 @@ invariants:
   - AttendanceRecord.employeeId must reference existing Employee.id (FK enforced).
   - GPS capture channel requires both latitude and longitude.
   - Attendance location coordinates must be stored as a complete pair or omitted together.
+  - Organization-level attendance geofence policy cannot be enabled without latitude, longitude, radius, and GPS-required enforcement.
   - When FLOWHR_ATTENDANCE_GPS_REQUIRED is enabled, employee attendance create/update must keep effective capture as GPS with coordinates.
   - When FLOWHR_ATTENDANCE_GEOFENCE_ENABLED is enabled, employee attendance GPS coordinates must be inside configured geofence radius.
   - When FLOWHR_ATTENDANCE_MULTI_SITE_GEOFENCE_ENABLED is enabled, employee attendance create/update GPS coordinates must match at least one configured site geofence.
@@ -170,6 +180,9 @@ test_plan:
     - create attendance with capture metadata persists channel/device/ip/location
     - read single attendance record returns scoped record payload
     - read single attendance record returns 404 for missing or cross-tenant record
+    - admin attendance security settings read returns organization-scoped policy payload
+    - admin attendance security settings update persists gps-required and geofence fields
+    - admin attendance security settings update rejects geofence enablement without full coordinates and radius
     - update pending attendance capture metadata persists new values
     - invalid capture metadata payload returns 400
     - employee manual/QR attendance write is rejected when gps policy flag is enabled
@@ -271,7 +284,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.17.1 adds single-record attendance read (`GET /attendance/records/{recordId}`) while preserving existing create/list/update/approve/reject and auto-close behavior."
+consumer_impact: "Contract v1.17.2 adds admin-managed attendance security settings (`GET/PUT /admin/attendance-security`) and organization-level GPS/geofence persistence while preserving existing attendance create/list/update/approve/reject and auto-close behavior."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -293,6 +306,7 @@ references:
   - work-items/WI-0066-attendance-reputation-circuit-breaker-operations.md
   - work-items/WI-0070-attendance-reputation-adaptive-routing-autoheal.md
   - work-items/WI-0925-auto-close.md
+  - work-items/WI-1055-admin-operational-settings-productization.md
 approval:
   spec_owner: attendance-agent
   qa_owner: qa-agent

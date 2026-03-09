@@ -1,8 +1,27 @@
 openapi: 3.1.0
 info:
   title: FlowHR Attendance API
-  version: 1.17.1
+  version: 1.17.2
 paths:
+  /admin/attendance-security:
+    get:
+      summary: Read organization-level attendance security settings
+      responses:
+        "200":
+          description: Attendance security settings returned
+    put:
+      summary: Update organization-level attendance security settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendanceSecurityPolicy"
+      responses:
+        "200":
+          description: Attendance security settings updated
+        "400":
+          description: Invalid policy payload
   /attendance/records:
     get:
       summary: List attendance records by period
@@ -267,3 +286,32 @@ components:
           minimum: 0
           maximum: 10000
       description: Coordinate fields must be provided as a pair (both numbers or both null).
+    AttendanceSecurityPolicy:
+      type: object
+      additionalProperties: false
+      required:
+        - gpsRequired
+        - geofenceEnabled
+      properties:
+        gpsRequired:
+          type: boolean
+        geofenceEnabled:
+          type: boolean
+        geofenceLatitude:
+          type:
+            - number
+            - "null"
+          minimum: -90
+          maximum: 90
+        geofenceLongitude:
+          type:
+            - number
+            - "null"
+          minimum: -180
+          maximum: 180
+        geofenceRadiusMeters:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+      description: When geofenceEnabled is true, latitude, longitude, and radius are required and GPS enforcement is implied.
