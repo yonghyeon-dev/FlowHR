@@ -78,6 +78,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Started the next `WI-1055` slice for notification durability by replacing localStorage-only employee notification settings with durable employee preferences plus admin-managed organization defaults.
 - Closed the `WI-1055` notification-durability slice through the full GitHub flow and merged it to `main` as `5e069280cb3bfc3d20edbcbacd3f77a1b7eb2b11`, then deleted the feature branch.
 - Started the next `WI-1055` slice for organization-level operator alert webhook fallback settings covering approval escalation and leave-promotion dispatch.
+- Closed the `WI-1055` operator-alert webhook slice through the full GitHub flow and merged it to `main` as `f00e7ccdcd4698f9eb39c111f8b10d1f7e36dd4e`, then deleted the feature branch.
+- Started the next `WI-1055` slice for organization-level leave promotion email template settings covering admin-managed endpoint, sender, token rotation, and default template ID.
 - Removed a remaining shared-session dev remnant by replacing raw organization ID output in `src/components/SessionMenu.tsx` with role/account status language and user-facing session errors.
 - Adjusted notice compose behavior so `publishAt` no longer defaults to a filled value; notice creation now defaults to draft and explains when to use scheduled or immediate publish.
 - Verified the current implementation pass with `npm run typecheck`.
@@ -121,8 +123,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close the current `WI-1055` operator-alert webhook slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
-2. Continue `WI-1055` on the next operator-controlled integration or email-setting slice that still depends on env-only configuration.
+1. Close the current `WI-1055` leave-promotion email settings slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
+2. Continue `WI-1055` on the next operator-controlled setting slice that still depends on env-only configuration.
 3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 
 ## 5. Blockers Or Watch Items

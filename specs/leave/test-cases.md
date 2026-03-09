@@ -36,17 +36,18 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 28. Promotion delivery history detail endpoint returns recipient snapshot statuses (`FAILED`, `SKIPPED_NO_EMAIL`, etc.).
 29. Promotion delivery retry endpoint supports dry-run and real dispatch with retry-chain linkage.
 30. Promotion delivery retry defaults to failed recipients when `recipientEmployeeIds` is omitted.
-31. Accrual auto-grant dry-run returns per-employee statuses (`ELIGIBLE`, `ALREADY_SETTLED`, `NOT_ELIGIBLE`) without mutating balances.
-32. Accrual auto-grant apply settles only eligible employees and reports failed rows without aborting whole batch.
-33. Leave calendar query returns day summaries and entry list for organization/date range.
-34. Leave calendar query applies `departmentId` filter to entries and day occupancy.
-35. Leave calendar query includes pending requests in occupancy when `includePending=true`.
-36. Leave policy list API returns `isStatutory` and `usageCount` for each policy row.
-37. Leave policy delete rejects statutory policies with `400`.
-38. Leave policy delete rejects policies with active leave-request usage with `400`.
-39. Leave policy delete archives unused non-statutory policy and default list excludes archived rows.
-40. Employee leave calendar query (`/leave/calendar/employee`) returns own + same-department entries with `PENDING/APPROVED/REJECTED` states and excludes other departments.
-41. Existing organizations list `MATERNITY` and `PATERNITY` statutory leave policies after migration deployment.
+31. Admin can read and update `/admin/leave-promotion-email-settings` with organization-scoped endpoint, sender, token rotation, and default template ID.
+32. Accrual auto-grant dry-run returns per-employee statuses (`ELIGIBLE`, `ALREADY_SETTLED`, `NOT_ELIGIBLE`) without mutating balances.
+33. Accrual auto-grant apply settles only eligible employees and reports failed rows without aborting whole batch.
+34. Leave calendar query returns day summaries and entry list for organization/date range.
+35. Leave calendar query applies `departmentId` filter to entries and day occupancy.
+36. Leave calendar query includes pending requests in occupancy when `includePending=true`.
+37. Leave policy list API returns `isStatutory` and `usageCount` for each policy row.
+38. Leave policy delete rejects statutory policies with `400`.
+39. Leave policy delete rejects policies with active leave-request usage with `400`.
+40. Leave policy delete archives unused non-statutory policy and default list excludes archived rows.
+41. Employee leave calendar query (`/leave/calendar/employee`) returns own + same-department entries with `PENDING/APPROVED/REJECTED` states and excludes other departments.
+42. Existing organizations list `MATERNITY` and `PATERNITY` statutory leave policies after migration deployment.
 
 ## Boundary and Accuracy Cases
 

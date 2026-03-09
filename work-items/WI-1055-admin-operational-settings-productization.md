@@ -82,6 +82,18 @@ Move required customer-admin operating controls into productized admin settings 
 - Regression coverage is attached to the integration chain:
   - `scripts/tests/e2e-wi1055-operator-alert-webhook-settings.test.ts`
   - `package.json` `test:integration`
+- Fifth execution slice productizes organization-level leave promotion email template settings:
+  - `src/app/admin/leave-promotion-email/page.tsx`
+  - `src/app/api/admin/leave-promotion-email-settings/route.ts`
+  - `prisma/migrations/202603090005_wi1055_leave_promotion_email_settings_productization/migration.sql`
+- Leave promotion email settings now move email-template delivery defaults out of env-only operation:
+  - `leavePromotionEmailTemplateUrl`
+  - `leavePromotionEmailFrom`
+  - `leavePromotionEmailTemplateToken`
+  - `leavePromotionEmailTemplateId`
+- Regression coverage is attached to the integration chain:
+  - `scripts/tests/e2e-wi1055-leave-promotion-email-settings.test.ts`
+  - `package.json` `test:integration`
 
 ## Data Changes (Tables and Migrations)
 
@@ -91,3 +103,4 @@ Move required customer-admin operating controls into productized admin settings 
   - `202603090002_wi1055_attendance_security_productization`
   - `202603090003_wi1055_notification_durability_productization`
   - `202603090004_wi1055_operator_alert_webhook_productization`
+  - `202603090005_wi1055_leave_promotion_email_settings_productization`

@@ -589,6 +589,10 @@ function toOrganizationEntity(record: {
   operatorAlertWebhookProvider?: string | null;
   approvalEscalationUseOperatorAlertWebhook?: boolean | null;
   leavePromotionUseOperatorAlertWebhook?: boolean | null;
+  leavePromotionEmailTemplateUrl?: string | null;
+  leavePromotionEmailFrom?: string | null;
+  leavePromotionEmailTemplateToken?: string | null;
+  leavePromotionEmailTemplateId?: string | null;
   isOnboardingComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -613,7 +617,11 @@ function toOrganizationEntity(record: {
     operatorAlertWebhookProvider,
     approvalEscalationUseOperatorAlertWebhook:
       record.approvalEscalationUseOperatorAlertWebhook ?? true,
-    leavePromotionUseOperatorAlertWebhook: record.leavePromotionUseOperatorAlertWebhook ?? true
+    leavePromotionUseOperatorAlertWebhook: record.leavePromotionUseOperatorAlertWebhook ?? true,
+    leavePromotionEmailTemplateUrl: record.leavePromotionEmailTemplateUrl ?? null,
+    leavePromotionEmailFrom: record.leavePromotionEmailFrom ?? null,
+    leavePromotionEmailTemplateToken: record.leavePromotionEmailTemplateToken ?? null,
+    leavePromotionEmailTemplateId: record.leavePromotionEmailTemplateId ?? null
   };
 }
 
@@ -1158,6 +1166,10 @@ const organizations: OrganizationStore = {
       operatorAlertWebhookProvider: null,
       approvalEscalationUseOperatorAlertWebhook: true,
       leavePromotionUseOperatorAlertWebhook: true,
+      leavePromotionEmailTemplateUrl: null,
+      leavePromotionEmailFrom: null,
+      leavePromotionEmailTemplateToken: null,
+      leavePromotionEmailTemplateId: null,
       isOnboardingComplete: false
     } as Prisma.OrganizationUncheckedCreateInput;
 
@@ -1298,6 +1310,18 @@ const organizations: OrganizationStore = {
           ? {
               leavePromotionUseOperatorAlertWebhook: input.leavePromotionUseOperatorAlertWebhook
             }
+          : {}),
+        ...(input.leavePromotionEmailTemplateUrl !== undefined
+          ? { leavePromotionEmailTemplateUrl: input.leavePromotionEmailTemplateUrl }
+          : {}),
+        ...(input.leavePromotionEmailFrom !== undefined
+          ? { leavePromotionEmailFrom: input.leavePromotionEmailFrom }
+          : {}),
+        ...(input.leavePromotionEmailTemplateToken !== undefined
+          ? { leavePromotionEmailTemplateToken: input.leavePromotionEmailTemplateToken }
+          : {}),
+        ...(input.leavePromotionEmailTemplateId !== undefined
+          ? { leavePromotionEmailTemplateId: input.leavePromotionEmailTemplateId }
           : {}),
         ...(input.isOnboardingComplete !== undefined
           ? { isOnboardingComplete: input.isOnboardingComplete }

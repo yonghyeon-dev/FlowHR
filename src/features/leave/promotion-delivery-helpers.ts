@@ -17,9 +17,22 @@ export type PromotionEmailTemplateConfig = {
   url: string;
   token: string | null;
   from: string;
+  defaultTemplateId: string | null;
   urlSource: string;
   tokenSource: string | null;
   fromSource: string;
+  defaultTemplateIdSource: string | null;
+};
+
+export type PromotionEmailTemplateOverride = {
+  url: string | null;
+  from: string | null;
+  token: string | null;
+  defaultTemplateId: string | null;
+  urlSource: string;
+  tokenSource: string | null;
+  fromSource: string;
+  defaultTemplateIdSource: string | null;
 };
 
 function normalizeEnvValue(value: string | undefined) {
@@ -93,8 +106,18 @@ export function resolvePromotionWebhookConfig(
   };
 }
 
-export function resolvePromotionEmailTemplateConfig(): PromotionEmailTemplateConfig | null {
+export function resolvePromotionEmailTemplateConfig(
+  override?: PromotionEmailTemplateOverride | null
+): PromotionEmailTemplateConfig | null {
   const urlCandidates: Array<{ source: string; value: string }> = [
+    ...(override
+      ? [
+          {
+            source: override.urlSource,
+            value: normalizeEnvValue(override.url ?? undefined)
+          }
+        ]
+      : []),
     {
       source: "FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_URL",
       value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_URL)
@@ -105,6 +128,14 @@ export function resolvePromotionEmailTemplateConfig(): PromotionEmailTemplateCon
     }
   ];
   const fromCandidates: Array<{ source: string; value: string }> = [
+    ...(override
+      ? [
+          {
+            source: override.fromSource,
+            value: normalizeEnvValue(override.from ?? undefined)
+          }
+        ]
+      : []),
     {
       source: "FLOWHR_LEAVE_PROMOTION_EMAIL_FROM",
       value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_FROM)
@@ -115,6 +146,14 @@ export function resolvePromotionEmailTemplateConfig(): PromotionEmailTemplateCon
     }
   ];
   const tokenCandidates: Array<{ source: string; value: string }> = [
+    ...(override
+      ? [
+          {
+            source: override.tokenSource ?? "organization.leavePromotionEmailTemplateToken",
+            value: normalizeEnvValue(override.token ?? undefined)
+          }
+        ]
+      : []),
     {
       source: "FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_TOKEN",
       value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_TOKEN)
@@ -131,14 +170,32 @@ export function resolvePromotionEmailTemplateConfig(): PromotionEmailTemplateCon
     return null;
   }
   const matchedToken = tokenCandidates.find((candidate) => candidate.value.length > 0);
+  const templateIdCandidates: Array<{ source: string; value: string }> = [
+    ...(override
+      ? [
+          {
+            source:
+              override.defaultTemplateIdSource ?? "organization.leavePromotionEmailTemplateId",
+            value: normalizeEnvValue(override.defaultTemplateId ?? undefined)
+          }
+        ]
+      : []),
+    {
+      source: "FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID",
+      value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID)
+    }
+  ];
+  const matchedTemplateId = templateIdCandidates.find((candidate) => candidate.value.length > 0);
 
   return {
     url: matchedUrl.value,
     token: matchedToken?.value ?? null,
     from: matchedFrom.value,
+    defaultTemplateId: matchedTemplateId?.value ?? null,
     urlSource: matchedUrl.source,
     tokenSource: matchedToken?.source ?? null,
-    fromSource: matchedFrom.source
+    fromSource: matchedFrom.source,
+    defaultTemplateIdSource: matchedTemplateId?.source ?? null
   };
 }
 

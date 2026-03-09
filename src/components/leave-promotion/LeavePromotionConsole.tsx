@@ -694,7 +694,7 @@ export default function LeavePromotionConsole({
             </label>
           </div>
           <p className="small">
-            email template 채널 사용 시 `emailTemplateId` 또는 서버 환경변수(`FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID`)가 필요합니다.
+            email template 채널 사용 시 `emailTemplateId`, 관리자 설정의 기본 템플릿 ID, 또는 서버 fallback 환경변수 중 하나가 필요합니다.
           </p>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void loadPolicySettings()} disabled={!organizationId.trim()}>
