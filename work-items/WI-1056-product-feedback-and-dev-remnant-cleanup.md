@@ -52,5 +52,9 @@ Raise product trust by removing dev remnants and adding expected confirmation an
   - `src/components/SessionMenu.tsx`
   - raw organization ID output replaced with account-status language
   - raw session errors replaced with user-facing session guidance
+- Added regression coverage and wired it into the CI integration chain:
+  - `scripts/tests/e2e-wi1056-product-feedback-and-dev-remnant-cleanup.test.ts`
+  - `package.json` `test:integration`
 - Local verification:
   - `npm run typecheck`
+  - `npm run test:integration`
