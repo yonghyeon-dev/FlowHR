@@ -23,16 +23,13 @@ async function run() {
   assert.match(copySource, /tableHeaders: \{/);
   assert.match(copySource, /logSuccessLabel: string;/);
   assert.match(copySource, /logFailLabel: string;/);
-  assert.match(copySource, /organizationIdLabel: "조직 식별자"/);
-  assert.match(copySource, /accessTokenLabel: "액세스 토큰 \(선택\)"/);
+  assert.match(copySource, /organizationIdLabel: "운영 조직"/);
+  assert.match(copySource, /accessTokenLabel: "연결 토큰 \(선택\)"/);
 
   assert.match(sectionsSource, /copy\.tableHeaders\.employee/);
   assert.match(sectionsSource, /copy\.tableHeaders\.department/);
   assert.match(sectionsSource, /copy\.tableHeaders\.checkIn/);
-  assert.match(
-    sectionsSource,
-    /log\.ok \? copy\.logSuccessLabel : copy\.logFailLabel/
-  );
+  assert.match(sectionsSource, /log\.ok \? copy\.logSuccessLabel : copy\.logFailLabel/);
   assert.doesNotMatch(sectionsSource, /<th style=\{CELL_STYLE\}>Employee<\/th>/);
   assert.doesNotMatch(sectionsSource, /log\.ok \? "OK" : "FAIL"/);
 

@@ -15,14 +15,11 @@ async function run() {
   assert.match(copySource, /metricLabel: string;/);
   assert.match(copySource, /logSuccessLabel: string;/);
   assert.match(copySource, /logFailLabel: string;/);
-  assert.match(copySource, /organizationIdLabel: "조직 식별자"/);
-  assert.match(copySource, /accessTokenLabel: "액세스 토큰 \(선택\)"/);
+  assert.match(copySource, /organizationIdLabel: "운영 조직"/);
+  assert.match(copySource, /accessTokenLabel: "연결 토큰 \(선택\)"/);
 
   assert.match(sectionsSource, /<th>\{copy\.metricLabel\}<\/th>/);
-  assert.match(
-    sectionsSource,
-    /log\.ok \? copy\.logSuccessLabel : copy\.logFailLabel/
-  );
+  assert.match(sectionsSource, /log\.ok \? copy\.logSuccessLabel : copy\.logFailLabel/);
   assert.doesNotMatch(sectionsSource, /<th>Metric<\/th>/);
   assert.doesNotMatch(sectionsSource, /log\.ok \? "OK" : "FAIL"/);
 
