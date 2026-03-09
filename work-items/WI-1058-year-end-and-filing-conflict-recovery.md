@@ -38,6 +38,7 @@ Make year-end and filing flows recoverable and production-credible when conflict
   - `src/components/withholding-receipt/useWithholdingReceiptRequests.ts`
   - `src/components/payroll-year-end-filing/request-feedback-helpers.ts`
   - `src/components/payroll-year-end-filing/PayrollYearEndFilingConsole.tsx`
+- Extended the same runtime normalization to nearby payroll close and insurance consoles so session and catch-path errors reuse the same product-safe guidance.
 - Covered known production conflict cases:
   - feature flag disabled
   - missing finalized settlement / issued receipt

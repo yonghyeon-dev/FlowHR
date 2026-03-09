@@ -54,6 +54,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Hardened `WI-1057` further by adding a shared contracts access-token requirement and applying it to admin reload/action paths, employee response/evidence paths, and the template builder so stale session clicks fail with user-facing guidance instead of bare unauthorized requests.
 - Started `WI-1058` and added shared conflict-to-guidance mapping for year-end settlement, filing, and withholding flows so production-valid `409` responses surface recovery steps instead of raw diagnostics.
 - Extended the same `WI-1058` guidance into the year-end preflight and employee year-end input consoles so adjacent guard failures no longer fall back to raw runtime text.
+- Extended the same runtime-message normalization into payroll close and payroll insurance consoles so adjacent catch/session errors no longer fall back to raw diagnostics.
 - Started `WI-1056` cleanup of weak product feedback copy by replacing `request failed; check logs` / `invalid input` wording across payroll, receipt, and leave-related production surfaces with product-safe guidance.
 - Continued `WI-1056` with actual interaction cleanup:
   - admin people profile updates now ask for confirmation before commit

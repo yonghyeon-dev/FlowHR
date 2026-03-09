@@ -19,6 +19,7 @@ import {
   toSeoulEndIso,
   toSeoulStartIso
 } from "@/components/payroll-close/types";
+import { normalizePayrollYearEndRuntimeMessage } from "@/components/payroll-year-end/runtime-copy-helpers";
 
 function parseRequiredInt(value: string, fieldLabel: string, nonNegativeIntegerLabel: string) {
   const parsed = Number(value);
@@ -75,6 +76,16 @@ export default function PayrollClosePeriodConsole() {
     const success = logs.filter((log) => log.ok).length;
     return { total, success, fail: total - success };
   }, [logs]);
+  const normalizedSupabaseSessionError = useMemo(() => {
+    if (!supabaseSessionError) {
+      return null;
+    }
+    return normalizePayrollYearEndRuntimeMessage(
+      supabaseSessionError,
+      locale,
+      copy.statusRequestFailed
+    );
+  }, [copy.statusRequestFailed, locale, supabaseSessionError]);
 
   async function runClosePeriod(apply: boolean) {
     try {
@@ -156,7 +167,11 @@ export default function PayrollClosePeriodConsole() {
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      setStatusMessage(
+        error instanceof Error
+          ? normalizePayrollYearEndRuntimeMessage(error.message, locale, copy.statusInvalidInput)
+          : copy.statusInvalidInput
+      );
     } finally {
       setPendingLabel(null);
     }
@@ -228,9 +243,9 @@ export default function PayrollClosePeriodConsole() {
             </button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? (
+          {normalizedSupabaseSessionError ? (
             <p className="small fail">
-              {copy.sessionErrorPrefix}: {supabaseSessionError}
+              {copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}
             </p>
           ) : null}
         </article>
