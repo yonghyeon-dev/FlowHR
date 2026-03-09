@@ -24,6 +24,7 @@ import {
   type ServiceContext,
   requirePayrollPermission
 } from "@/features/payroll/service-context-helpers";
+import { loadPayrollRuntimeFeatureFlags } from "@/features/payroll/service-feature-flags";
 import { ServiceError } from "@/features/shared/service-error";
 
 export async function getPayrollYearEndInsuranceReconciliationReportFromHelper(
@@ -31,7 +32,8 @@ export async function getPayrollYearEndInsuranceReconciliationReportFromHelper(
   input: GetPayrollYearEndInsuranceReconciliationReportInput
 ): Promise<GetPayrollYearEndInsuranceReconciliationReportResult> {
   await requirePayrollPermission(context, Permissions.payrollRunList, "list");
-  if (!isPayrollYearEndEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollYearEndEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
   }
 
@@ -102,7 +104,8 @@ export async function getPayrollYearEndPreflightChecklistFromHelper(
   input: GetPayrollYearEndPreflightChecklistInput
 ): Promise<GetPayrollYearEndPreflightChecklistResult> {
   await requirePayrollPermission(context, Permissions.payrollRunList, "list");
-  if (!isPayrollYearEndEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollYearEndEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
   }
 
@@ -115,11 +118,11 @@ export async function getPayrollYearEndPreflightChecklistFromHelper(
   );
   const nonTaxableWithinAnnualGross = nonTaxableAnnualIncomeKrw <= annualGrossPayKrw;
 
-  const submissions = isPayrollYearEndFilingSubmissionEnabled()
+  const submissions = isPayrollYearEndFilingSubmissionEnabled(featureFlags)
     ? await listYearEndFilingSubmissionSummaries(context, {
-      year: input.year,
-      employeeId: input.employeeId
-    })
+        year: input.year,
+        employeeId: input.employeeId
+      })
     : [];
   const pendingSubmissionCount = submissions.filter((submission) => submission.status === "submitted").length;
   const rejectedSubmissionCount = submissions.filter(

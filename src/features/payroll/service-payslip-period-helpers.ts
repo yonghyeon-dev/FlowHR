@@ -33,6 +33,7 @@ import {
   getEventPublisher,
   requirePayrollPermission
 } from "@/features/payroll/service-context-helpers";
+import { loadPayrollRuntimeFeatureFlags } from "@/features/payroll/service-feature-flags";
 
 const PAYSLIP_DISTRIBUTION_NOTICE_TITLE = "급여명세서 도착";
 
@@ -46,7 +47,8 @@ export async function closePayrollPeriodFromHelper(
   input: ClosePayrollPeriodInput
 ): Promise<ClosePayrollPeriodResult> {
   await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
-  if (!isPayrollClosePeriodEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollClosePeriodEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_close_period_v1 feature flag is disabled");
   }
 
@@ -181,7 +183,8 @@ export async function distributePayrollPayslipsFromHelper(
   input: DistributePayrollPayslipsInput
 ): Promise<DistributePayrollPayslipsResult> {
   await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
-  if (!isPayrollPayslipDeliveryEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollPayslipDeliveryEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_payslip_delivery_v1 feature flag is disabled");
   }
 
@@ -354,7 +357,8 @@ export async function acknowledgePayrollPayslipReceiptFromHelper(
   context: ServiceContext,
   input: AcknowledgePayrollPayslipReceiptInput
 ): Promise<AcknowledgePayrollPayslipReceiptResult> {
-  if (!isPayrollPayslipDeliveryEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollPayslipDeliveryEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_payslip_delivery_v1 feature flag is disabled");
   }
 

@@ -90,6 +90,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 82. Admin payroll statutory preview defaults `incomeTaxLookupPresetAuto=true` for KR simple-tax-table precision and preserves deterministic manual override replay.
 83. Run payroll 4-insurance settlement preview with policy preset selection (`insurancePolicyPresetId`) or auto-selection (`insurancePolicyPresetAuto` + optional `insurancePolicyAsOf`) and verify deterministic rate/cap resolution with manual-rate override replay.
 84. Admin payroll-insurance console supports insurance policy mode controls (manual/preset-id/preset-auto), wires `insurancePolicyPresetAuto`/`insurancePolicyPresetId`/`insurancePolicyAsOf` payload deterministically, and surfaces resolved policy preset/rates/caps in summary.
+85. Admin feature management loads/saves organization payroll feature override modes and keeps ops-only rollout controls explicitly separated from customer-managed settings.
 
 ## Accuracy Cases
 

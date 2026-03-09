@@ -21,16 +21,18 @@ import {
   getEventPublisher,
   requirePayrollPermission
 } from "@/features/payroll/service-context-helpers";
+import { loadPayrollRuntimeFeatureFlags } from "@/features/payroll/service-feature-flags";
 
 export async function exportPayrollYearEndFilingDataFromHelper(
   context: ServiceContext,
   input: ExportPayrollYearEndFilingDataInput
 ): Promise<ExportPayrollYearEndFilingDataResult> {
   await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
-  if (!isPayrollYearEndEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollYearEndEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
   }
-  if (!isPayrollYearEndFilingExportEnabled()) {
+  if (!isPayrollYearEndFilingExportEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_filing_export_v1 feature flag is disabled");
   }
 

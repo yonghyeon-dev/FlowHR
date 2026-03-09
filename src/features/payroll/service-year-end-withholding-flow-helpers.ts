@@ -33,6 +33,7 @@ import {
   type ServiceContext,
   getEventPublisher
 } from "@/features/payroll/service-context-helpers";
+import { loadPayrollRuntimeFeatureFlags } from "@/features/payroll/service-feature-flags";
 import { requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
 import { ServiceError } from "@/features/shared/service-error";
 
@@ -65,7 +66,8 @@ export async function getPayrollYearEndWithholdingReceiptDocumentFromHelper(
   context: ServiceContext,
   input: GetPayrollYearEndWithholdingReceiptDocumentInput
 ): Promise<GetPayrollYearEndWithholdingReceiptDocumentResult> {
-  if (!isPayrollYearEndEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollYearEndEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
   }
 
@@ -120,7 +122,8 @@ export async function getPayrollYearEndFinalizedSettlementFromHelper(
   context: ServiceContext,
   input: GetPayrollYearEndFinalizedSettlementInput
 ): Promise<GetPayrollYearEndFinalizedSettlementResult> {
-  if (!isPayrollYearEndEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollYearEndEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
   }
 
@@ -175,7 +178,8 @@ export async function issuePayrollYearEndWithholdingReceiptFromHelper(
   context: ServiceContext,
   input: IssuePayrollYearEndWithholdingReceiptInput
 ): Promise<IssuePayrollYearEndWithholdingReceiptResult> {
-  if (!isPayrollYearEndEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollYearEndEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
   }
 

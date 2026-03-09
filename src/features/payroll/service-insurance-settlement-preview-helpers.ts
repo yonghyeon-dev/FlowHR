@@ -26,6 +26,7 @@ import {
   getEventPublisher,
   requirePayrollPermission
 } from "@/features/payroll/service-context-helpers";
+import { loadPayrollRuntimeFeatureFlags } from "@/features/payroll/service-feature-flags";
 import { calculatePayrollComputation } from "@/features/payroll/service-computation-helpers";
 
 export async function previewPayrollInsuranceSettlementFromHelper(
@@ -33,7 +34,8 @@ export async function previewPayrollInsuranceSettlementFromHelper(
   input: PreviewPayrollInsuranceSettlementInput
 ): Promise<PreviewPayrollInsuranceSettlementResult> {
   await requirePayrollPermission(context, Permissions.payrollRunPreview, "preview");
-  if (!isPayrollKrInsuranceSettlementEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollKrInsuranceSettlementEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_kr_insurance_settlement_v1 feature flag is disabled");
   }
 

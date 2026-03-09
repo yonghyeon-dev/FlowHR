@@ -23,6 +23,7 @@ import {
   getEventPublisher,
   requirePayrollPermission
 } from "@/features/payroll/service-context-helpers";
+import { loadPayrollRuntimeFeatureFlags } from "@/features/payroll/service-feature-flags";
 import { calculatePayrollComputation } from "@/features/payroll/service-computation-helpers";
 
 const pendingAttendanceWarningMessage = (count: number) =>
@@ -98,7 +99,8 @@ export async function previewPayrollWithDeductionsFromHelper(
   input: PreviewPayrollWithDeductionsInput
 ): Promise<PreviewPayrollWithDeductionsResult> {
   await requirePayrollPermission(context, Permissions.payrollRunPreview, "preview");
-  if (!isPayrollDeductionsEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollDeductionsEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_deductions_v1 feature flag is disabled");
   }
 
@@ -143,7 +145,7 @@ export async function previewPayrollWithDeductionsFromHelper(
     }
     Object.assign(additionalBreakdown, manualAdditional);
   } else if (deductionMode === "profile") {
-    if (!isPayrollDeductionProfileEnabled()) {
+    if (!isPayrollDeductionProfileEnabled(featureFlags)) {
       throw new ServiceError(409, "payroll_deduction_profile_v1 feature flag is disabled");
     }
 
@@ -189,7 +191,7 @@ export async function previewPayrollWithDeductionsFromHelper(
       fixedOtherDeductionKrw
     });
   } else {
-    if (!isPayrollKrBaselineEnabled()) {
+    if (!isPayrollKrBaselineEnabled(featureFlags)) {
       throw new ServiceError(409, "payroll_kr_baseline_v1 feature flag is disabled");
     }
     const organization = organizationId

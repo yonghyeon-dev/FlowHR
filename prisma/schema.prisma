@@ -52,6 +52,16 @@ model Organization {
   leavePromotionEmailFrom String?
   leavePromotionEmailTemplateToken String?
   leavePromotionEmailTemplateId String?
+  payrollFeatureDeductionsEnabled Boolean?
+  payrollFeatureDeductionProfileEnabled Boolean?
+  payrollFeatureKrBaselineEnabled Boolean?
+  payrollFeatureKrInsuranceSettlementEnabled Boolean?
+  payrollFeatureClosePeriodEnabled Boolean?
+  payrollFeaturePayslipDeliveryEnabled Boolean?
+  payrollFeatureYearEndEnabled Boolean?
+  payrollFeatureYearEndDeductionInputEnabled Boolean?
+  payrollFeatureYearEndFilingExportEnabled Boolean?
+  payrollFeatureYearEndFilingSubmissionEnabled Boolean?
   isOnboardingComplete       Boolean   @default(false)
   createdAt                  DateTime  @default(now())
   updatedAt                  DateTime  @updatedAt

@@ -1,4 +1,5 @@
 import { ServiceError } from "@/features/shared/service-error";
+import type { PayrollRuntimeFeatureFlags } from "@/features/payroll/feature-management-settings";
 
 function readBooleanEnvFlag(primaryKey: string, legacyKey: string): boolean {
   const raw = process.env[primaryKey] ?? process.env[legacyKey] ?? "";
@@ -29,61 +30,79 @@ export function toRateNumber(value: number | null, fieldName: string) {
   return value;
 }
 
-export function isPayrollDeductionsEnabled() {
-  return readBooleanEnvFlag("FLOWHR_PAYROLL_DEDUCTIONS_V1", "PAYROLL_DEDUCTIONS_V1");
+export function isPayrollDeductionsEnabled(flags?: PayrollRuntimeFeatureFlags) {
+  return flags?.deductions ?? readBooleanEnvFlag("FLOWHR_PAYROLL_DEDUCTIONS_V1", "PAYROLL_DEDUCTIONS_V1");
 }
 
-export function isPayrollDeductionProfileEnabled() {
-  return readBooleanEnvFlag(
-    "FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1",
-    "PAYROLL_DEDUCTION_PROFILE_V1"
+export function isPayrollDeductionProfileEnabled(flags?: PayrollRuntimeFeatureFlags) {
+  return (
+    flags?.deductionProfile ??
+    readBooleanEnvFlag(
+      "FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1",
+      "PAYROLL_DEDUCTION_PROFILE_V1"
+    )
   );
 }
 
-export function isPayrollKrBaselineEnabled() {
-  return readBooleanEnvFlag("FLOWHR_PAYROLL_KR_BASELINE_V1", "PAYROLL_KR_BASELINE_V1");
+export function isPayrollKrBaselineEnabled(flags?: PayrollRuntimeFeatureFlags) {
+  return flags?.krBaseline ?? readBooleanEnvFlag("FLOWHR_PAYROLL_KR_BASELINE_V1", "PAYROLL_KR_BASELINE_V1");
 }
 
-export function isPayrollKrInsuranceSettlementEnabled() {
-  return readBooleanEnvFlag(
-    "FLOWHR_PAYROLL_KR_INSURANCE_SETTLEMENT_V1",
-    "PAYROLL_KR_INSURANCE_SETTLEMENT_V1"
+export function isPayrollKrInsuranceSettlementEnabled(flags?: PayrollRuntimeFeatureFlags) {
+  return (
+    flags?.krInsuranceSettlement ??
+    readBooleanEnvFlag(
+      "FLOWHR_PAYROLL_KR_INSURANCE_SETTLEMENT_V1",
+      "PAYROLL_KR_INSURANCE_SETTLEMENT_V1"
+    )
   );
 }
 
-export function isPayrollClosePeriodEnabled() {
-  return readBooleanEnvFlag("FLOWHR_PAYROLL_CLOSE_PERIOD_V1", "PAYROLL_CLOSE_PERIOD_V1");
+export function isPayrollClosePeriodEnabled(flags?: PayrollRuntimeFeatureFlags) {
+  return flags?.closePeriod ?? readBooleanEnvFlag("FLOWHR_PAYROLL_CLOSE_PERIOD_V1", "PAYROLL_CLOSE_PERIOD_V1");
 }
 
-export function isPayrollPayslipDeliveryEnabled() {
-  return readBooleanEnvFlag(
-    "FLOWHR_PAYROLL_PAYSLIP_DELIVERY_V1",
-    "PAYROLL_PAYSLIP_DELIVERY_V1"
+export function isPayrollPayslipDeliveryEnabled(flags?: PayrollRuntimeFeatureFlags) {
+  return (
+    flags?.payslipDelivery ??
+    readBooleanEnvFlag(
+      "FLOWHR_PAYROLL_PAYSLIP_DELIVERY_V1",
+      "PAYROLL_PAYSLIP_DELIVERY_V1"
+    )
   );
 }
 
-export function isPayrollYearEndEnabled() {
-  return readBooleanEnvFlag("FLOWHR_PAYROLL_YEAR_END_V1", "PAYROLL_YEAR_END_V1");
+export function isPayrollYearEndEnabled(flags?: PayrollRuntimeFeatureFlags) {
+  return flags?.yearEnd ?? readBooleanEnvFlag("FLOWHR_PAYROLL_YEAR_END_V1", "PAYROLL_YEAR_END_V1");
 }
 
-export function isPayrollYearEndDeductionInputEnabled() {
-  return readBooleanEnvFlag(
-    "FLOWHR_PAYROLL_YEAR_END_DEDUCTION_INPUT_V1",
-    "PAYROLL_YEAR_END_DEDUCTION_INPUT_V1"
+export function isPayrollYearEndDeductionInputEnabled(flags?: PayrollRuntimeFeatureFlags) {
+  return (
+    flags?.yearEndDeductionInput ??
+    readBooleanEnvFlag(
+      "FLOWHR_PAYROLL_YEAR_END_DEDUCTION_INPUT_V1",
+      "PAYROLL_YEAR_END_DEDUCTION_INPUT_V1"
+    )
   );
 }
 
-export function isPayrollYearEndFilingExportEnabled() {
-  return readBooleanEnvFlag(
-    "FLOWHR_PAYROLL_YEAR_END_FILING_EXPORT_V1",
-    "PAYROLL_YEAR_END_FILING_EXPORT_V1"
+export function isPayrollYearEndFilingExportEnabled(flags?: PayrollRuntimeFeatureFlags) {
+  return (
+    flags?.yearEndFilingExport ??
+    readBooleanEnvFlag(
+      "FLOWHR_PAYROLL_YEAR_END_FILING_EXPORT_V1",
+      "PAYROLL_YEAR_END_FILING_EXPORT_V1"
+    )
   );
 }
 
-export function isPayrollYearEndFilingSubmissionEnabled() {
-  return readBooleanEnvFlag(
-    "FLOWHR_PAYROLL_YEAR_END_FILING_SUBMISSION_V1",
-    "PAYROLL_YEAR_END_FILING_SUBMISSION_V1"
+export function isPayrollYearEndFilingSubmissionEnabled(flags?: PayrollRuntimeFeatureFlags) {
+  return (
+    flags?.yearEndFilingSubmission ??
+    readBooleanEnvFlag(
+      "FLOWHR_PAYROLL_YEAR_END_FILING_SUBMISSION_V1",
+      "PAYROLL_YEAR_END_FILING_SUBMISSION_V1"
+    )
   );
 }
 
