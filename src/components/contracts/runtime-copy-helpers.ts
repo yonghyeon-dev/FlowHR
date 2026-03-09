@@ -55,6 +55,14 @@ function resolveFileExtension(fileName: string) {
   return `.${match[1].toLowerCase()}`;
 }
 
+function toPublicReferenceSuffix(stableId: string) {
+  const normalized = stableId.trim().replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  if (normalized.length === 0) {
+    return "000000";
+  }
+  return normalized.slice(-6);
+}
+
 export function normalizeContractsEntityTitle(title: string, stableId: string, isKoLocale: boolean) {
   const normalized = title.trim();
   if (!isKoLocale) {
@@ -87,4 +95,20 @@ export function normalizeContractsEvidenceFileName(
     return normalized;
   }
   return shouldNormalizeAsKoFallbackTitle(normalized) ? fallbackName : normalized;
+}
+
+export function formatContractsPublicReference(
+  stableId: string,
+  kind: "document" | "template",
+  isKoLocale: boolean
+) {
+  const prefix =
+    kind === "template"
+      ? isKoLocale
+        ? "템플릿"
+        : "Template"
+      : isKoLocale
+        ? "계약"
+        : "Contract";
+  return `${prefix}-${toPublicReferenceSuffix(stableId)}`;
 }

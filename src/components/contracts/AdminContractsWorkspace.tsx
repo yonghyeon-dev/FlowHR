@@ -26,7 +26,10 @@ import {
 } from "@/components/contracts/useAdminContractsDocumentFilters";
 import { setContractsRuntimeLocale } from "@/components/contracts/http";
 import { resolveAdminContractDocumentNextStep, resolveAllowedContractDocumentActions, type ContractDocumentNextStepKey } from "@/components/contracts/document-action-policy";
-import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-copy-helpers";
+import {
+  formatContractsPublicReference,
+  normalizeContractsEntityTitle
+} from "@/components/contracts/runtime-copy-helpers";
 import { resolveContractApprovalStatusLabel, resolveContractDocumentStatusLabel } from "@/components/contracts/status-label-helpers";
 import { formatEmployeeIdForLocaleDisplay, normalizeEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
@@ -90,6 +93,7 @@ export default function AdminContractsWorkspace({ accessToken }: AdminContractsW
     normalizedEmployeeIdForApi,
     actionLabelByAction
   });
+  const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? null;
   const { documentSearchQuery, setDocumentSearchQuery, documentStatusFilter, setDocumentStatusFilter, expirationWindowDays, setExpirationWindowDays, slaRiskFilter, setSlaRiskFilter, renewalCandidateOnly, setRenewalCandidateOnly, decisionQueueOnly, setDecisionQueueOnly, nextStepFilter, setNextStepFilter, expiringSoonCount, dueSoonSlaCount, overdueSlaCount, decisionQueueCount, nextStepCounts, renewalCandidateCount, visibleDocuments, isDueSoonSlaRisk, isOverdueSlaRisk } = useAdminContractsDocumentFilters({
     documents,
     locale,
@@ -200,7 +204,9 @@ export default function AdminContractsWorkspace({ accessToken }: AdminContractsW
                   <span className="queue-history-chip">v{template.version}</span>
                 </div>
                 <div className="contract-template-meta">
-                  <span className="queue-history-chip">{template.id}</span>
+                  <span className="queue-history-chip">
+                    {formatContractsPublicReference(template.id, "template", isKoLocale)}
+                  </span>
                   <span className="queue-history-chip">{categoryLabels[template.category]}</span>
                   <span className="queue-history-chip">{templateStatusLabels[template.status]}</span>
                   <span className="queue-history-chip">
@@ -224,7 +230,15 @@ export default function AdminContractsWorkspace({ accessToken }: AdminContractsW
             </label>
             <label>
               {copy.selectedTemplateLabel}
-              <input value={selectedTemplateId} disabled />
+              <input
+                value={
+                  selectedTemplate
+                    ? normalizeContractsEntityTitle(selectedTemplate.name, selectedTemplate.id, isKoLocale)
+                    : ""
+                }
+                placeholder={copy.selectedTemplateLabel}
+                disabled
+              />
             </label>
           </div>
           <div className="contract-action-row">
@@ -273,7 +287,7 @@ export default function AdminContractsWorkspace({ accessToken }: AdminContractsW
                     <span className="queue-history-chip">{resolveContractDocumentStatusLabel(document.status, documentStatusLabels, isKoLocale)}</span>
                   </div>
                   <p>
-                    {document.id} | {copy.employeePrefix}{" "}
+                    {formatContractsPublicReference(document.id, "document", isKoLocale)} | {copy.employeePrefix}{" "}
                     {formatEmployeeIdForLocaleDisplay(document.employeeId, locale)} | {copy.approvalPrefix}{" "}
                     {resolveContractApprovalStatusLabel(document.approvalStatus, approvalStatusLabels, isKoLocale)} | {copy.expiresPrefix}{" "}
                     {toDateText(document.expiresAt, runtimeLocale)}

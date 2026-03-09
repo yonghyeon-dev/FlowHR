@@ -14,6 +14,7 @@ import {
   requireContractsAccessToken,
   setContractsRuntimeLocale
 } from "@/components/contracts/http";
+import { formatContractsPublicReference } from "@/components/contracts/runtime-copy-helpers";
 import {
   buildTemplateBody,
   buildTemplateBodyDiffSummary,
@@ -142,7 +143,9 @@ export default function ContractTemplateBuilder() {
         template: CreatedTemplate;
       };
       setCreatedTemplate(body.template);
-      setStatusMessage(`${copy.templateCreatedPrefix}: ${body.template.id} (v${body.template.version})`);
+      setStatusMessage(
+        `${copy.templateCreatedPrefix}: ${formatContractsPublicReference(body.template.id, "template", locale === "ko")} (v${body.template.version})`
+      );
     } catch (createError) {
       setError(
         createError instanceof Error
@@ -293,7 +296,10 @@ export default function ContractTemplateBuilder() {
           )}
           {createdTemplate ? (
             <ul className="simple-list">
-              <li><span>{copy.templateIdLabel}</span><strong>{createdTemplate.id}</strong></li>
+              <li>
+                <span>{copy.templateIdLabel}</span>
+                <strong>{formatContractsPublicReference(createdTemplate.id, "template", locale === "ko")}</strong>
+              </li>
               <li><span>{copy.versionLabel}</span><strong>{createdTemplate.version}</strong></li>
               <li><span>{copy.statusLabel}</span><strong>{templateStatusLabels[createdTemplate.status]}</strong></li>
               <li><span>{copy.categoryValueLabel}</span><strong>{categoryLabels[createdTemplate.category]}</strong></li>

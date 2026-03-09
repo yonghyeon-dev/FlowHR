@@ -47,6 +47,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Reworded payroll close, insurance, payslip delivery, year-end, filing, and contracts copy away from employee/actor/organization ID terminology.
 - Cleaned the remaining WI-1053 runtime and workflow wording on scheduling, filing workflow metadata, payslip/year-end runtime diagnostics, and onboarding dev-setting labels.
 - Removed the last non-ops `Organization ID` / `Employee ID` / `Actor ID` phrases from production surfaces after a repo-wide rescan.
+- Continued `WI-1053` on contracts by replacing raw template/document identifiers in admin and employee contract surfaces with public-facing reference labels.
 - Started `WI-1054` and rewrote approval-escalation plus leave-promotion webhook message bodies into operator-readable summaries with action guidance.
 - Started `WI-1057` and removed duplicated contract-session bootstrap reads by passing the resolved bearer token from route entry pages into contract workspaces.
 - Hardened `WI-1057` further by adding a shared contracts access-token requirement and applying it to admin reload/action paths, employee response/evidence paths, and the template builder so stale session clicks fail with user-facing guidance instead of bare unauthorized requests.

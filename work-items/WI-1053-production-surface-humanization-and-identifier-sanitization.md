@@ -47,5 +47,6 @@ Replace internal and technical surface language with human-readable product lang
 - Reworded employee onboarding recovery messages, employee session notices, payslip session copy, and approval queue search labels to the same baseline.
 - Reworded payroll close, insurance, payslip delivery, year-end, filing, and contracts copy to the same product-facing vocabulary baseline.
 - Cleaned the remaining scheduling, payslip, withholding, year-end runtime, filing metadata, and onboarding dev-setting wording that still exposed raw identifier vocabulary.
+- Replaced raw contract template/document IDs on operator and employee contract surfaces with public-facing reference labels.
 - Repo-wide scan is now clear for non-ops production surfaces containing literal `Organization ID`, `Employee ID`, or `Actor ID` phrasing.
 - Remaining follow-up is limited to operator/webhook productization and policy decisions for ops-only or intentionally hidden tooling surfaces.
