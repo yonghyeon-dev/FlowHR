@@ -21,8 +21,8 @@ export function resolveEmployeeProductionSessionNotices(isKoLocale: boolean) {
       ? "프로덕션에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요."
       : "A login session is required in production. Please sign in again at /login.",
     productionEmployeeIdRequiredNotice: isKoLocale
-      ? "운영 환경에서는 세션 app_metadata.actor_id 또는 app_metadata.employee_id에 직원 ID가 필요합니다. /login에서 다시 로그인해 주세요."
-      : "In production, session app_metadata.actor_id or app_metadata.employee_id is required. Please sign in again at /login."
+      ? "운영 환경에서는 세션에 직원 번호가 필요합니다. /login에서 다시 로그인해 주세요."
+      : "In production, an employee number must be present in the session. Please sign in again at /login."
   };
 }
 

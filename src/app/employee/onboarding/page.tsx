@@ -45,14 +45,14 @@ export default function EmployeeOnboardingChecklistPage() {
     if (isKoLocale) {
       return {
         requiresLoginSessionError: "프로덕션에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요.",
-        missingEmployeeIdError: "세션에서 직원 ID를 확인할 수 없습니다. /login에서 다시 로그인해 주세요.",
+        missingEmployeeIdError: "세션에서 직원 번호를 확인할 수 없습니다. /login에서 다시 로그인해 주세요.",
         loadChecklistFailed: "온보딩 체크리스트를 불러오지 못했습니다.",
         completeChecklistFailed: "체크리스트 완료 처리에 실패했습니다."
       };
     }
     return {
       requiresLoginSessionError: "A login session is required in production. Please sign in again at /login.",
-      missingEmployeeIdError: "Employee ID is missing in the session. Please sign in again at /login.",
+      missingEmployeeIdError: "Employee number is missing in the session. Please sign in again at /login.",
       loadChecklistFailed: "Failed to load onboarding checklist.",
       completeChecklistFailed: "Failed to mark checklist task as complete."
     };

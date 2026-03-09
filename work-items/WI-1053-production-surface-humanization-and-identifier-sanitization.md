@@ -44,4 +44,5 @@ Replace internal and technical surface language with human-readable product lang
 - Removed raw session and referrer identifiers from benefits and recruitment workspace views, and restored the deleted employee benefits workspace view during the cleanup.
 - Reworded benefits, recruitment, and employee-guide copy from raw identifier vocabulary to workspace/account language.
 - Reworded admin onboarding, KPI, notices, attendance-live, and leave-calendar copy to the same product-facing vocabulary baseline.
+- Reworded employee onboarding recovery messages, employee session notices, payslip session copy, and approval queue search labels to the same baseline.
 - Remaining follow-up is limited to copy-level `Organization ID` / `Employee ID` wording and uncovered console-like production surfaces outside this first pass.

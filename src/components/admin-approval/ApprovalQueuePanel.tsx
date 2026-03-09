@@ -128,7 +128,7 @@ const queuePanelCopyByLocale = {
     periodEnd: "Period end",
     searchScope: "Search scope",
     searchScopeAll: "All fields",
-    searchScopeEmployee: "Employee ID",
+    searchScopeEmployee: "Employee number",
     searchScopeRequestId: "Request ID",
     searchScopeContent: "Memo/reason",
     query: "Queue search",
