@@ -17,6 +17,7 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
         description: "결재 대기 건 처리와 실행 현황을 확인합니다.",
         links: [
           { href: "/admin/approval-executions", label: "결재 실행" },
+          { href: "/admin/approval-escalation-settings", label: "에스컬레이션 설정" },
           { href: "/admin/approval-templates", label: "결재 템플릿" }
         ]
       },
@@ -85,6 +86,7 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
       description: "Handle pending approvals and execution backlog.",
       links: [
         { href: "/admin/approval-executions", label: "Approval executions" },
+        { href: "/admin/approval-escalation-settings", label: "Escalation settings" },
         { href: "/admin/approval-templates", label: "Approval templates" }
       ]
     },

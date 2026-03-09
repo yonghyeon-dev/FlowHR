@@ -1,5 +1,5 @@
 owner: approval-agent
-version: 0.10.0
+version: 0.10.1
 scope:
   in:
     - organization-level approval policy for attendance/leave/payroll
@@ -16,6 +16,7 @@ scope:
     - approval execution listing API for operator troubleshooting (priority sorting + stalled queue filtering)
     - approval execution admin UI with stalled-item prioritization and quick domain jump
     - approval execution stalled escalation command API with dry-run and webhook dispatch
+    - approval escalation admin settings for organization default threshold, batch limit, and notification channel
     - approval execution stalled escalation scheduler runner for periodic multi-organization sweep
     - approval gate enforcement on attendance/leave/payroll decision endpoints
   out:
@@ -61,6 +62,12 @@ api:
     - method: POST
       path: /approval/executions/escalate
       description: Trigger stalled approval execution escalation command with optional dry-run and webhook dispatch.
+    - method: GET
+      path: /admin/approval-escalation-settings
+      description: Read organization-managed default approval escalation settings.
+    - method: PUT
+      path: /admin/approval-escalation-settings
+      description: Update organization-managed default approval escalation settings.
     - method: GET
       path: /approval/delegations
       description: List approval delegations by organization/domain/active filter.
@@ -116,6 +123,8 @@ db_changes:
       description: Add JSON stage-definition payload for approval template multi-stage routing model.
     - id: 202602190006_approval_execution_state_machine
       description: Add approval execution/action-log tables and staged action runtime model.
+    - id: 202603090006_wi1055_approval_escalation_settings_productization
+      description: Add organization-level approval escalation default settings for admin-managed policy.
   backward_compatible: true
   notes: Additive schema changes with template condition/stage payload, stage history table, and idempotent role-permission seed.
 invariants:
@@ -145,6 +154,7 @@ invariants:
   - priority_desc sort must prioritize PENDING and stale rows before terminal states.
   - Approval execution escalation command evaluates only PENDING execution rows above stalledHoursMin threshold.
   - Approval execution escalation command with dryRun=true must not dispatch webhook side effects.
+  - Organization-managed approval escalation settings provide the default stalled threshold, batch limit, and notification channel before UI or API overrides apply.
   - Tenant-scoped actors cannot mutate policy/delegation for another organization.
 risk:
   permissions:
@@ -171,6 +181,7 @@ test_plan:
     - execution list query supports `sort=priority_desc` and `stalledHoursMin` + `asOf` filtering
     - execution escalation command returns deterministic candidate ordering and dry-run summary
     - execution escalation command dispatch path emits webhook and runtime event when candidates exist
+    - admin approval escalation settings read/update persists organization-scoped default policy
     - attendance/leave/payroll staged flow keeps target pending until final stage approval
     - reject duplicate active template in same organization+domain with 409
     - reject payroll condition fields for non-PAYROLL template domain
@@ -231,7 +242,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.10.0 adds stalled escalation command endpoint (`POST /approval/executions/escalate`) and scheduler operation metadata while preserving existing policy/delegation/template/execution list behavior."
+consumer_impact: "Contract v0.10.1 adds admin-managed approval escalation settings (`GET/PUT /admin/approval-escalation-settings`) so stalled escalation defaults no longer depend on code constants, while preserving existing policy/delegation/template/execution list behavior."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0103-approval-line-delegation-policy.md

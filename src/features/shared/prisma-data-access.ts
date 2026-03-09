@@ -589,6 +589,9 @@ function toOrganizationEntity(record: {
   operatorAlertWebhookProvider?: string | null;
   approvalEscalationUseOperatorAlertWebhook?: boolean | null;
   leavePromotionUseOperatorAlertWebhook?: boolean | null;
+  approvalEscalationDefaultStalledHoursMin?: number | null;
+  approvalEscalationDefaultLimit?: number | null;
+  approvalEscalationDefaultNotificationChannel?: string | null;
   leavePromotionEmailTemplateUrl?: string | null;
   leavePromotionEmailFrom?: string | null;
   leavePromotionEmailTemplateToken?: string | null;
@@ -618,6 +621,11 @@ function toOrganizationEntity(record: {
     approvalEscalationUseOperatorAlertWebhook:
       record.approvalEscalationUseOperatorAlertWebhook ?? true,
     leavePromotionUseOperatorAlertWebhook: record.leavePromotionUseOperatorAlertWebhook ?? true,
+    approvalEscalationDefaultStalledHoursMin:
+      record.approvalEscalationDefaultStalledHoursMin ?? null,
+    approvalEscalationDefaultLimit: record.approvalEscalationDefaultLimit ?? null,
+    approvalEscalationDefaultNotificationChannel:
+      record.approvalEscalationDefaultNotificationChannel ?? null,
     leavePromotionEmailTemplateUrl: record.leavePromotionEmailTemplateUrl ?? null,
     leavePromotionEmailFrom: record.leavePromotionEmailFrom ?? null,
     leavePromotionEmailTemplateToken: record.leavePromotionEmailTemplateToken ?? null,
@@ -1166,6 +1174,9 @@ const organizations: OrganizationStore = {
       operatorAlertWebhookProvider: null,
       approvalEscalationUseOperatorAlertWebhook: true,
       leavePromotionUseOperatorAlertWebhook: true,
+      approvalEscalationDefaultStalledHoursMin: null,
+      approvalEscalationDefaultLimit: null,
+      approvalEscalationDefaultNotificationChannel: null,
       leavePromotionEmailTemplateUrl: null,
       leavePromotionEmailFrom: null,
       leavePromotionEmailTemplateToken: null,
@@ -1309,6 +1320,21 @@ const organizations: OrganizationStore = {
         ...(input.leavePromotionUseOperatorAlertWebhook !== undefined
           ? {
               leavePromotionUseOperatorAlertWebhook: input.leavePromotionUseOperatorAlertWebhook
+            }
+          : {}),
+        ...(input.approvalEscalationDefaultStalledHoursMin !== undefined
+          ? {
+              approvalEscalationDefaultStalledHoursMin:
+                input.approvalEscalationDefaultStalledHoursMin
+            }
+          : {}),
+        ...(input.approvalEscalationDefaultLimit !== undefined
+          ? { approvalEscalationDefaultLimit: input.approvalEscalationDefaultLimit }
+          : {}),
+        ...(input.approvalEscalationDefaultNotificationChannel !== undefined
+          ? {
+              approvalEscalationDefaultNotificationChannel:
+                input.approvalEscalationDefaultNotificationChannel
             }
           : {}),
         ...(input.leavePromotionEmailTemplateUrl !== undefined

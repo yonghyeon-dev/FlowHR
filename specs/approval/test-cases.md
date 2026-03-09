@@ -27,6 +27,7 @@
 23. Admin reads `GET /approval/executions?stalledHoursMin=...&asOf=...` and verifies only stalled pending rows are returned.
 24. Admin runs `POST /approval/executions/escalate` with `dryRun=true` and receives deterministic candidate summary without webhook side effects.
 25. Admin runs `POST /approval/executions/escalate` with `dryRun=false` and receives webhook dispatch summary for stalled candidates.
+26. Admin reads and updates `/admin/approval-escalation-settings`, and the approval execution queue adopts the saved default threshold, limit, and notification channel when query overrides are absent.
 
 ## Negative
 

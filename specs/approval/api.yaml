@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Approval Policy API
-  version: 0.10.0
+  version: 0.10.1
 paths:
   /approval/policy:
     get:
@@ -201,6 +201,36 @@ paths:
           description: Permission denied
         "503":
           description: Webhook configuration missing for non-dry-run candidate dispatch
+  /admin/approval-escalation-settings:
+    get:
+      summary: Read organization-managed approval escalation settings
+      responses:
+        "200":
+          description: Approval escalation settings snapshot
+    put:
+      summary: Update organization-managed approval escalation settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                policy:
+                  type: object
+                  properties:
+                    stalledHoursMin:
+                      type: integer
+                      minimum: 1
+                    limit:
+                      type: integer
+                      minimum: 1
+                      maximum: 500
+                    notificationChannel:
+                      type: string
+      responses:
+        "200":
+          description: Approval escalation settings updated
   /approval/delegations:
     get:
       summary: List approval delegations

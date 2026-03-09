@@ -35,9 +35,24 @@ import {
   normalizeAdminAnalyticsFocusMetric,
   resolveAdminAnalyticsBackHref
 } from "@/components/admin-kpi/admin-analytics-context";
+import {
+  DEFAULT_APPROVAL_ESCALATION_LIMIT,
+  DEFAULT_APPROVAL_ESCALATION_NOTIFICATION_CHANNEL,
+  DEFAULT_APPROVAL_ESCALATION_STALLED_HOURS_MIN
+} from "@/features/approval/escalation-settings";
 import { apiClientFetch, parseApiResponseBody } from "@/lib/api-client";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+
+type ApprovalEscalationSettingsDto = {
+  organizationId: string;
+  policy: {
+    stalledHoursMin: number;
+    limit: number;
+    notificationChannel: string;
+  };
+  updatedAt: string;
+};
 
 export default function AdminApprovalExecutionsPage() {
   const searchParams = useSearchParams();
@@ -49,13 +64,22 @@ export default function AdminApprovalExecutionsPage() {
   const [domain, setDomain] = useState<ApprovalDomain | "">("");
   const [state, setState] = useState<ApprovalExecutionState | "">("PENDING");
   const [sort, setSort] = useState<ApprovalExecutionSort>("priority_desc");
-  const [stalledHoursMin, setStalledHoursMin] = useState("24");
+  const [stalledHoursMin, setStalledHoursMin] = useState(
+    String(DEFAULT_APPROVAL_ESCALATION_STALLED_HOURS_MIN)
+  );
   const [asOfInput, setAsOfInput] = useState("");
   const [targetEntityType, setTargetEntityType] = useState("");
   const [targetEntityId, setTargetEntityId] = useState("");
-  const [limit, setLimit] = useState("100");
+  const [limit, setLimit] = useState(String(DEFAULT_APPROVAL_ESCALATION_LIMIT));
   const [historyLimit, setHistoryLimit] = useState("30");
-  const [notificationChannel, setNotificationChannel] = useState("approval-stalled-queue");
+  const [notificationChannel, setNotificationChannel] = useState(
+    DEFAULT_APPROVAL_ESCALATION_NOTIFICATION_CHANNEL
+  );
+  const [escalationDefaults, setEscalationDefaults] = useState({
+    stalledHoursMin: String(DEFAULT_APPROVAL_ESCALATION_STALLED_HOURS_MIN),
+    limit: String(DEFAULT_APPROVAL_ESCALATION_LIMIT),
+    notificationChannel: DEFAULT_APPROVAL_ESCALATION_NOTIFICATION_CHANNEL
+  });
 
   const [executions, setExecutions] = useState<ApprovalExecutionDto[]>([]);
   const [selectedTargetKey, setSelectedTargetKey] = useState("");
@@ -90,13 +114,53 @@ export default function AdminApprovalExecutionsPage() {
     setDomain(normalizeApprovalDomainFilter(searchParams.get("domain")));
     setState(normalizeApprovalStateFilter(searchParams.get("state")));
     setSort(normalizeApprovalSortFilter(searchParams.get("sort")));
-    setStalledHoursMin(normalizePositiveIntegerText(searchParams.get("stalledHoursMin"), "24"));
-    setLimit(normalizePositiveIntegerText(searchParams.get("limit"), "100"));
-  }, [searchParams]);
+    setStalledHoursMin(
+      normalizePositiveIntegerText(
+        searchParams.get("stalledHoursMin"),
+        escalationDefaults.stalledHoursMin
+      )
+    );
+    setLimit(normalizePositiveIntegerText(searchParams.get("limit"), escalationDefaults.limit));
+    setNotificationChannel(
+      searchParams.get("notificationChannel")?.trim() || escalationDefaults.notificationChannel
+    );
+  }, [escalationDefaults, searchParams]);
 
   useEffect(() => {
     setAsOfInput(toLocalInputValue(new Date()));
   }, []);
+
+  useEffect(() => {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
+      return;
+    }
+
+    let cancelled = false;
+    async function loadEscalationSettings() {
+      const response = await apiClientFetch({
+        method: "GET",
+        path: "/api/admin/approval-escalation-settings"
+      });
+      if (!response.ok) {
+        return;
+      }
+      const body = await parseApiResponseBody(response);
+      if (!body || typeof body !== "object" || cancelled) {
+        return;
+      }
+      const payload = body as ApprovalEscalationSettingsDto;
+      setEscalationDefaults({
+        stalledHoursMin: String(payload.policy.stalledHoursMin),
+        limit: String(payload.policy.limit),
+        notificationChannel: payload.policy.notificationChannel
+      });
+    }
+
+    void loadEscalationSettings();
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId, requiresLoginSession, supabaseSessionLoading]);
 
   useEffect(() => {
     if (

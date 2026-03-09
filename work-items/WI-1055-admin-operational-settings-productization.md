@@ -94,6 +94,17 @@ Move required customer-admin operating controls into productized admin settings 
 - Regression coverage is attached to the integration chain:
   - `scripts/tests/e2e-wi1055-leave-promotion-email-settings.test.ts`
   - `package.json` `test:integration`
+- Sixth execution slice productizes organization-level approval escalation settings:
+  - `src/app/admin/approval-escalation-settings/page.tsx`
+  - `src/app/api/admin/approval-escalation-settings/route.ts`
+  - `prisma/migrations/202603090006_wi1055_approval_escalation_settings_productization/migration.sql`
+- Approval escalation settings now move stalled escalation defaults out of hard-coded runtime constants:
+  - `approvalEscalationDefaultStalledHoursMin`
+  - `approvalEscalationDefaultLimit`
+  - `approvalEscalationDefaultNotificationChannel`
+- Regression coverage is attached to the integration chain:
+  - `scripts/tests/e2e-wi1055-approval-escalation-settings.test.ts`
+  - `package.json` `test:integration`
 
 ## Data Changes (Tables and Migrations)
 
@@ -104,3 +115,4 @@ Move required customer-admin operating controls into productized admin settings 
   - `202603090003_wi1055_notification_durability_productization`
   - `202603090004_wi1055_operator_alert_webhook_productization`
   - `202603090005_wi1055_leave_promotion_email_settings_productization`
+  - `202603090006_wi1055_approval_escalation_settings_productization`
