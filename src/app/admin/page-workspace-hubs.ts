@@ -35,6 +35,7 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
         description: "근무 일정과 휴가 정책, 휴가 캘린더를 운영합니다.",
         links: [
           { href: "/admin/scheduling", label: "근무 일정" },
+          { href: "/admin/leave-policies", label: "휴가 정책" },
           { href: "/admin/leave-calendar", label: "휴가 캘린더" }
         ]
       },
@@ -98,6 +99,7 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
       description: "Operate schedules and leave policy/calendar flows.",
       links: [
         { href: "/admin/scheduling", label: "Scheduling" },
+        { href: "/admin/leave-policies", label: "Leave policies" },
         { href: "/admin/leave-calendar", label: "Leave calendar" }
       ]
     },
