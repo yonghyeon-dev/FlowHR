@@ -1,5 +1,7 @@
+import { buildFilingFailureMessage } from "@/components/payroll-year-end/request-failure-guidance";
 import type { PayrollYearEndFilingCopy } from "@/components/payroll-year-end-filing/copy";
 import type { ApiLog } from "@/components/payroll-year-end-filing/types";
+import type { FlowLocale } from "@/lib/i18n/locales";
 
 export type PayrollYearEndFilingFailureAction =
   | "preflight_checklist"
@@ -65,11 +67,21 @@ export function extractApiErrorMessage(body: unknown) {
 
 export function buildRequestFailureStatusMessage(
   copy: PayrollYearEndFilingCopy,
+  locale: FlowLocale,
   status: number | null,
-  detailMessage: string | null
+  bodyOrMessage: unknown
 ) {
   const statusSuffix = status === null ? "" : ` (${status})`;
+  const detailMessage = buildFilingFailureMessage({
+    status,
+    body: bodyOrMessage,
+    locale,
+    fallback: copy.statusRequestFailed
+  }).trim();
   if (!detailMessage) {
+    return `${copy.statusRequestFailed}${statusSuffix}`;
+  }
+  if (detailMessage === copy.statusRequestFailed) {
     return `${copy.statusRequestFailed}${statusSuffix}`;
   }
   return `${copy.statusRequestFailed}${statusSuffix}: ${detailMessage}`;

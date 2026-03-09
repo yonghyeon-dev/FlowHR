@@ -5,8 +5,8 @@ import { useMemo, useState } from "react";
 
 import { payrollYearEndCopyByLocale } from "@/components/payroll-year-end/copy";
 import { PayrollAccuracyEvidencePanel } from "@/components/payroll-year-end/PayrollAccuracyEvidencePanel";
+import { buildPayrollYearEndFailureMessage } from "@/components/payroll-year-end/request-failure-guidance";
 import {
-  extractPayrollYearEndErrorMessage,
   normalizePayrollYearEndRuntimeMessage,
   resolvePayrollYearEndBlockingReasons,
   resolvePayrollYearEndReasonCodeLabel,
@@ -233,7 +233,14 @@ export default function PayrollYearEndConsole() {
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage(extractPayrollYearEndErrorMessage(body, locale, copy.statusRequestFailed));
+        setStatusMessage(
+          buildPayrollYearEndFailureMessage({
+            status: response.status,
+            body,
+            locale,
+            fallback: copy.statusRequestFailed
+          })
+        );
         return;
       }
       setSettlement(body);
@@ -349,7 +356,14 @@ export default function PayrollYearEndConsole() {
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage(extractPayrollYearEndErrorMessage(body, locale, copy.statusRequestFailed));
+        setStatusMessage(
+          buildPayrollYearEndFailureMessage({
+            status: response.status,
+            body,
+            locale,
+            fallback: copy.statusRequestFailed
+          })
+        );
         return;
       }
       setRecalculation(body);
@@ -394,7 +408,14 @@ export default function PayrollYearEndConsole() {
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage(extractPayrollYearEndErrorMessage(body, locale, copy.statusRequestFailed));
+        setStatusMessage(
+          buildPayrollYearEndFailureMessage({
+            status: response.status,
+            body,
+            locale,
+            fallback: copy.statusRequestFailed
+          })
+        );
         return;
       }
       setReceipt(body);
@@ -445,7 +466,14 @@ export default function PayrollYearEndConsole() {
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage(extractPayrollYearEndErrorMessage(body, locale, copy.statusRequestFailed));
+        setStatusMessage(
+          buildPayrollYearEndFailureMessage({
+            status: response.status,
+            body,
+            locale,
+            fallback: copy.statusRequestFailed
+          })
+        );
         return;
       }
       const reconciliationStatusLabel = resolvePayrollYearEndReconciliationStatusLabel(

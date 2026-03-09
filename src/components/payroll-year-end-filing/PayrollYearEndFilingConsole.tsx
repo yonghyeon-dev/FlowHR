@@ -11,7 +11,6 @@ import { payrollYearEndFilingCopyByLocale } from "@/components/payroll-year-end-
 import {
   appendApiLogEntry,
   buildRequestFailureStatusMessage,
-  extractApiErrorMessage,
   type PayrollYearEndFilingFailureAction,
   type PayrollYearEndFilingFailureState
 } from "@/components/payroll-year-end-filing/request-feedback-helpers";
@@ -321,11 +320,7 @@ export default function PayrollYearEndFilingConsole() {
     bodyOrMessage?: unknown,
     submissionId: string | null = null
   ) {
-    const detail =
-      typeof bodyOrMessage === "string"
-        ? bodyOrMessage.trim() || null
-        : extractApiErrorMessage(bodyOrMessage);
-    const message = buildRequestFailureStatusMessage(copy, status, detail);
+    const message = buildRequestFailureStatusMessage(copy, locale, status, bodyOrMessage);
     setStatusMessage(message);
     setLastFailure({
       action,
