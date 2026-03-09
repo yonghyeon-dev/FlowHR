@@ -78,12 +78,6 @@ function parseDepartments(payload: unknown) {
   return Array.isArray(departments) ? departments : [];
 }
 
-function toDateTimeLocalValue() {
-  const now = new Date();
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-}
-
 function buildQuery(input: Record<string, string>) {
   const query = new URLSearchParams();
   Object.entries(input).forEach(([key, value]) => {
@@ -348,7 +342,7 @@ export default function AdminNoticeWorkspace() {
       body,
       audience,
       targetDepartmentIds: selectedDepartmentIds,
-      publishAt: publishIso
+      ...(hasEditingTarget || publishIso !== null ? { publishAt: publishIso } : {})
     });
     if (!response.ok) {
       setStatusMessage(copy.messages.loadFailed);

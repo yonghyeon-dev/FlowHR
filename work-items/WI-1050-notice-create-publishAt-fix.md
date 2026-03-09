@@ -65,3 +65,12 @@ publishAt: z.string().datetime({ offset: true }).nullable().optional()
   - immediate publishing stays on the dedicated `Publish now` action
 - Local verification:
   - `npm run typecheck`
+
+## Execution Log
+
+- 2026-03-09: aligned notice create payload handling so blank compose scheduling omits `publishAt` on `POST /api/notices` while edit flows still send `publishAt: null` to clear schedules on `PATCH /api/notices/{noticeId}`.
+- 2026-03-09: added `scripts/tests/e2e-wi1050-notice-create-publishAt-fix.test.ts` to lock:
+  - draft create succeeds when `publishAt` is omitted
+  - draft create succeeds when `publishAt` is `null`
+  - scheduled create succeeds when `publishAt` carries an offset-aware ISO timestamp
+- 2026-03-09: updated `specs/people/*` to document notice create semantics and bumped the people contract from `0.3.20` to `0.3.21`.

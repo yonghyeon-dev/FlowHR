@@ -84,8 +84,10 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Started the next `WI-1055` slice for organization-level approval escalation settings covering stalled threshold, batch limit, and notification channel defaults.
 - Closed the `WI-1055` approval escalation settings slice through the full GitHub flow and merged it to `main` as `3290f045b233fa489e63297b47a1d4b0b1c31356`, then deleted the feature branch.
 - Started the next `WI-1055` slice for organization-level payroll feature management covering payroll/year-end rollout overrides plus explicit ops-only boundary disclosure.
+- Closed the `WI-1055` feature management slice through the full GitHub flow and merged it to `main` as `6388999aa45e8279ff9755fc068862ba4e7a4e7f`, then deleted the feature branch.
 - Removed a remaining shared-session dev remnant by replacing raw organization ID output in `src/components/SessionMenu.tsx` with role/account status language and user-facing session errors.
 - Adjusted notice compose behavior so `publishAt` no longer defaults to a filled value; notice creation now defaults to draft and explains when to use scheduled or immediate publish.
+- Started `WI-1050` to close the remaining notice-create reliability gap by omitting blank `publishAt` from create payloads, preserving explicit null clearing on edit payloads, and adding a dedicated regression guard plus updated people contract coverage.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI
@@ -127,8 +129,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close the current `WI-1055` feature management slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
-2. Continue `WI-1055` on the next operator-controlled setting slice that still depends on env-only configuration or hard-coded operator defaults.
+1. Close the current `WI-1050` notice-create reliability slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
+2. Re-scan remaining core-journey reliability gaps and pick the next highest-value production blocker after `WI-1050`.
 3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 
 ## 5. Blockers Or Watch Items
