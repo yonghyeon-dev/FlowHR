@@ -152,10 +152,10 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
   ko: {
     pageTitle: "공지사항 워크스페이스",
     pageSubtitle: "공지 작성, 예약 게시, 게시 처리까지 한 화면에서 관리합니다.",
-    filtersTitle: "조회/세션 설정",
-    organizationIdLabel: "조직 식별자",
-    actorIdLabel: "관리자 액터 식별자",
-    accessTokenLabel: "접근 토큰(선택)",
+    filtersTitle: "조회/운영 컨텍스트",
+    organizationIdLabel: "운영 조직",
+    actorIdLabel: "관리자 계정",
+    accessTokenLabel: "연결 토큰(선택)",
     statusFilterLabel: "상태 필터",
     audienceFilterLabel: "대상 필터",
     refreshAction: "목록 새로고침",
@@ -216,7 +216,7 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
       admins: "관리자"
     },
     messages: {
-      needOrganization: "조직 식별자를 입력하세요.",
+      needOrganization: "조직 연결 상태를 확인하세요.",
       needTitle: "제목을 입력하세요.",
       needBody: "본문을 입력하세요.",
       editing: "공지 수정 모드입니다.",
@@ -232,10 +232,10 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
   en: {
     pageTitle: "Notice Workspace",
     pageSubtitle: "Manage notice compose, schedule, and publish actions in one screen.",
-    filtersTitle: "Filters / Session",
-    organizationIdLabel: "Organization ID",
-    actorIdLabel: "Admin Actor ID",
-    accessTokenLabel: "Access token (optional)",
+    filtersTitle: "Filters / Workspace context",
+    organizationIdLabel: "Organization",
+    actorIdLabel: "Admin account",
+    accessTokenLabel: "Connection token (optional)",
     statusFilterLabel: "Status filter",
     audienceFilterLabel: "Audience filter",
     refreshAction: "Refresh list",
@@ -296,7 +296,7 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
       admins: "Admins"
     },
     messages: {
-      needOrganization: "Organization ID is required.",
+      needOrganization: "Organization context is missing. Please sign in again.",
       needTitle: "Title is required.",
       needBody: "Body is required.",
       editing: "Editing selected notice.",
@@ -315,10 +315,10 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
   ko: {
     pageTitle: "내 공지사항",
     pageSubtitle: "게시된 공지를 확인하고 최신 전달 사항을 빠르게 확인합니다.",
-    filtersTitle: "조회 설정",
-    organizationIdLabel: "조직 식별자",
-    employeeIdLabel: "직원 식별자",
-    accessTokenLabel: "접근 토큰(선택)",
+    filtersTitle: "조회 컨텍스트",
+    organizationIdLabel: "소속 조직",
+    employeeIdLabel: "직원 번호",
+    accessTokenLabel: "연결 토큰(선택)",
     searchLabel: "검색어",
     searchPlaceholder: "제목/본문에서 검색",
     readStatusFilterLabel: "읽음 상태",
@@ -352,7 +352,7 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
       employees: "직원"
     },
     messages: {
-      needOrganization: "조직 식별자를 입력하세요.",
+      needOrganization: "조직 연결 상태를 확인하세요.",
       loadFailed: "공지 목록을 불러오지 못했습니다.",
       markedRead: "공지 확인 처리를 완료했습니다.",
       markReadFailed: "공지 확인 처리에 실패했습니다.",
@@ -364,9 +364,9 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
     pageTitle: "My Notices",
     pageSubtitle: "Review published notices and catch up on the latest updates.",
     filtersTitle: "Filters",
-    organizationIdLabel: "Organization ID",
-    employeeIdLabel: "Employee ID",
-    accessTokenLabel: "Access token (optional)",
+    organizationIdLabel: "Organization",
+    employeeIdLabel: "Employee number",
+    accessTokenLabel: "Connection token (optional)",
     searchLabel: "Search",
     searchPlaceholder: "Search in title/body",
     readStatusFilterLabel: "Read status",
@@ -400,7 +400,7 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
       employees: "Employees"
     },
     messages: {
-      needOrganization: "Organization ID is required.",
+      needOrganization: "Organization context is missing. Please sign in again.",
       loadFailed: "Failed to load notices.",
       markedRead: "Notice marked as read.",
       markReadFailed: "Failed to mark notice as read.",

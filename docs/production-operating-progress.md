@@ -42,6 +42,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Hid raw employee, actor, template, delegation, and organization identifiers from newly covered production surfaces.
 - Recreated the missing `src/components/benefits/EmployeeBenefitsWorkspaceView.tsx` and folded it into the same humanization baseline.
 - Reworded benefits, recruitment, and employee-guide copy so session and identifier language reads as workspace/account context instead of raw ID terminology.
+- Reworded admin onboarding, KPI, notices, attendance-live, and leave-calendar copy with the same workspace/account terminology.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI
