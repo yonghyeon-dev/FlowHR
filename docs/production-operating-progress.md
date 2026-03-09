@@ -88,6 +88,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Removed a remaining shared-session dev remnant by replacing raw organization ID output in `src/components/SessionMenu.tsx` with role/account status language and user-facing session errors.
 - Adjusted notice compose behavior so `publishAt` no longer defaults to a filled value; notice creation now defaults to draft and explains when to use scheduled or immediate publish.
 - Started `WI-1050` to close the remaining notice-create reliability gap by omitting blank `publishAt` from create payloads, preserving explicit null clearing on edit payloads, and adding a dedicated regression guard plus updated people contract coverage.
+- Closed `WI-1050` through the full GitHub flow and merged it to `main` as `2c6d518a9bfeb6a326960db1816d15076ac13cec`, then deleted the feature branch.
+- Started `WI-1059` as the current follow-up for the remaining desktop-only employee direct-load focus failures after production reverify still showed `5/12` on desktop and `12/12` on mobile.
+- Narrowed `WI-1059` to a settled-state retry guard so direct-load focus only closes after hash sync plus in-viewport visibility are both satisfied.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI
@@ -129,8 +132,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close the current `WI-1050` notice-create reliability slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
-2. Re-scan remaining core-journey reliability gaps and pick the next highest-value production blocker after `WI-1050`.
+1. Close the current `WI-1059` employee desktop focus deep-link follow-up through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
+2. Re-scan remaining core-journey reliability gaps and pick the next highest-value production blocker after `WI-1059`.
 3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 
 ## 5. Blockers Or Watch Items
@@ -150,3 +153,4 @@ Latest verification evidence:
 
 - `codex_test/results/prod-contracts-reverify-2026-03-09T09-53-21-595Z/REPORT.md`
 - `codex_test/results/prod-year-end-conflict-reverify-2026-03-09T10-07-21-859Z/REPORT.md`
+- `codex_test/results/prod-completed-items-reverify-2026-03-09T13-37-17-634Z/REPORT.md`
