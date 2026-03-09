@@ -304,6 +304,7 @@ export default function AdminNoticeWorkspaceView({
               <input type="datetime-local" value={publishAt} onChange={(event) => onPublishAtChange(event.target.value)} />
             </label>
           </div>
+          <p className="small muted">{copy.scheduleHelp}</p>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={onCreateNotice}>
               {editingNoticeId ? copy.updateAction ?? copy.createAction : copy.createAction}

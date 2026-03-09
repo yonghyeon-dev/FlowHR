@@ -57,6 +57,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
   - admin/employee notification pages now show visible success feedback after read actions
   - employee payslip comparison copy now exports a human-readable summary instead of raw JSON
 - Removed a remaining shared-session dev remnant by replacing raw organization ID output in `src/components/SessionMenu.tsx` with role/account status language and user-facing session errors.
+- Adjusted notice compose behavior so `publishAt` no longer defaults to a filled value; notice creation now defaults to draft and explains when to use scheduled or immediate publish.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI

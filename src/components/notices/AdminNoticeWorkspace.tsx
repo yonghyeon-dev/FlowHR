@@ -187,7 +187,7 @@ export default function AdminNoticeWorkspace() {
   const [body, setBody] = useState("");
   const [audience, setAudience] = useState<"all" | "employees" | "admins">("all");
   const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<string[]>([]);
-  const [publishAt, setPublishAt] = useState(toDateTimeLocalValue());
+  const [publishAt, setPublishAt] = useState("");
   const [listSearchQuery, setListSearchQuery] = useState("");
   const [readRiskOnly, setReadRiskOnly] = useState(false);
   const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
@@ -360,7 +360,7 @@ export default function AdminNoticeWorkspace() {
     setBody("");
     setAudience("all");
     setSelectedDepartmentIds([]);
-    setPublishAt(toDateTimeLocalValue());
+    setPublishAt("");
     setStatusMessage(hasEditingTarget ? copy.messages.updated ?? copy.messages.created : copy.messages.created);
     await loadNotices();
   }
@@ -385,7 +385,7 @@ export default function AdminNoticeWorkspace() {
     setBody("");
     setAudience("all");
     setSelectedDepartmentIds([]);
-    setPublishAt(toDateTimeLocalValue());
+    setPublishAt("");
     setStatusMessage("");
   }
 

@@ -22,6 +22,7 @@ export type NoticeWorkspaceCopy = {
   departmentTargetSelectedLabel: string;
   clearDepartmentTargetsAction: string;
   scheduleLabel: string;
+  scheduleHelp: string;
   createAction: string;
   updateAction?: string;
   editAction?: string;
@@ -170,6 +171,7 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     departmentTargetSelectedLabel: "선택 부서 수",
     clearDepartmentTargetsAction: "부서 선택 초기화",
     scheduleLabel: "예약 게시 시각(선택)",
+    scheduleHelp: "비워 두면 임시 저장으로 남습니다. 즉시 게시가 필요하면 목록에서 '즉시 게시'를 사용하세요.",
     createAction: "공지 저장",
     updateAction: "공지 수정",
     editAction: "수정",
@@ -250,6 +252,7 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     departmentTargetSelectedLabel: "Selected departments",
     clearDepartmentTargetsAction: "Clear department targets",
     scheduleLabel: "Schedule publish at (optional)",
+    scheduleHelp: "Leave this empty to save as draft. Use 'Publish now' from the list when immediate publishing is needed.",
     createAction: "Save notice",
     updateAction: "Update notice",
     editAction: "Edit",
