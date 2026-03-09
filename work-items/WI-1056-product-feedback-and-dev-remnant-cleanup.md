@@ -41,5 +41,12 @@ Raise product trust by removing dev remnants and adding expected confirmation an
   - `src/components/payroll-insurance/copy.ts`
 - Replaced `request failed; check logs` style messages with product-safe recovery guidance.
 - Replaced `invalid input` style messages with user-directed value review copy.
+- Added confirmation before admin people profile updates commit:
+  - `src/app/admin/people/page-directory-actions.ts`
+- Added visible success feedback after admin/employee notification read actions:
+  - `src/app/admin/notifications/page.tsx`
+  - `src/app/employee/notifications/page.tsx`
+- Replaced raw JSON compare snapshot copy with a human-readable summary:
+  - `src/app/employee/payslips/page.tsx`
 - Local verification:
   - `npm run typecheck`

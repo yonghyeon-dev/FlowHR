@@ -52,6 +52,10 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Started `WI-1058` and added shared conflict-to-guidance mapping for year-end settlement, filing, and withholding flows so production-valid `409` responses surface recovery steps instead of raw diagnostics.
 - Extended the same `WI-1058` guidance into the year-end preflight and employee year-end input consoles so adjacent guard failures no longer fall back to raw runtime text.
 - Started `WI-1056` cleanup of weak product feedback copy by replacing `request failed; check logs` / `invalid input` wording across payroll, receipt, and leave-related production surfaces with product-safe guidance.
+- Continued `WI-1056` with actual interaction cleanup:
+  - admin people profile updates now ask for confirmation before commit
+  - admin/employee notification pages now show visible success feedback after read actions
+  - employee payslip comparison copy now exports a human-readable summary instead of raw JSON
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI

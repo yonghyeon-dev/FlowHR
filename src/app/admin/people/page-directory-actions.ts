@@ -182,6 +182,12 @@ export function useAdminPeopleDirectoryActions(input: UseAdminPeopleDirectoryAct
     if (!selectedEmployeeId.trim()) {
       return;
     }
+    const confirmationMessage = isKoLocale
+      ? "직원 프로필 변경사항을 저장할까요? 변경 후에는 인사 이력에 바로 반영됩니다."
+      : "Save these employee profile changes now? The update will be written to HR history immediately.";
+    if (typeof window !== "undefined" && !window.confirm(confirmationMessage)) {
+      return;
+    }
     const payload = {
       departmentId: editDepartmentId.trim() || null,
       positionId: editPositionId.trim() || null,

@@ -45,6 +45,7 @@ export default function EmployeeNotificationsPage() {
   const [isFetching, setIsFetching] = useState(false);
   const [pendingReadId, setPendingReadId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const bearerToken = snapshot?.accessToken?.trim() ?? "";
 
   const unreadCount = useMemo(() => notifications.filter((row) => !row.isRead).length, [notifications]);
@@ -59,6 +60,7 @@ export default function EmployeeNotificationsPage() {
 
     setIsFetching(true);
     setErrorMessage(null);
+    setStatusMessage(null);
     try {
       const response = await fetch("/api/notifications", {
         cache: "no-store",
@@ -89,6 +91,7 @@ export default function EmployeeNotificationsPage() {
 
     setPendingReadId(notificationId);
     setErrorMessage(null);
+    setStatusMessage(null);
     try {
       const response = await fetch(`/api/notifications/${notificationId}/read`, {
         method: "PATCH",
@@ -108,6 +111,7 @@ export default function EmployeeNotificationsPage() {
         setNotifications((previous) =>
           previous.map((row) => (row.id === updatedNotification.id ? updatedNotification : row))
         );
+        setStatusMessage("읽음 처리되었습니다.");
         return;
       }
 
@@ -116,6 +120,7 @@ export default function EmployeeNotificationsPage() {
           row.id === notificationId ? { ...row, isRead: true, readAt: new Date().toISOString() } : row
         )
       );
+      setStatusMessage("읽음 처리되었습니다.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "알림 읽음 처리에 실패했습니다.";
       setErrorMessage(formatUserFacingErrorMessage(message, "ko-KR"));
@@ -157,6 +162,11 @@ export default function EmployeeNotificationsPage() {
           {errorMessage ? (
             <p className="small" style={{ color: "var(--danger)", marginTop: 10 }}>
               {errorMessage}
+            </p>
+          ) : null}
+          {statusMessage ? (
+            <p className="small" style={{ color: "var(--ok)", marginTop: 10 }}>
+              {statusMessage}
             </p>
           ) : null}
 
