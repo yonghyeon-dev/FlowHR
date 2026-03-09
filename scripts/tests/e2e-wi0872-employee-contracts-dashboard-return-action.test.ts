@@ -8,6 +8,7 @@ function readUtf8(...parts: string[]) {
 
 function run() {
   const inbox = readUtf8("src", "components", "contracts", "EmployeeContractsInbox.tsx");
+  const inboxHeader = readUtf8("src", "components", "contracts", "EmployeeContractsInboxHeader.tsx");
   const sourceContext = readUtf8(
     "src",
     "components",
@@ -19,13 +20,14 @@ function run() {
     "WI-0872-employee-contracts-dashboard-return-action.md"
   );
   const roadmap = readUtf8("ROADMAP.md");
+  const inboxSurface = `${inbox}\n${inboxHeader}`;
 
   assert.match(inbox, /resolveEmployeeContractsSourceEntry/);
   assert.match(inbox, /searchParams\.get\("source"\)/);
-  assert.match(inbox, /sourceEntry \? <p className="small muted">\{sourceEntry\.hint\}<\/p> : null/);
-  assert.match(inbox, /className="page-actions"/);
-  assert.match(inbox, /<Link className="btn btn-secondary" href="\/employee">/);
-  assert.match(inbox, /sourceEntry\.returnLabel/);
+  assert.match(inboxSurface, /sourceHint \? <p className="small muted">\{sourceHint\}<\/p> : null/);
+  assert.match(inboxSurface, /className="page-actions"/);
+  assert.match(inboxSurface, /<Link className="btn btn-secondary" href="\/employee">/);
+  assert.match(inboxSurface, /returnLabel/);
 
   assert.match(sourceContext, /source !== "employee-dashboard"/);
   assert.match(sourceContext, /직원 대시보드 바로가기에서 이동했습니다\./);

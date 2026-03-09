@@ -73,6 +73,12 @@ async function run() {
     "contracts",
     "AdminContractsWorkspace.tsx"
   );
+  const contractsWorkspaceHeader = readUtf8(
+    "src",
+    "components",
+    "contracts",
+    "AdminContractsWorkspaceHeader.tsx"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-0401-korean-copy-residual-sweep-withholding-payslip-contracts.md"
@@ -104,8 +110,10 @@ async function run() {
     );
   }
 
-  assert.match(contractsWorkspace, /aria-label=\{copy\.summaryKpiAria\}/);
-  assert.doesNotMatch(contractsWorkspace, /aria-label="contract summary kpi"/);
+  const contractsAdminSurface = `${contractsWorkspace}\n${contractsWorkspaceHeader}`;
+
+  assert.match(contractsAdminSurface, /aria-label=\{summaryKpiAria\}/);
+  assert.doesNotMatch(contractsAdminSurface, /aria-label="contract summary kpi"/);
 
   assert.match(workItem, /WI-0401/i);
   assert.match(workItem, /원천징수|명세서|전자계약/i);

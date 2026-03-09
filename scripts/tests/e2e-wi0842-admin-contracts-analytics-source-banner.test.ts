@@ -8,14 +8,16 @@ function readUtf8(...parts: string[]) {
 
 function run() {
   const workspace = readUtf8("src", "components", "contracts", "AdminContractsWorkspace.tsx");
+  const header = readUtf8("src", "components", "contracts", "AdminContractsWorkspaceHeader.tsx");
   const copy = readUtf8("src", "components", "contracts", "copy.ts");
   const workItem = readUtf8("work-items", "WI-0842-admin-contracts-analytics-source-banner.md");
   const roadmap = readUtf8("ROADMAP.md");
+  const workspaceSurface = `${workspace}\n${header}`;
 
   assert.match(workspace, /const analyticsSource = searchParams\.get\("source"\)/);
-  assert.match(workspace, /analyticsSource === "admin-analytics"/);
-  assert.match(workspace, /copy\.analyticsSourceBanner/);
-  assert.match(workspace, /copy\.analyticsSourceFocusLabel/);
+  assert.match(workspaceSurface, /analyticsSource === "admin-analytics"/);
+  assert.match(workspaceSurface, /analyticsSourceBanner/);
+  assert.match(workspaceSurface, /analyticsSourceFocusLabel/);
   assert.match(copy, /analyticsSourceBanner: "Opened from admin analytics"/);
   assert.match(copy, /analyticsSourceBanner: "관리자 분석 화면에서 이동했습니다"/);
 
