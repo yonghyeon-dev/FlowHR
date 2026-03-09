@@ -46,4 +46,6 @@ Replace internal and technical surface language with human-readable product lang
 - Reworded admin onboarding, KPI, notices, attendance-live, and leave-calendar copy to the same product-facing vocabulary baseline.
 - Reworded employee onboarding recovery messages, employee session notices, payslip session copy, and approval queue search labels to the same baseline.
 - Reworded payroll close, insurance, payslip delivery, year-end, filing, and contracts copy to the same product-facing vocabulary baseline.
-- Remaining follow-up is limited to copy-level `Organization ID` / `Employee ID` wording and uncovered console-like production surfaces outside this first pass.
+- Cleaned the remaining scheduling, payslip, withholding, year-end runtime, filing metadata, and onboarding dev-setting wording that still exposed raw identifier vocabulary.
+- Repo-wide scan is now clear for non-ops production surfaces containing literal `Organization ID`, `Employee ID`, or `Actor ID` phrasing.
+- Remaining follow-up is limited to operator/webhook productization and policy decisions for ops-only or intentionally hidden tooling surfaces.

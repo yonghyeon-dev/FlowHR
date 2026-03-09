@@ -39,11 +39,11 @@ const payrollYearEndBlockingReasonKoMap: Record<string, string> = {
 const koRuntimeMessagePatterns: Array<{ pattern: RegExp; message: string }> = [
   {
     pattern: /employee\s*id.*required|employeeid.*required/i,
-    message: "직원 번호는 필수입니다."
+    message: "직원 정보가 필요합니다."
   },
   {
     pattern: /organization\s*id.*required|organizationid.*required/i,
-    message: "조직 식별자는 필수입니다."
+    message: "조직 정보를 먼저 확인해 주세요."
   },
   {
     pattern: /session.*(missing|expired|invalid|not\s*found)|unauthorized|forbidden/i,
@@ -106,7 +106,6 @@ export function normalizePayrollYearEndRuntimeMessage(
     return knownKoMessage;
   }
   if (hasHangulText(normalized)) {
-    // Suppress mixed ko+latin diagnostics to avoid leaking raw English snippets in ko runtime.
     return hasLatinText(normalized) ? koFallback : normalized;
   }
   if (!hasLatinText(normalized)) {

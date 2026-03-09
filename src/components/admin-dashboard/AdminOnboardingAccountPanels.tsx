@@ -135,7 +135,7 @@ export function AdminOnboardingAccountPanels({
             </summary>
             <div className="input-grid" style={{ marginTop: 12 }}>
               <label>
-                {isKoLocale ? "조직 ID" : "Organization ID"}
+                {isKoLocale ? "작업 조직" : "Working organization"}
                 <input
                   value={organizationId}
                   placeholder={isKoLocale ? "예: ORG-00001" : "e.g. ORG-00001"}
@@ -143,7 +143,7 @@ export function AdminOnboardingAccountPanels({
                 />
               </label>
               <label>
-                {isKoLocale ? "관리자 액터 ID" : "Admin actor ID"}
+                {isKoLocale ? "관리자 계정" : "Admin account"}
                 <input value={adminActorId} onChange={(event) => onAdminActorIdChange(event.target.value)} />
               </label>
               <label className="full">

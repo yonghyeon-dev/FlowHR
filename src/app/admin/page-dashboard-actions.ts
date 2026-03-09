@@ -265,7 +265,7 @@ export function buildAdminDashboardActions(input: BuildAdminDashboardActionsInpu
       input.setLogs((prev) => [
         buildAdminValidationFailureLog({
           label: "휴가 정책 조회",
-          error: "조직 식별자가 필요합니다.",
+          error: "작업할 조직을 먼저 선택해 주세요.",
           runtimeLocale: input.runtimeLocale
         }),
         ...prev
@@ -315,7 +315,7 @@ export function buildAdminDashboardActions(input: BuildAdminDashboardActionsInpu
       input.setLogs((prev) => [
         buildAdminValidationFailureLog({
           label: "휴가 정책 저장",
-          error: "조직 식별자가 필요합니다.",
+          error: "작업할 조직을 먼저 선택해 주세요.",
           runtimeLocale: input.runtimeLocale
         }),
         ...prev

@@ -64,7 +64,7 @@ const defaultCopy: EmployeeGuideCopy = {
   progressLabel: "Guide progress",
   journeyTitle: "Recommended first path",
   journeySteps: [
-    "1) Verify account context (organization and employee IDs).",
+    "1) Verify account context (organization and employee number).",
     "2) Submit one attendance correction to learn approval flow.",
     "3) Submit one leave request and verify request status.",
     "4) Open payslips and confirm the latest confirmed payroll."

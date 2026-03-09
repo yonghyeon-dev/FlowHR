@@ -180,7 +180,7 @@ export const employeeYearEndInputCopyByLocale: Record<FlowLocale, EmployeeYearEn
     validationNonTaxableLabel: "Non-taxable annual income <= annual gross pay",
     validationPassLabel: "PASS",
     validationFailLabel: "FAIL",
-    coreLoadInvalidGuide: "Check year and employee ID before loading finalized settlement.",
+    coreLoadInvalidGuide: "Check year and employee number before loading finalized settlement.",
     requestFailedStatus: "request failed",
     requestFailedCheckLogsStatus: "request failed; check logs",
     loadedStatusPrefix: "loaded",

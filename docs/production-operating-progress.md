@@ -45,6 +45,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Reworded admin onboarding, KPI, notices, attendance-live, and leave-calendar copy with the same workspace/account terminology.
 - Reworded employee onboarding, employee session notices, payslip session copy, and approval queue search labels away from raw ID terminology.
 - Reworded payroll close, insurance, payslip delivery, year-end, filing, and contracts copy away from employee/actor/organization ID terminology.
+- Cleaned the remaining WI-1053 runtime and workflow wording on scheduling, filing workflow metadata, payslip/year-end runtime diagnostics, and onboarding dev-setting labels.
+- Removed the last non-ops `Organization ID` / `Employee ID` / `Actor ID` phrases from production surfaces after a repo-wide rescan.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI
@@ -86,7 +88,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Finish the remaining `WI-1053` copy and console surfaces that still expose `Organization ID`, `Employee ID`, or environment-oriented wording.
+1. Close the remaining `WI-1053` operator-facing cleanup outside the current production surface scan, especially webhook/operator messages and non-user ops remnants that still need productization decisions.
 2. Fix `WI-1057` and remove contracts first-load unauthorized requests.
 3. Classify and recover `WI-1058` year-end and filing conflicts into product-grade behavior.
 

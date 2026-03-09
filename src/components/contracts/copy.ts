@@ -110,7 +110,7 @@ const adminContractsCopyEn = {
   selectedTemplateLabel: "Selected Template",
   createDraftAction: "Create Draft",
   documentSearchLabel: "Document Search",
-  documentSearchPlaceholder: "Search by title/document ID/employee ID",
+  documentSearchPlaceholder: "Search by title/document number/employee number",
   documentStatusFilterLabel: "Document Status",
   allDocumentStatusOption: "All statuses",
   expirationWindowFilterLabel: "Expiry window",
