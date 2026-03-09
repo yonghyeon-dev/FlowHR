@@ -48,5 +48,9 @@ Raise product trust by removing dev remnants and adding expected confirmation an
   - `src/app/employee/notifications/page.tsx`
 - Replaced raw JSON compare snapshot copy with a human-readable summary:
   - `src/app/employee/payslips/page.tsx`
+- Removed a remaining shared-session dev remnant:
+  - `src/components/SessionMenu.tsx`
+  - raw organization ID output replaced with account-status language
+  - raw session errors replaced with user-facing session guidance
 - Local verification:
   - `npm run typecheck`
