@@ -5,7 +5,8 @@ import { buildEmployeeMutationRuntime } from "@/app/employee/page-mutation-runti
 import {
   buildEmployeeInteractionHandlers,
   hasSettledSectionJumpAction,
-  jumpToSectionAction
+  jumpToSectionAction,
+  syncSectionHashAction
 } from "@/app/employee/page-interaction-actions";
 import { useEmployeeInteractionOrchestratorInput } from "@/app/employee/page-interaction-orchestrator";
 import {
@@ -57,6 +58,7 @@ import { useSearchParams } from "next/navigation";
 
 const FOCUS_SECTION_RETRY_TIMEOUT_MS = 3500;
 const FOCUS_SECTION_RETRY_INTERVAL_MS = 120;
+const FOCUS_SECTION_OBSERVER_TIMEOUT_MS = 8000;
 
 export default function EmployeeSelfServicePage() {
   const { locale } = useI18n();
@@ -348,7 +350,7 @@ export default function EmployeeSelfServicePage() {
       appliedFocusSectionRef.current = null;
       return;
     }
-    if (!snapshotLoaded) {
+    if (typeof document === "undefined" || typeof window === "undefined") {
       return;
     }
     if (
@@ -359,29 +361,68 @@ export default function EmployeeSelfServicePage() {
     }
 
     let cancelled = false;
-    const startedAt =
-      typeof window === "undefined" ? 0 : window.performance.now();
+    let retryTimeoutId: number | null = null;
+    let observer: MutationObserver | null = null;
+    const startedAt = window.performance.now();
+
+    const clearRetryTimeout = () => {
+      if (retryTimeoutId !== null) {
+        window.clearTimeout(retryTimeoutId);
+        retryTimeoutId = null;
+      }
+    };
+
+    const stopTracking = () => {
+      clearRetryTimeout();
+      observer?.disconnect();
+      observer = null;
+    };
+
+    const hasTimedOut = () =>
+      window.performance.now() - startedAt >= FOCUS_SECTION_OBSERVER_TIMEOUT_MS;
 
     const ensureFocusSectionVisible = () => {
-      if (cancelled || typeof window === "undefined") {
+      if (cancelled) {
         return;
       }
       if (hasSettledSectionJumpAction(focusSectionId)) {
         appliedFocusSectionRef.current = focusSectionId;
+        stopTracking();
         return;
       }
-      if (window.performance.now() - startedAt >= FOCUS_SECTION_RETRY_TIMEOUT_MS) {
+      if (hasTimedOut()) {
+        stopTracking();
         return;
       }
+      syncSectionHashAction(focusSectionId);
       jumpToSectionAction(focusSectionId, 0, "instant");
-      window.setTimeout(ensureFocusSectionVisible, FOCUS_SECTION_RETRY_INTERVAL_MS);
+      clearRetryTimeout();
+      retryTimeoutId = window.setTimeout(
+        ensureFocusSectionVisible,
+        FOCUS_SECTION_RETRY_INTERVAL_MS
+      );
     };
 
     appliedFocusSectionRef.current = null;
+    observer = new MutationObserver(() => {
+      if (
+        cancelled ||
+        appliedFocusSectionRef.current === focusSectionId ||
+        hasTimedOut()
+      ) {
+        return;
+      }
+      ensureFocusSectionVisible();
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
     ensureFocusSectionVisible();
 
     return () => {
       cancelled = true;
+      stopTracking();
     };
   }, [focusSectionId, snapshotLoaded]);
   useApplyAttendanceSchedulePrefillEffect({ attendanceSchedulePrefill, attendance, appliedAttendanceSchedulePrefillRef, setCheckInAt, setCheckOutAt, setAttendanceNotes, applyAttendanceRecordToCorrectionForm });

@@ -27,12 +27,12 @@ async function run() {
   );
   assert.match(
     employeePage,
-    /window\.setTimeout\(ensureFocusSectionVisible, FOCUS_SECTION_RETRY_INTERVAL_MS\);/,
+    /window\.setTimeout\(\s*ensureFocusSectionVisible,\s*FOCUS_SECTION_RETRY_INTERVAL_MS\s*\);/,
     "desktop focus retry must keep polling until the section lands or the retry budget expires"
   );
   assert.match(
     employeePage,
-    /appliedFocusSectionRef\.current = null;\s*ensureFocusSectionVisible\(\);/,
+    /appliedFocusSectionRef\.current = null;[\s\S]*ensureFocusSectionVisible\(\);/,
     "desktop focus retry must not mark the section as applied before the retry loop begins"
   );
   assert.doesNotMatch(
