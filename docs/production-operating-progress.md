@@ -52,6 +52,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Started `WI-1054` and rewrote approval-escalation plus leave-promotion webhook message bodies into operator-readable summaries with action guidance.
 - Started `WI-1057` and removed duplicated contract-session bootstrap reads by passing the resolved bearer token from route entry pages into contract workspaces.
 - Hardened `WI-1057` further by adding a shared contracts access-token requirement and applying it to admin reload/action paths, employee response/evidence paths, and the template builder so stale session clicks fail with user-facing guidance instead of bare unauthorized requests.
+- Re-verified `WI-1057` against production with a dedicated contracts bootstrap probe and confirmed first-load admin/employee contract requests now resolve as `200` without an initial `401`.
 - Started `WI-1058` and added shared conflict-to-guidance mapping for year-end settlement, filing, and withholding flows so production-valid `409` responses surface recovery steps instead of raw diagnostics.
 - Extended the same `WI-1058` guidance into the year-end preflight and employee year-end input consoles so adjacent guard failures no longer fall back to raw runtime text.
 - Extended the same runtime-message normalization into payroll close and payroll insurance consoles so adjacent catch/session errors no longer fall back to raw diagnostics.
@@ -103,7 +104,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Re-verify `WI-1057` in production to confirm admin and employee contracts no longer emit unauthorized bootstrap or post-click requests.
+1. Close `WI-1057` through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`) now that production re-verification passed.
 2. Continue `WI-1058` by extending the same recovery guidance to remaining year-end preflight and employee year-end-input conflict surfaces if they still leak raw runtime text.
 3. Review `WI-1054` operator/webhook payload side-effects and any remaining non-user ops remnants that still need productization decisions.
 
@@ -119,3 +120,7 @@ After every meaningful work item or production re-verification:
 1. Update this file with the new status.
 2. Keep the next queue to at most three active items.
 3. Link evidence in `codex_test/results/prod-*` when verification produced new artifacts.
+
+Latest verification evidence:
+
+- `codex_test/results/prod-contracts-reverify-2026-03-09T09-53-21-595Z/REPORT.md`

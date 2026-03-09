@@ -31,3 +31,4 @@ Remove first-load unauthorized contract requests by aligning bootstrap timing wi
 - Updated admin and employee contract workspaces to consume the already-resolved access token instead of starting a second local session bootstrap.
 - Updated the admin contracts action hook to use the injected access token so the initial template/document bootstrap aligns with the route-level authenticated state.
 - Added a shared contract-session guard so admin template/document actions, employee respond/evidence actions, and the template builder fail early with user-facing session recovery guidance instead of sending unauthenticated fallback requests.
+- Re-verified production on 2026-03-09 with `codex_test/production-contracts-reverify.mjs`; `/admin/contracts` and `/employee/contracts` both emitted first-load `200` contract API responses with no leading `401`.
