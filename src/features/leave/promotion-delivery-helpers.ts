@@ -130,6 +130,29 @@ export function resolvePromotionEmailTemplateConfig(): PromotionEmailTemplateCon
   };
 }
 
+function formatPromotionNoticeWindow(noticeWindow: {
+  startAt: string;
+  endAt: string;
+  isOpen: boolean;
+}) {
+  return `${noticeWindow.startAt} ~ ${noticeWindow.endAt} (${noticeWindow.isOpen ? "안내 가능" : "안내 예정"})`;
+}
+
+function formatPromotionTargetLine(
+  target: {
+    employeeId: string;
+    name: string | null;
+    email: string | null;
+    remainingDays: number;
+    eligibleNow: boolean;
+  },
+  index: number
+) {
+  const employeeName = target.name?.trim() || `직원 ${index + 1}`;
+  const deliveryState = target.eligibleNow ? "즉시 안내 대상" : "예정 대상";
+  return `${index + 1}. ${employeeName} · 잔여 연차 ${target.remainingDays}일 · ${deliveryState}`;
+}
+
 export function buildPromotionNoticeMessage(input: {
   organizationId: string;
   asOf: string;
@@ -158,36 +181,34 @@ export function buildPromotionNoticeMessage(input: {
   };
 }) {
   const headline = input.dryRun
-    ? "[FlowHR] 연차 촉진 공지 드라이런"
-    : "[FlowHR] 연차 촉진 공지 발송";
+    ? "[FlowHR] 연차 촉진 안내 점검"
+    : "[FlowHR] 연차 촉진 안내";
 
   const lines = [
     headline,
-    `- 조직: ${input.organizationId}`,
-    `- 기준 시각(asOf): ${input.asOf}`,
-    `- 공지 윈도우: ${input.noticeWindow.startAt} ~ ${input.noticeWindow.endAt}`,
-    `- 윈도우 오픈: ${input.noticeWindow.isOpen ? "yes" : "no"}`,
-    `- includeUpcoming: ${input.includeUpcoming ? "yes" : "no"}`,
-    `- 대상자: 표시 ${input.summary.displayTargetCount}명 / 즉시 ${input.summary.eligibleNowCount}명 / 잠재 ${input.summary.potentialTargetCount}명`,
-    "- 공지 제목:",
+    input.dryRun
+      ? "운영자 안내 발송 전 점검 결과입니다."
+      : "잔여 연차가 많은 직원에게 연차 사용 안내가 발송되었습니다.",
+    `- 기준 시각: ${input.asOf}`,
+    `- 안내 기간: ${formatPromotionNoticeWindow(input.noticeWindow)}`,
+    `- 확인 대상: ${input.summary.displayTargetCount}명`,
+    `- 즉시 안내 가능: ${input.summary.eligibleNowCount}명`,
+    `- 전체 후보: ${input.summary.potentialTargetCount}명`,
+    "- 안내 제목:",
     input.announcementDraft.title,
-    "- 공지 본문:",
+    "- 안내 본문:",
     input.announcementDraft.body
   ];
 
   const sampleTargets = input.targets.slice(0, 30);
   if (sampleTargets.length > 0) {
-    lines.push("- 대상자 샘플:");
-    for (const target of sampleTargets) {
-      const name = target.name?.trim() || "-";
-      const email = target.email?.trim() || "-";
-      lines.push(
-        `  - ${target.employeeId} | ${name} | ${email} | remaining=${target.remainingDays} | ${target.eligibleNow ? "eligible" : "upcoming"}`
-      );
+    lines.push("- 대상자 요약:");
+    for (const [index, target] of sampleTargets.entries()) {
+      lines.push(`  - ${formatPromotionTargetLine(target, index)}`);
     }
   }
   if (input.targets.length > sampleTargets.length) {
-    lines.push(`  - ... and ${input.targets.length - sampleTargets.length} more target(s)`);
+    lines.push(`  - 그 외 ${input.targets.length - sampleTargets.length}명`);
   }
 
   return lines.join("\n");
