@@ -82,6 +82,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Started the next `WI-1055` slice for organization-level leave promotion email template settings covering admin-managed endpoint, sender, token rotation, and default template ID.
 - Closed the `WI-1055` leave-promotion email settings slice through the full GitHub flow and merged it to `main` as `e7914803d4e8529c1179bfc0a6ac9449f2105915`, then deleted the feature branch.
 - Started the next `WI-1055` slice for organization-level approval escalation settings covering stalled threshold, batch limit, and notification channel defaults.
+- Closed the `WI-1055` approval escalation settings slice through the full GitHub flow and merged it to `main` as `3290f045b233fa489e63297b47a1d4b0b1c31356`, then deleted the feature branch.
+- Started the next `WI-1055` slice for organization-level payroll feature management covering payroll/year-end rollout overrides plus explicit ops-only boundary disclosure.
 - Removed a remaining shared-session dev remnant by replacing raw organization ID output in `src/components/SessionMenu.tsx` with role/account status language and user-facing session errors.
 - Adjusted notice compose behavior so `publishAt` no longer defaults to a filled value; notice creation now defaults to draft and explains when to use scheduled or immediate publish.
 - Verified the current implementation pass with `npm run typecheck`.
@@ -125,7 +127,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close the current `WI-1055` approval escalation settings slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
+1. Close the current `WI-1055` feature management slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
 2. Continue `WI-1055` on the next operator-controlled setting slice that still depends on env-only configuration or hard-coded operator defaults.
 3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 

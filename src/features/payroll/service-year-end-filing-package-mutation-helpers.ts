@@ -25,6 +25,7 @@ import {
   getEventPublisher,
   requirePayrollPermission
 } from "@/features/payroll/service-context-helpers";
+import { loadPayrollRuntimeFeatureFlags } from "@/features/payroll/service-feature-flags";
 
 type FilingSubmissionTarget = {
   submissions: Awaited<ReturnType<typeof listYearEndFilingSubmissionSummaries>>;
@@ -56,10 +57,11 @@ export async function acknowledgePayrollYearEndFilingPackageFromHelper(
   input: AcknowledgePayrollYearEndFilingPackageInput
 ): Promise<AcknowledgePayrollYearEndFilingPackageResult> {
   await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
-  if (!isPayrollYearEndEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollYearEndEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
   }
-  if (!isPayrollYearEndFilingSubmissionEnabled()) {
+  if (!isPayrollYearEndFilingSubmissionEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
   }
 
@@ -146,10 +148,11 @@ export async function cancelPayrollYearEndFilingPackageFromHelper(
   input: CancelPayrollYearEndFilingPackageInput
 ): Promise<CancelPayrollYearEndFilingPackageResult> {
   await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
-  if (!isPayrollYearEndEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollYearEndEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
   }
-  if (!isPayrollYearEndFilingSubmissionEnabled()) {
+  if (!isPayrollYearEndFilingSubmissionEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
   }
 
@@ -204,10 +207,11 @@ export async function reopenPayrollYearEndFilingPackageFromHelper(
   input: ReopenPayrollYearEndFilingPackageInput
 ): Promise<ReopenPayrollYearEndFilingPackageResult> {
   await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
-  if (!isPayrollYearEndEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollYearEndEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
   }
-  if (!isPayrollYearEndFilingSubmissionEnabled()) {
+  if (!isPayrollYearEndFilingSubmissionEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
   }
 

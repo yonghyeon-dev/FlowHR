@@ -209,6 +209,16 @@ export type OrganizationEntity = {
   leavePromotionEmailFrom: string | null;
   leavePromotionEmailTemplateToken: string | null;
   leavePromotionEmailTemplateId: string | null;
+  payrollFeatureDeductionsEnabled: boolean | null;
+  payrollFeatureDeductionProfileEnabled: boolean | null;
+  payrollFeatureKrBaselineEnabled: boolean | null;
+  payrollFeatureKrInsuranceSettlementEnabled: boolean | null;
+  payrollFeatureClosePeriodEnabled: boolean | null;
+  payrollFeaturePayslipDeliveryEnabled: boolean | null;
+  payrollFeatureYearEndEnabled: boolean | null;
+  payrollFeatureYearEndDeductionInputEnabled: boolean | null;
+  payrollFeatureYearEndFilingExportEnabled: boolean | null;
+  payrollFeatureYearEndFilingSubmissionEnabled: boolean | null;
   isOnboardingComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -766,6 +776,16 @@ export type UpdateOrganizationInput = {
   leavePromotionEmailFrom?: string | null;
   leavePromotionEmailTemplateToken?: string | null;
   leavePromotionEmailTemplateId?: string | null;
+  payrollFeatureDeductionsEnabled?: boolean | null;
+  payrollFeatureDeductionProfileEnabled?: boolean | null;
+  payrollFeatureKrBaselineEnabled?: boolean | null;
+  payrollFeatureKrInsuranceSettlementEnabled?: boolean | null;
+  payrollFeatureClosePeriodEnabled?: boolean | null;
+  payrollFeaturePayslipDeliveryEnabled?: boolean | null;
+  payrollFeatureYearEndEnabled?: boolean | null;
+  payrollFeatureYearEndDeductionInputEnabled?: boolean | null;
+  payrollFeatureYearEndFilingExportEnabled?: boolean | null;
+  payrollFeatureYearEndFilingSubmissionEnabled?: boolean | null;
   isOnboardingComplete?: boolean;
 };
 

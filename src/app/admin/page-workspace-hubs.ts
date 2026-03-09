@@ -47,6 +47,7 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
         title: "급여/연말정산",
         description: "급여 정산, 명세서 배포, 연말정산 신고를 처리합니다.",
         links: [
+          { href: "/admin/feature-management", label: "기능 관리" },
           { href: "/admin/payroll-year-end", label: "연말정산" },
           { href: "/admin/payroll-year-end-filing", label: "신고" }
         ]
@@ -116,6 +117,7 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
       title: "Payroll and year-end",
       description: "Run payroll settlement, delivery, and filing.",
       links: [
+        { href: "/admin/feature-management", label: "Feature management" },
         { href: "/admin/payroll-year-end", label: "Year-end" },
         { href: "/admin/payroll-year-end-filing", label: "Filing" }
       ]

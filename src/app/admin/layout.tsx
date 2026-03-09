@@ -40,6 +40,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin/attendance-security", label: t("admin.nav.attendanceSecurity") },
     { href: "/admin/operator-alerts", label: t("admin.nav.operatorAlerts") },
     { href: "/admin/notification-defaults", label: t("admin.nav.notificationDefaults") },
+    { href: "/admin/feature-management", label: t("admin.nav.featureManagement") },
     { href: "/admin/leave-calendar", label: t("admin.nav.leaveCalendar") },
     { href: "/admin/scheduling", label: t("admin.nav.scheduling") },
     { href: "/admin/notices", label: t("admin.nav.notices") },

@@ -938,6 +938,46 @@ function updateOrganizationEntity(
       input.leavePromotionEmailTemplateId !== undefined
         ? input.leavePromotionEmailTemplateId
         : existing.leavePromotionEmailTemplateId,
+    payrollFeatureDeductionsEnabled:
+      input.payrollFeatureDeductionsEnabled !== undefined
+        ? input.payrollFeatureDeductionsEnabled
+        : existing.payrollFeatureDeductionsEnabled,
+    payrollFeatureDeductionProfileEnabled:
+      input.payrollFeatureDeductionProfileEnabled !== undefined
+        ? input.payrollFeatureDeductionProfileEnabled
+        : existing.payrollFeatureDeductionProfileEnabled,
+    payrollFeatureKrBaselineEnabled:
+      input.payrollFeatureKrBaselineEnabled !== undefined
+        ? input.payrollFeatureKrBaselineEnabled
+        : existing.payrollFeatureKrBaselineEnabled,
+    payrollFeatureKrInsuranceSettlementEnabled:
+      input.payrollFeatureKrInsuranceSettlementEnabled !== undefined
+        ? input.payrollFeatureKrInsuranceSettlementEnabled
+        : existing.payrollFeatureKrInsuranceSettlementEnabled,
+    payrollFeatureClosePeriodEnabled:
+      input.payrollFeatureClosePeriodEnabled !== undefined
+        ? input.payrollFeatureClosePeriodEnabled
+        : existing.payrollFeatureClosePeriodEnabled,
+    payrollFeaturePayslipDeliveryEnabled:
+      input.payrollFeaturePayslipDeliveryEnabled !== undefined
+        ? input.payrollFeaturePayslipDeliveryEnabled
+        : existing.payrollFeaturePayslipDeliveryEnabled,
+    payrollFeatureYearEndEnabled:
+      input.payrollFeatureYearEndEnabled !== undefined
+        ? input.payrollFeatureYearEndEnabled
+        : existing.payrollFeatureYearEndEnabled,
+    payrollFeatureYearEndDeductionInputEnabled:
+      input.payrollFeatureYearEndDeductionInputEnabled !== undefined
+        ? input.payrollFeatureYearEndDeductionInputEnabled
+        : existing.payrollFeatureYearEndDeductionInputEnabled,
+    payrollFeatureYearEndFilingExportEnabled:
+      input.payrollFeatureYearEndFilingExportEnabled !== undefined
+        ? input.payrollFeatureYearEndFilingExportEnabled
+        : existing.payrollFeatureYearEndFilingExportEnabled,
+    payrollFeatureYearEndFilingSubmissionEnabled:
+      input.payrollFeatureYearEndFilingSubmissionEnabled !== undefined
+        ? input.payrollFeatureYearEndFilingSubmissionEnabled
+        : existing.payrollFeatureYearEndFilingSubmissionEnabled,
     isOnboardingComplete:
       input.isOnboardingComplete !== undefined
         ? input.isOnboardingComplete
@@ -1092,6 +1132,16 @@ export const memoryDataAccess: DataAccess = {
         leavePromotionEmailFrom: null,
         leavePromotionEmailTemplateToken: null,
         leavePromotionEmailTemplateId: null,
+        payrollFeatureDeductionsEnabled: null,
+        payrollFeatureDeductionProfileEnabled: null,
+        payrollFeatureKrBaselineEnabled: null,
+        payrollFeatureKrInsuranceSettlementEnabled: null,
+        payrollFeatureClosePeriodEnabled: null,
+        payrollFeaturePayslipDeliveryEnabled: null,
+        payrollFeatureYearEndEnabled: null,
+        payrollFeatureYearEndDeductionInputEnabled: null,
+        payrollFeatureYearEndFilingExportEnabled: null,
+        payrollFeatureYearEndFilingSubmissionEnabled: null,
         isOnboardingComplete: false,
         createdAt: now,
         updatedAt: now

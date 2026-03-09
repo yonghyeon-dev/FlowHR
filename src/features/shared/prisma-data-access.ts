@@ -596,6 +596,16 @@ function toOrganizationEntity(record: {
   leavePromotionEmailFrom?: string | null;
   leavePromotionEmailTemplateToken?: string | null;
   leavePromotionEmailTemplateId?: string | null;
+  payrollFeatureDeductionsEnabled?: boolean | null;
+  payrollFeatureDeductionProfileEnabled?: boolean | null;
+  payrollFeatureKrBaselineEnabled?: boolean | null;
+  payrollFeatureKrInsuranceSettlementEnabled?: boolean | null;
+  payrollFeatureClosePeriodEnabled?: boolean | null;
+  payrollFeaturePayslipDeliveryEnabled?: boolean | null;
+  payrollFeatureYearEndEnabled?: boolean | null;
+  payrollFeatureYearEndDeductionInputEnabled?: boolean | null;
+  payrollFeatureYearEndFilingExportEnabled?: boolean | null;
+  payrollFeatureYearEndFilingSubmissionEnabled?: boolean | null;
   isOnboardingComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -629,7 +639,21 @@ function toOrganizationEntity(record: {
     leavePromotionEmailTemplateUrl: record.leavePromotionEmailTemplateUrl ?? null,
     leavePromotionEmailFrom: record.leavePromotionEmailFrom ?? null,
     leavePromotionEmailTemplateToken: record.leavePromotionEmailTemplateToken ?? null,
-    leavePromotionEmailTemplateId: record.leavePromotionEmailTemplateId ?? null
+    leavePromotionEmailTemplateId: record.leavePromotionEmailTemplateId ?? null,
+    payrollFeatureDeductionsEnabled: record.payrollFeatureDeductionsEnabled ?? null,
+    payrollFeatureDeductionProfileEnabled: record.payrollFeatureDeductionProfileEnabled ?? null,
+    payrollFeatureKrBaselineEnabled: record.payrollFeatureKrBaselineEnabled ?? null,
+    payrollFeatureKrInsuranceSettlementEnabled:
+      record.payrollFeatureKrInsuranceSettlementEnabled ?? null,
+    payrollFeatureClosePeriodEnabled: record.payrollFeatureClosePeriodEnabled ?? null,
+    payrollFeaturePayslipDeliveryEnabled: record.payrollFeaturePayslipDeliveryEnabled ?? null,
+    payrollFeatureYearEndEnabled: record.payrollFeatureYearEndEnabled ?? null,
+    payrollFeatureYearEndDeductionInputEnabled:
+      record.payrollFeatureYearEndDeductionInputEnabled ?? null,
+    payrollFeatureYearEndFilingExportEnabled:
+      record.payrollFeatureYearEndFilingExportEnabled ?? null,
+    payrollFeatureYearEndFilingSubmissionEnabled:
+      record.payrollFeatureYearEndFilingSubmissionEnabled ?? null
   };
 }
 
@@ -1181,6 +1205,16 @@ const organizations: OrganizationStore = {
       leavePromotionEmailFrom: null,
       leavePromotionEmailTemplateToken: null,
       leavePromotionEmailTemplateId: null,
+      payrollFeatureDeductionsEnabled: null,
+      payrollFeatureDeductionProfileEnabled: null,
+      payrollFeatureKrBaselineEnabled: null,
+      payrollFeatureKrInsuranceSettlementEnabled: null,
+      payrollFeatureClosePeriodEnabled: null,
+      payrollFeaturePayslipDeliveryEnabled: null,
+      payrollFeatureYearEndEnabled: null,
+      payrollFeatureYearEndDeductionInputEnabled: null,
+      payrollFeatureYearEndFilingExportEnabled: null,
+      payrollFeatureYearEndFilingSubmissionEnabled: null,
       isOnboardingComplete: false
     } as Prisma.OrganizationUncheckedCreateInput;
 
@@ -1348,6 +1382,54 @@ const organizations: OrganizationStore = {
           : {}),
         ...(input.leavePromotionEmailTemplateId !== undefined
           ? { leavePromotionEmailTemplateId: input.leavePromotionEmailTemplateId }
+          : {}),
+        ...(input.payrollFeatureDeductionsEnabled !== undefined
+          ? { payrollFeatureDeductionsEnabled: input.payrollFeatureDeductionsEnabled }
+          : {}),
+        ...(input.payrollFeatureDeductionProfileEnabled !== undefined
+          ? {
+              payrollFeatureDeductionProfileEnabled:
+                input.payrollFeatureDeductionProfileEnabled
+            }
+          : {}),
+        ...(input.payrollFeatureKrBaselineEnabled !== undefined
+          ? { payrollFeatureKrBaselineEnabled: input.payrollFeatureKrBaselineEnabled }
+          : {}),
+        ...(input.payrollFeatureKrInsuranceSettlementEnabled !== undefined
+          ? {
+              payrollFeatureKrInsuranceSettlementEnabled:
+                input.payrollFeatureKrInsuranceSettlementEnabled
+            }
+          : {}),
+        ...(input.payrollFeatureClosePeriodEnabled !== undefined
+          ? { payrollFeatureClosePeriodEnabled: input.payrollFeatureClosePeriodEnabled }
+          : {}),
+        ...(input.payrollFeaturePayslipDeliveryEnabled !== undefined
+          ? {
+              payrollFeaturePayslipDeliveryEnabled:
+                input.payrollFeaturePayslipDeliveryEnabled
+            }
+          : {}),
+        ...(input.payrollFeatureYearEndEnabled !== undefined
+          ? { payrollFeatureYearEndEnabled: input.payrollFeatureYearEndEnabled }
+          : {}),
+        ...(input.payrollFeatureYearEndDeductionInputEnabled !== undefined
+          ? {
+              payrollFeatureYearEndDeductionInputEnabled:
+                input.payrollFeatureYearEndDeductionInputEnabled
+            }
+          : {}),
+        ...(input.payrollFeatureYearEndFilingExportEnabled !== undefined
+          ? {
+              payrollFeatureYearEndFilingExportEnabled:
+                input.payrollFeatureYearEndFilingExportEnabled
+            }
+          : {}),
+        ...(input.payrollFeatureYearEndFilingSubmissionEnabled !== undefined
+          ? {
+              payrollFeatureYearEndFilingSubmissionEnabled:
+                input.payrollFeatureYearEndFilingSubmissionEnabled
+            }
           : {}),
         ...(input.isOnboardingComplete !== undefined
           ? { isOnboardingComplete: input.isOnboardingComplete }

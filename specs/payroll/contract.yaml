@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.61.1
+version: 1.61.2
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -62,6 +62,7 @@ scope:
     - year-end hash-guard unified regression suite (finalize/export/submit/ack/resubmit/list settlement-hash filters)
     - year-end filing submission search/sort and quick-action workflow
     - year-end filing ops dashboard drilldown and alert-rule workflow
+    - admin organization-level payroll feature management for rollout flags and ops-only boundary disclosure
   out:
     - country-specific legal tax engine implementation
     - external remittance and filing
@@ -240,6 +241,8 @@ db_changes:
       description: Add payslip delivery/receipt tracking columns on PayrollRun.
     - id: 202603050010_wi0943_insurance_rates_defaults
       description: Add organization-level insurance rate override columns for payroll deductions.
+    - id: 202603090007_wi1055_feature_management_productization
+      description: Add organization-level payroll feature-management override columns.
   backward_compatible: true
   notes: Phase2 adds optional profile-based deduction calculation while keeping manual mode.
 invariants:
@@ -693,7 +696,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.58.0 additively introduces dependent-aware simple withholding lookup tiers (`incomeTaxLookupTable[].dependentTaxKrw`) for statutory KR baseline preview while preserving existing lookup-row and year-end API compatibility (no breaking API change)."
+consumer_impact: "Contract v1.61.2 additively introduces admin-managed organization payroll feature overrides and `/api/admin/feature-management` while preserving existing payroll and year-end API compatibility (no breaking API change)."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md

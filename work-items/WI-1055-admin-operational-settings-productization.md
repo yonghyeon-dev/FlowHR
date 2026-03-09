@@ -105,6 +105,24 @@ Move required customer-admin operating controls into productized admin settings 
 - Regression coverage is attached to the integration chain:
   - `scripts/tests/e2e-wi1055-approval-escalation-settings.test.ts`
   - `package.json` `test:integration`
+- Seventh execution slice productizes organization-level payroll feature management and explicitly separates ops-only controls:
+  - `src/app/admin/feature-management/page.tsx`
+  - `src/app/api/admin/feature-management/route.ts`
+  - `prisma/migrations/202603090007_wi1055_feature_management_productization/migration.sql`
+- Payroll feature management now moves payroll/year-end rollout flags out of env-only customer operation while keeping true ops-only controls explicitly documented:
+  - `payrollFeatureDeductionsEnabled`
+  - `payrollFeatureDeductionProfileEnabled`
+  - `payrollFeatureKrBaselineEnabled`
+  - `payrollFeatureKrInsuranceSettlementEnabled`
+  - `payrollFeatureClosePeriodEnabled`
+  - `payrollFeaturePayslipDeliveryEnabled`
+  - `payrollFeatureYearEndEnabled`
+  - `payrollFeatureYearEndDeductionInputEnabled`
+  - `payrollFeatureYearEndFilingExportEnabled`
+  - `payrollFeatureYearEndFilingSubmissionEnabled`
+- Regression coverage is attached to the integration chain:
+  - `scripts/tests/e2e-wi1055-feature-management-productization.test.ts`
+  - `package.json` `test:integration`
 
 ## Data Changes (Tables and Migrations)
 
@@ -116,3 +134,4 @@ Move required customer-admin operating controls into productized admin settings 
   - `202603090004_wi1055_operator_alert_webhook_productization`
   - `202603090005_wi1055_leave_promotion_email_settings_productization`
   - `202603090006_wi1055_approval_escalation_settings_productization`
+  - `202603090007_wi1055_feature_management_productization`

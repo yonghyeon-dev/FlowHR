@@ -117,6 +117,7 @@ import {
   getEventPublisher,
   requirePayrollPermission
 } from "@/features/payroll/service-context-helpers";
+import { loadPayrollRuntimeFeatureFlags } from "@/features/payroll/service-feature-flags";
 import { previewPayrollInsuranceSettlementFromHelper } from "@/features/payroll/service-insurance-settlement-preview-helpers";
 import {
   acknowledgePayrollPayslipReceiptFromHelper,
@@ -441,13 +442,14 @@ async function loadFilingSubmissionContext(
   year: number,
   employeeId: string
 ) {
-  if (!isPayrollYearEndEnabled()) {
+  const featureFlags = await loadPayrollRuntimeFeatureFlags(context);
+  if (!isPayrollYearEndEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
   }
-  if (!isPayrollYearEndFilingExportEnabled()) {
+  if (!isPayrollYearEndFilingExportEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_filing_export_v1 feature flag is disabled");
   }
-  if (!isPayrollYearEndFilingSubmissionEnabled()) {
+  if (!isPayrollYearEndFilingSubmissionEnabled(featureFlags)) {
     throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
   }
   await loadYearEndRunSnapshot(context, year, employeeId);
