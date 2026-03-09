@@ -18,6 +18,7 @@ runtimeEnv.FLOWHR_APPROVAL_EXECUTION_ESCALATION_SLACK_WEBHOOK = "";
 runtimeEnv.FLOWHR_ALERT_WEBHOOK_URL = "";
 runtimeEnv.FLOWHR_ALERT_DISCORD_WEBHOOK = "";
 runtimeEnv.FLOWHR_ALERT_SLACK_WEBHOOK = "";
+runtimeEnv.NEXT_PUBLIC_SITE_URL = "https://flowhr.example.com";
 
 type CapturedRequest = {
   method: string;
@@ -192,8 +193,12 @@ async function run() {
 
     const webhookPayload = JSON.parse(webhookServer.capturedRequests[0].body) as Record<string, unknown>;
     assert.equal(typeof webhookPayload.content, "string", "discord payload must use content");
-    assert.match(String(webhookPayload.content), /결재 지연 알림/);
-    assert.match(String(webhookPayload.content), /확인 대상: 2건/);
+    const content = String(webhookPayload.content);
+    assert.match(content, /https:\/\/flowhr\.example\.com\/admin\/approval-executions/);
+    assert.doesNotMatch(content, /organizationId/i, "operator message must not leak organizationId");
+    assert.doesNotMatch(content, /approval-stalled-queue/, "operator message must not leak routing channel");
+    assert.doesNotMatch(content, /PR-ESCALATE-001|LR-ESCALATE-001/, "operator message must not leak raw target IDs");
+    assert.doesNotMatch(content, /PayrollRun|LeaveRequest/, "operator message must not leak raw entity types");
 
     const eventNames = getRuntimeMemoryDomainEvents().map((event) => event.name);
     assert.ok(
