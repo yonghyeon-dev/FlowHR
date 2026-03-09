@@ -10,6 +10,7 @@ import {
   type Position,
   type ProfileField
 } from "@/app/admin/people/page-types";
+import { formatActorRoleLabel, formatEmployeeDisplayName } from "@/lib/product-language";
 
 type AdminPeopleHistoryPanelProps = {
   isKoLocale: boolean;
@@ -60,13 +61,18 @@ export function AdminPeopleHistoryPanel({
   historyChanges,
   profileFieldLabel
 }: AdminPeopleHistoryPanelProps) {
+  const locale = isKoLocale ? "ko-KR" : "en-US";
+  const selectedEmployeeName = selectedEmployee
+    ? formatEmployeeDisplayName(selectedEmployee.name, locale)
+    : null;
+
   return (
     <article className="panel panel-employee-history">
       <h2>{isKoLocale ? "인사 이력" : "HR history"}</h2>
       {selectedEmployee ? (
         <>
           <p className="small">
-            {isKoLocale ? "선택 직원" : "Selected employee"}: <strong>{selectedEmployee.id}</strong> /{" "}
+            {isKoLocale ? "선택 직원" : "Selected employee"}: <strong>{selectedEmployeeName}</strong> /{" "}
             {isKoLocale ? "최근 업데이트" : "Last updated"} {formatDateTime(selectedEmployee.updatedAt, runtimeLocale)}
           </p>
           <div className="input-grid">
@@ -142,7 +148,8 @@ export function AdminPeopleHistoryPanel({
           </p>
           {historyChangeSummary[0] ? (
             <p className="small muted">
-              {isKoLocale ? "변경 집중 필드" : "Top changed field"}: {historyChangeSummary[0].label} ({historyChangeSummary[0].count})
+              {isKoLocale ? "변경 집중 필드" : "Top changed field"}: {historyChangeSummary[0].label} (
+              {historyChangeSummary[0].count})
             </p>
           ) : null}
         </>
@@ -168,7 +175,10 @@ export function AdminPeopleHistoryPanel({
                     onClick={() => setHistoryFieldFilter(item.field)}
                   >
                     <strong>{item.label}</strong>
-                    <span>{item.count}{isKoLocale ? "건 변경" : " changes"}</span>
+                    <span>
+                      {item.count}
+                      {isKoLocale ? "건 변경" : " changes"}
+                    </span>
                   </button>
                 </li>
               ))}
@@ -184,8 +194,7 @@ export function AdminPeopleHistoryPanel({
                     <span className="muted">{formatDateTime(entry.createdAt, runtimeLocale)}</span>
                   </div>
                   <p className="small">
-                    {isKoLocale ? "액터" : "actor"} {entry.actorRole}
-                    {entry.actorId ? ` (${entry.actorId})` : ""}
+                    {isKoLocale ? "수행자" : "Actor"} {formatActorRoleLabel(entry.actorRole, locale)}
                   </p>
                   {changes.length === 0 ? (
                     <p className="small muted">

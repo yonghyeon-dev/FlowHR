@@ -4,6 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
+import {
+  formatActorRoleLabel,
+  formatApprovalEntityTypeLabel,
+  formatAuditActionLabel,
+  formatUserFacingErrorMessage
+} from "@/lib/product-language";
 
 type AuditLogItem = {
   action: string;
@@ -23,14 +29,31 @@ function formatDateTime(iso: string) {
   }
 }
 
-function formatPayload(payload: unknown) {
-  if (!payload) return "-";
-  try {
-    const str = JSON.stringify(payload);
-    return str.length > 80 ? `${str.slice(0, 80)}...` : str;
-  } catch {
+function formatPayloadSummary(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
     return "-";
   }
+
+  const record = payload as Record<string, unknown>;
+
+  if (typeof record.name === "string" && record.name.trim()) {
+    return `이름: ${record.name.trim()}`;
+  }
+
+  if (typeof record.email === "string" && record.email.trim()) {
+    return `이메일: ${record.email.trim()}`;
+  }
+
+  if (record.before && record.after) {
+    return "변경 전후 정보";
+  }
+
+  const keys = Object.keys(record);
+  if (keys.length === 0) {
+    return "-";
+  }
+
+  return `변경 데이터 ${keys.length}건`;
 }
 
 function todayRange() {
@@ -62,29 +85,31 @@ export default function AdminAuditLogsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const fromDate = new Date(from + "T00:00:00+09:00").toISOString();
-        const toDate = new Date(to + "T23:59:59+09:00").toISOString();
+        const fromDate = new Date(`${from}T00:00:00+09:00`).toISOString();
+        const toDate = new Date(`${to}T23:59:59+09:00`).toISOString();
         let path = `/api/admin/audit-logs?from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}&limit=${limit}&offset=${pageOffset}`;
         if (entityType.trim()) {
           path += `&entityType=${encodeURIComponent(entityType.trim())}`;
         }
 
         const result = await performAdminApiCall({
-          label: "감사로그 조회",
+          label: "감사 로그 조회",
           method: "GET",
           path,
           runtimeLocale: "ko-KR"
         });
 
         if (!result.response.ok) {
-          throw new Error("감사로그를 불러오지 못했습니다.");
+          throw new Error("감사 로그를 불러오지 못했습니다.");
         }
 
         const body = result.body as { items?: AuditLogItem[]; total?: number };
         setItems(body?.items ?? []);
         setTotal(body?.total ?? 0);
       } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+        setError(
+          formatUserFacingErrorMessage(err instanceof Error ? err.message : String(err), "ko-KR")
+        );
       } finally {
         setIsLoading(false);
       }
@@ -104,8 +129,8 @@ export default function AdminAuditLogsPage() {
   };
 
   const handleExportCsv = async () => {
-    const fromDate = new Date(from + "T00:00:00+09:00").toISOString();
-    const toDate = new Date(to + "T23:59:59+09:00").toISOString();
+    const fromDate = new Date(`${from}T00:00:00+09:00`).toISOString();
+    const toDate = new Date(`${to}T23:59:59+09:00`).toISOString();
     let path = `/api/admin/audit-logs/export?from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}`;
     if (entityType.trim()) {
       path += `&entityType=${encodeURIComponent(entityType.trim())}`;
@@ -113,7 +138,7 @@ export default function AdminAuditLogsPage() {
 
     try {
       const result = await performAdminApiCall({
-        label: "감사로그 CSV 내보내기",
+        label: "감사 로그 CSV 내보내기",
         method: "GET",
         path,
         runtimeLocale: "ko-KR"
@@ -122,14 +147,14 @@ export default function AdminAuditLogsPage() {
         const text = typeof result.body === "string" ? result.body : JSON.stringify(result.body);
         const blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `audit-logs-${from}-${to}.csv`;
-        a.click();
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = `audit-logs-${from}-${to}.csv`;
+        anchor.click();
         URL.revokeObjectURL(url);
       }
     } catch {
-      /* export is best-effort */
+      // best-effort export
     }
   };
 
@@ -145,14 +170,16 @@ export default function AdminAuditLogsPage() {
     void loadLogs(newOffset);
   };
 
-  if (sessionLoading) return null;
+  if (sessionLoading) {
+    return null;
+  }
 
   return (
     <main className="saas-content">
       <header className="page-header">
         <div>
-          <h1 className="page-title">감사로그</h1>
-          <p className="page-subtitle">조직 내 모든 변경 이력을 조회합니다.</p>
+          <h1 className="page-title">감사 로그</h1>
+          <p className="page-subtitle">조직 내 주요 변경 이력을 확인합니다.</p>
         </div>
         <div className="page-actions">
           <button className="btn btn-secondary" type="button" onClick={() => void handleExportCsv()}>
@@ -167,19 +194,19 @@ export default function AdminAuditLogsPage() {
         <div className="input-grid" style={{ marginBottom: "1rem" }}>
           <label>
             시작일
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
           </label>
           <label>
             종료일
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            <input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
           </label>
           <label>
-            엔티티 유형
+            대상 유형
             <input
               type="text"
-              placeholder="예: employee, leave_request"
+              placeholder="직원, 휴가 신청, 근태 정정"
               value={entityType}
-              onChange={(e) => setEntityType(e.target.value)}
+              onChange={(event) => setEntityType(event.target.value)}
             />
           </label>
           <div style={{ display: "flex", alignItems: "flex-end" }}>
@@ -197,29 +224,27 @@ export default function AdminAuditLogsPage() {
               <thead>
                 <tr>
                   <th>시간</th>
-                  <th>엔티티 유형</th>
-                  <th>엔티티 ID</th>
-                  <th>액션</th>
-                  <th>수행자</th>
-                  <th>변경 내용</th>
+                  <th>대상</th>
+                  <th>활동 내역</th>
+                  <th>수행 주체</th>
+                  <th>변경 요약</th>
                 </tr>
               </thead>
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="muted" style={{ textAlign: "center" }}>
-                      감사로그가 없습니다.
+                    <td colSpan={5} className="muted" style={{ textAlign: "center" }}>
+                      감사 로그가 없습니다.
                     </td>
                   </tr>
                 ) : (
-                  items.map((item, i) => (
-                    <tr key={`${item.createdAt}-${i}`}>
+                  items.map((item, index) => (
+                    <tr key={`${item.createdAt}-${index}`}>
                       <td>{formatDateTime(item.createdAt)}</td>
-                      <td>{item.entityType}</td>
-                      <td>{item.entityId ?? "-"}</td>
-                      <td>{item.action}</td>
-                      <td>{item.actorId ?? "-"}</td>
-                      <td title={JSON.stringify(item.payload)}>{formatPayload(item.payload)}</td>
+                      <td>{formatApprovalEntityTypeLabel(item.entityType, "ko-KR")}</td>
+                      <td>{formatAuditActionLabel(item.action, "ko-KR")}</td>
+                      <td>{formatActorRoleLabel(item.actorRole, "ko-KR")}</td>
+                      <td>{formatPayloadSummary(item.payload)}</td>
                     </tr>
                   ))
                 )}

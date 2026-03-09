@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 
 import { resolveAdminBenefitsCopy } from "@/components/benefits/copy";
 import type {
@@ -7,6 +7,7 @@ import type {
   BenefitRequestItem,
   BenefitRequestStatus
 } from "@/features/benefits/types";
+import { formatPublicEmployeeNumber } from "@/lib/product-language";
 
 type RequestSummary = {
   total: number;
@@ -123,6 +124,9 @@ export default function AdminBenefitsWorkspaceView({
     }
     return acc;
   }, {});
+  const adminSessionLabel = runtimeLocale.startsWith("ko")
+    ? "관리자 세션이 연결되어 있습니다."
+    : "Admin session connected.";
 
   return (
     <main className="saas-content">
@@ -150,12 +154,7 @@ export default function AdminBenefitsWorkspaceView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.sessionTitle}</h2>
-          {showDevTools ? (
-            <p className="small muted">
-              {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.actorIdLabel}:{" "}
-              <code>{sessionActorId || "-"}</code>
-            </p>
-          ) : null}
+          {showDevTools ? <p className="small muted">{adminSessionLabel}</p> : null}
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={onLoadWorkspace}>
               {copy.refreshAction}
@@ -165,8 +164,7 @@ export default function AdminBenefitsWorkspaceView({
             {copy.statsLabel}: {catalogStats.total} (A {catalogStats.active} / I {catalogStats.inactive})
           </p>
           <p className="small muted">
-            {copy.requestStatsLabel}: {requestSummary.total} (S {requestSummary.submitted} / A{" "}
-            {requestSummary.approved} / R {requestSummary.rejected})
+            {copy.requestStatsLabel}: {requestSummary.total} (S {requestSummary.submitted} / A {requestSummary.approved} / R {requestSummary.rejected})
             {" · "}
             {copy.overLimitRequestSummaryLabel}: {overLimitRequestCount}
             {" · "}
@@ -335,7 +333,7 @@ export default function AdminBenefitsWorkspaceView({
                 return (
                   <li key={request.id}>
                     <span>
-                      <strong>{request.employeeId}</strong>
+                      <strong>{formatPublicEmployeeNumber(request.employeeId)}</strong>
                       <br />
                       <span className="small muted">
                         {copy.benefitLabel}: {catalogNameById[request.benefitId] ?? copy.unknownBenefitLabel}
@@ -414,5 +412,3 @@ export default function AdminBenefitsWorkspaceView({
     </main>
   );
 }
-
-

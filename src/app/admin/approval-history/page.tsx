@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -10,6 +10,13 @@ import {
 import { apiClientFetch, parseApiResponseBody } from "@/lib/api-client";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatActorRoleLabel,
+  formatApprovalDomainLabel,
+  formatApprovalEntityTypeLabel,
+  formatApprovalStageResolutionLabel,
+  formatUserFacingErrorMessage
+} from "@/lib/product-language";
 
 type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
 type ApprovalStageResolution =
@@ -67,6 +74,7 @@ export default function AdminApprovalHistoryPage() {
   const [allowed, setAllowed] = useState<"" | "true" | "false">("");
   const [resolution, setResolution] = useState<ApprovalStageResolution | "">("");
   const [limit, setLimit] = useState("100");
+  const [error, setError] = useState<string | null>(null);
 
   const [history, setHistory] = useState<ApprovalStageHistoryDto[]>([]);
   const [logs, setLogs] = useState<ApiLog[]>([]);
@@ -99,6 +107,7 @@ export default function AdminApprovalHistoryPage() {
 
   async function callApi(label: string, path: string) {
     setPendingLabel(label);
+    setError(null);
     try {
       if (requiresLoginSession) {
         throw new Error(
@@ -124,7 +133,13 @@ export default function AdminApprovalHistoryPage() {
       ]);
 
       const body = await parseApiResponseBody(response);
+      if (!response.ok) {
+        throw new Error(typeof body === "string" ? body : "결재 단계 이력을 불러오지 못했습니다.");
+      }
       return { response, body };
+    } catch (err) {
+      setError(formatUserFacingErrorMessage(err instanceof Error ? err.message : String(err), runtimeLocale));
+      return null;
     } finally {
       setPendingLabel(null);
     }
@@ -156,11 +171,11 @@ export default function AdminApprovalHistoryPage() {
       query.set("limit", limit.trim());
     }
 
-    const { response, body } = await callApi(copy.logs.fetchHistory, `/api/approval/stage-history?${query.toString()}`);
-    if (!response.ok || !body || typeof body !== "object") {
+    const result = await callApi(copy.logs.fetchHistory, `/api/approval/stage-history?${query.toString()}`);
+    if (!result || !result.body || typeof result.body !== "object") {
       return;
     }
-    const parsed = body as { history?: ApprovalStageHistoryDto[] };
+    const parsed = result.body as { history?: ApprovalStageHistoryDto[] };
     setHistory(parsed.history ?? []);
   }
 
@@ -181,6 +196,7 @@ export default function AdminApprovalHistoryPage() {
           <Link href="/login">/login</Link>
         </p>
       ) : null}
+      {error ? <p className="small fail">{error}</p> : null}
 
       <section className="panel-grid">
         <article className="panel">
@@ -194,9 +210,10 @@ export default function AdminApprovalHistoryPage() {
           <label>
             {copy.filters.domain}
             <select value={domain} onChange={(event) => setDomain(event.target.value as ApprovalDomain | "")}>
-              {domainOptions.map((option) => (
-                <option key={option || "all"} value={option}>
-                  {option || copy.filters.all}
+              <option value="">{copy.filters.all}</option>
+              {domainOptions.filter(Boolean).map((option) => (
+                <option key={option} value={option}>
+                  {formatApprovalDomainLabel(option, runtimeLocale)}
                 </option>
               ))}
             </select>
@@ -205,12 +222,12 @@ export default function AdminApprovalHistoryPage() {
             {copy.filters.allowed}
             <select value={allowed} onChange={(event) => setAllowed(event.target.value as "" | "true" | "false")}>
               <option value="">{copy.filters.all}</option>
-              <option value="true">true</option>
-              <option value="false">false</option>
+              <option value="true">{isKoLocale ? "허용" : "Allowed"}</option>
+              <option value="false">{isKoLocale ? "차단" : "Blocked"}</option>
             </select>
           </label>
           <details className="details">
-            <summary>{isKoLocale ? "고급 조건" : "Advanced options"}</summary>
+            <summary>{isKoLocale ? "세부 조건" : "Advanced options"}</summary>
             <div className="input-grid" style={{ marginTop: 12 }}>
               <label>
                 {copy.filters.targetEntityType}
@@ -222,7 +239,11 @@ export default function AdminApprovalHistoryPage() {
               </label>
               <label>
                 {copy.filters.targetEntityId}
-                <input value={targetEntityId} onChange={(event) => setTargetEntityId(event.target.value)} />
+                <input
+                  value={targetEntityId}
+                  onChange={(event) => setTargetEntityId(event.target.value)}
+                  placeholder={isKoLocale ? "특정 요청만 확인할 때 입력" : "Optional request reference"}
+                />
               </label>
               <label>
                 {copy.filters.resolution}
@@ -230,9 +251,10 @@ export default function AdminApprovalHistoryPage() {
                   value={resolution}
                   onChange={(event) => setResolution(event.target.value as ApprovalStageResolution | "")}
                 >
-                  {resolutionOptions.map((option) => (
-                    <option key={option || "all"} value={option}>
-                      {option || copy.filters.all}
+                  <option value="">{copy.filters.all}</option>
+                  {resolutionOptions.filter(Boolean).map((option) => (
+                    <option key={option} value={option}>
+                      {formatApprovalStageResolutionLabel(option, runtimeLocale)}
                     </option>
                   ))}
                 </select>
@@ -259,9 +281,7 @@ export default function AdminApprovalHistoryPage() {
             </button>
           </div>
           {supabaseSessionError ? (
-            <p className="small fail">
-              {copy.filters.sessionError}: {supabaseSessionError}
-            </p>
+            <p className="small fail">{formatUserFacingErrorMessage(supabaseSessionError, runtimeLocale)}</p>
           ) : null}
         </article>
 
@@ -275,27 +295,27 @@ export default function AdminApprovalHistoryPage() {
             <ul className="simple-list">
               {history.map((entry) => (
                 <li key={entry.id}>
-                  <strong>{entry.domain}</strong> / {entry.targetEntityType}:{entry.targetEntityId}
+                  <strong>{formatApprovalDomainLabel(entry.domain, runtimeLocale)}</strong> ·{" "}
+                  {formatApprovalEntityTypeLabel(entry.targetEntityType, runtimeLocale)}
                   <br />
                   <span className={entry.allowed ? "ok" : "fail"}>
-                    {entry.allowed ? copy.results.allowed : copy.results.blocked} ({entry.resolution})
+                    {entry.allowed ? copy.results.allowed : copy.results.blocked} (
+                    {formatApprovalStageResolutionLabel(entry.resolution, runtimeLocale)})
                   </span>
                   {" / "}
-                  {copy.results.required} [{entry.requiredRoles.join(", ")}] / {copy.results.fallback} {entry.fallbackRole}
+                  {copy.results.required} [{entry.requiredRoles.map((role) => formatActorRoleLabel(role, runtimeLocale)).join(", ")}]
+                  {" / "}
+                  {copy.results.fallback} {formatActorRoleLabel(entry.fallbackRole, runtimeLocale)}
                   <br />
-                  {copy.results.actor} {entry.actorRole}
-                  {entry.actorId ? ` (${entry.actorId})` : ""} / {copy.results.stage} {entry.stageIndex}({entry.stageLabel})
+                  {copy.results.actor} {formatActorRoleLabel(entry.actorRole, runtimeLocale)} / {copy.results.stage}{" "}
+                  {entry.stageIndex}({entry.stageLabel})
                   {entry.payrollGrossPayKrw !== null
                     ? ` / ${copy.results.gross} ${entry.payrollGrossPayKrw.toLocaleString(runtimeLocale)} KRW`
                     : ""}
                   <br />
-                  {entry.matchedTemplateIds.length > 0
-                    ? `${copy.results.matchedTemplates}: ${entry.matchedTemplateIds.join(", ")}`
-                    : `${copy.results.matchedTemplates}: -`}
-                  {" / "}
-                  {entry.activeDelegationIds.length > 0
-                    ? `${copy.results.delegations}: ${entry.activeDelegationIds.join(", ")}`
-                    : `${copy.results.delegations}: -`}
+                  {copy.results.matchedTemplates}: {entry.matchedTemplateIds.length}
+                  {isKoLocale ? "건" : ""} / {copy.results.delegations}: {entry.activeDelegationIds.length}
+                  {isKoLocale ? "건" : ""}
                   <br />
                   <span className="small">
                     {copy.results.evaluated} {formatApprovalHistoryDateTime(entry.evaluatedAt, runtimeLocale)}

@@ -138,7 +138,7 @@ export function AdminPayrollPanel({
     : {
         previewMode: "Preview mode",
         grossOnly: "Gross only",
-        employeeId: "Target employee ID",
+        employeeId: "Target employee number",
         hourlyRate: "Hourly rate (KRW)",
         nonTaxableIncome: "Non-taxable income (KRW)",
         otherDeductions: "Other deductions (KRW)",

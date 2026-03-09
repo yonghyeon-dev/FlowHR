@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -23,6 +23,11 @@ import { apiClientFetch, parseApiResponseBody } from "@/lib/api-client";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { defaultEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatActorRoleLabel,
+  formatPublicEmployeeNumber,
+  formatUserFacingErrorMessage
+} from "@/lib/product-language";
 
 export default function AdminApprovalPolicyPage() {
   const [attendanceRole, setAttendanceRole] = useState("manager");
@@ -48,6 +53,7 @@ export default function AdminApprovalPolicyPage() {
 
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -85,6 +91,7 @@ export default function AdminApprovalPolicyPage() {
     payload?: Record<string, unknown>
   ) {
     setPendingLabel(label);
+    setError(null);
     try {
       if (requiresLoginSession) {
         throw new Error(
@@ -112,7 +119,18 @@ export default function AdminApprovalPolicyPage() {
       ]);
 
       const body = await parseApiResponseBody(response);
+      if (!response.ok) {
+        throw new Error(typeof body === "string" ? body : label);
+      }
       return { response, body };
+    } catch (callError) {
+      setError(
+        formatUserFacingErrorMessage(
+          callError instanceof Error ? callError.message : String(callError),
+          runtimeLocale
+        )
+      );
+      return null;
     } finally {
       setPendingLabel(null);
     }
@@ -123,11 +141,11 @@ export default function AdminApprovalPolicyPage() {
       return;
     }
     const query = new URLSearchParams({ organizationId: organizationId.trim() }).toString();
-    const { response, body } = await callApi(copy.apiLabels.loadPolicy, "GET", `/api/approval/policy?${query}`);
-    if (!response.ok || !body || typeof body !== "object") {
+    const result = await callApi(copy.apiLabels.loadPolicy, "GET", `/api/approval/policy?${query}`);
+    if (!result || !result.body || typeof result.body !== "object") {
       return;
     }
-    const parsed = body as { policy?: ApprovalPolicyDto; configured?: boolean };
+    const parsed = result.body as { policy?: ApprovalPolicyDto; configured?: boolean };
     const policy = parsed.policy;
     if (!policy) {
       return;
@@ -156,11 +174,11 @@ export default function AdminApprovalPolicyPage() {
       return;
     }
     const query = new URLSearchParams({ organizationId: organizationId.trim() }).toString();
-    const { response, body } = await callApi(copy.apiLabels.loadDelegations, "GET", `/api/approval/delegations?${query}`);
-    if (!response.ok || !body || typeof body !== "object") {
+    const result = await callApi(copy.apiLabels.loadDelegations, "GET", `/api/approval/delegations?${query}`);
+    if (!result || !result.body || typeof result.body !== "object") {
       return;
     }
-    const parsed = body as { delegations?: ApprovalDelegationDto[] };
+    const parsed = result.body as { delegations?: ApprovalDelegationDto[] };
     setDelegations(parsed.delegations ?? []);
   }
 
@@ -196,15 +214,15 @@ export default function AdminApprovalPolicyPage() {
       return;
     }
 
-    const { response, body } = await callApi(copy.apiLabels.expireDelegations, "POST", "/api/approval/delegations/expire", {
+    const result = await callApi(copy.apiLabels.expireDelegations, "POST", "/api/approval/delegations/expire", {
       organizationId: organizationId.trim(),
       dryRun: delegationExpireDryRun
     });
-    if (!response.ok || !body || typeof body !== "object") {
+    if (!result || !result.body || typeof result.body !== "object") {
       return;
     }
 
-    const parsed = body as ApprovalDelegationExpireResultDto;
+    const parsed = result.body as ApprovalDelegationExpireResultDto;
     setLastExpireResult(parsed);
     if (!parsed.dryRun) {
       await loadDelegations();
@@ -228,6 +246,7 @@ export default function AdminApprovalPolicyPage() {
           <Link href="/login">/login</Link>
         </p>
       ) : null}
+      {error ? <p className="small fail">{error}</p> : null}
 
       <section className="panel-grid">
         <article className="panel">
@@ -256,7 +275,7 @@ export default function AdminApprovalPolicyPage() {
           </div>
           {supabaseSessionError ? (
             <p className="small fail">
-              {copy.context.sessionError}: {supabaseSessionError}
+              {copy.context.sessionError}: {formatUserFacingErrorMessage(supabaseSessionError, runtimeLocale)}
             </p>
           ) : null}
           <p className="small">
@@ -271,7 +290,7 @@ export default function AdminApprovalPolicyPage() {
             <select value={attendanceRole} onChange={(event) => setAttendanceRole(event.target.value)}>
               {actorRoles.map((role) => (
                 <option key={role} value={role}>
-                  {role}
+                  {formatActorRoleLabel(role, runtimeLocale)}
                 </option>
               ))}
             </select>
@@ -281,7 +300,7 @@ export default function AdminApprovalPolicyPage() {
             <select value={leaveRole} onChange={(event) => setLeaveRole(event.target.value)}>
               {actorRoles.map((role) => (
                 <option key={role} value={role}>
-                  {role}
+                  {formatActorRoleLabel(role, runtimeLocale)}
                 </option>
               ))}
             </select>
@@ -291,7 +310,7 @@ export default function AdminApprovalPolicyPage() {
             <select value={payrollRole} onChange={(event) => setPayrollRole(event.target.value)}>
               {actorRoles.map((role) => (
                 <option key={role} value={role}>
-                  {role}
+                  {formatActorRoleLabel(role, runtimeLocale)}
                 </option>
               ))}
             </select>
@@ -324,7 +343,7 @@ export default function AdminApprovalPolicyPage() {
             <select value={delegatorRole} onChange={(event) => setDelegatorRole(event.target.value)}>
               {actorRoles.map((role) => (
                 <option key={role} value={role}>
-                  {role}
+                  {formatActorRoleLabel(role, runtimeLocale)}
                 </option>
               ))}
             </select>
@@ -406,8 +425,10 @@ export default function AdminApprovalPolicyPage() {
             <ul className="simple-list">
               {delegations.map((delegation) => (
                 <li key={delegation.id}>
-                  <strong>{copy.domainLabels[delegation.domain]}</strong> / {delegation.delegatorRole} =&gt;{" "}
-                  {delegation.delegateActorId} / {delegation.active ? copy.delegationList.active : copy.delegationList.inactive}
+                  <strong>{copy.domainLabels[delegation.domain]}</strong> /{" "}
+                  {formatActorRoleLabel(delegation.delegatorRole, runtimeLocale)} =&gt;{" "}
+                  {formatPublicEmployeeNumber(delegation.delegateActorId)} /{" "}
+                  {delegation.active ? copy.delegationList.active : copy.delegationList.inactive}
                   <br />
                   <span className="small">
                     {formatApprovalPolicyDateTime(delegation.startsAt, runtimeLocale)} ~{" "}
@@ -475,5 +496,3 @@ export default function AdminApprovalPolicyPage() {
     </main>
   );
 }
-
-

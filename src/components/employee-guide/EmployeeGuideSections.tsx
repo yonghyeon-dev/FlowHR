@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { EmployeeGuideChecklistItem } from "@/features/employee-guide/checklist";
 
 import type { EmployeeGuideCopy } from "@/components/employee-guide/copy";
+import { formatPublicEmployeeNumber } from "@/lib/product-language";
 
 export type EmployeeGuideApiLog = {
   id: number;
@@ -25,16 +26,7 @@ type ContextPanelProps = {
 };
 
 export function EmployeeGuideContextPanel(props: ContextPanelProps) {
-  const {
-    copy,
-    organizationId,
-    employeeId,
-    showDevTools,
-    pendingLabel,
-    refreshDisabled,
-    isKoLocale,
-    onRefresh
-  } = props;
+  const { copy, employeeId, showDevTools, pendingLabel, refreshDisabled, isKoLocale, onRefresh } = props;
 
   return (
     <section className="panel-grid">
@@ -42,8 +34,7 @@ export function EmployeeGuideContextPanel(props: ContextPanelProps) {
         <h2>{copy.contextTitle}</h2>
         {showDevTools ? (
           <p className="small">
-            {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
-            {isKoLocale ? "세션 직원" : "Session employee"}: <code>{employeeId || "-"}</code>
+            {isKoLocale ? "세션 직원 번호" : "Session employee number"}: <code>{formatPublicEmployeeNumber(employeeId)}</code>
           </p>
         ) : null}
         <div className="actions">
@@ -173,8 +164,7 @@ export function EmployeeGuideChecklistPanel(props: ChecklistPanelProps) {
                   <span className={log.ok ? "ok" : "fail"}>
                     {log.ok ? copy.okLabel : copy.failLabel}
                   </span>{" "}
-                  {log.label} /{" "}
-                  {log.status} / {log.durationMs}ms / {log.at}
+                  {log.label} / {log.status} / {log.durationMs}ms / {log.at}
                 </li>
               ))}
             </ul>

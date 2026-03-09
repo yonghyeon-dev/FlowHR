@@ -1,6 +1,8 @@
 "use client";
+
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+
 import {
   isBenefitRequestPendingAgingRisk,
   resolveBenefitRequestPendingAgingDays,
@@ -10,7 +12,10 @@ import {
 import { resolveEmployeeBenefitsSourceEntry } from "@/components/benefits/employee-source-context";
 import { resolveEmployeeBenefitsCopy } from "@/components/benefits/copy";
 import type { BenefitCatalogItem, BenefitRequestItem, BenefitRequestStatus } from "@/features/benefits/types";
+import { formatPublicEmployeeNumber } from "@/lib/product-language";
+
 type EmployeeBenefitsCopy = ReturnType<typeof resolveEmployeeBenefitsCopy>;
+
 type EmployeeBenefitsWorkspaceViewProps = {
   copy: EmployeeBenefitsCopy;
   isKoLocale: boolean;
@@ -49,6 +54,7 @@ type EmployeeBenefitsWorkspaceViewProps = {
   resolveBenefitName: (benefitId: string) => string;
   selectedBenefit: BenefitCatalogItem | null;
 };
+
 export default function EmployeeBenefitsWorkspaceView({
   copy,
   isKoLocale,
@@ -89,6 +95,10 @@ export default function EmployeeBenefitsWorkspaceView({
 }: EmployeeBenefitsWorkspaceViewProps) {
   const searchParams = useSearchParams();
   const sourceEntry = resolveEmployeeBenefitsSourceEntry(searchParams.get("source"), isKoLocale);
+  const publicEmployeeNumber = formatPublicEmployeeNumber(sessionEmployeeId);
+  const devSessionLabel = isKoLocale
+    ? `세션 연결됨 · 사번 ${publicEmployeeNumber}`
+    : `Session connected · Employee ${publicEmployeeNumber}`;
 
   return (
     <main className="saas-content">
@@ -118,12 +128,7 @@ export default function EmployeeBenefitsWorkspaceView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.sessionTitle}</h2>
-          {showDevTools ? (
-            <p className="small muted">
-              {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
-              <code>{sessionEmployeeId || "-"}</code>
-            </p>
-          ) : null}
+          {showDevTools ? <p className="small muted">{devSessionLabel}</p> : null}
           <label>
             {copy.requestFilterLabel}
             <select

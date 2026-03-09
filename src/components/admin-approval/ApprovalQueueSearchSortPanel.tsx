@@ -1,9 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
 import Link from "next/link";
+import { useMemo } from "react";
 
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatApprovalQueueRequestLabel,
+  formatPublicEmployeeNumber
+} from "@/lib/product-language";
 
 import {
   type QueueFocus,
@@ -28,50 +32,50 @@ type ApprovalQueueSearchSortPanelProps = {
 
 const searchSortCopyByLocale = {
   ko: {
-    title: "승인 큐 검색/정렬",
-    description: "하나의 패널에서 큐 전체를 검색하고 우선순위를 빠르게 재정렬합니다.",
-    mobileHint: "모바일 빠른 승인 흐름 지원",
-    controlsAriaLabel: "승인 큐 검색 정렬 제어",
+    title: "승인 큐 검색과 정렬",
+    description: "한 화면에서 승인 대기 항목을 찾고 우선순위를 빠르게 정리합니다.",
+    mobileHint: "모바일 빠른 검토 흐름에 맞춰 정렬됩니다.",
+    controlsAriaLabel: "승인 큐 검색과 정렬 제어",
     scope: "검색 범위",
     scopeAll: "전체 필드",
-    scopeQueue: "큐",
+    scopeQueue: "요청 유형",
     scopeEmployee: "직원",
-    scopeRequestId: "요청 ID",
-    scopeDetail: "상세",
+    scopeRequestId: "요청 번호",
+    scopeDetail: "상세 내용",
     sort: "정렬",
     sortPriority: "우선순위 높은 순",
-    sortWait: "대기시간 긴 순",
-    sortRecent: "최근 항목 우선",
-    sortEmployee: "직원 오름차순",
-    sortQueue: "큐 오름차순",
+    sortWait: "대기 시간 긴 순",
+    sortRecent: "최신 항목 우선",
+    sortEmployee: "직원 번호 순",
+    sortQueue: "요청 유형 순",
     query: "검색어",
-    queryPlaceholder: "직원 번호, 요청 ID, 상태, 메모",
+    queryPlaceholder: "직원 번호, 요청 번호, 상태, 메모",
     pendingFirst: "대기 우선",
     urgentOnly: "긴급만 보기",
     reset: "초기화",
-    empty: "현재 검색/정렬 조건과 일치하는 항목이 없습니다.",
+    empty: "현재 조건과 일치하는 항목이 없습니다.",
     listAriaLabel: "승인 큐 검색 결과",
     wait: "대기",
     severity: "위험도",
     selected: "선택됨",
-    focusQueue: "큐 포커스",
-    openQueue: "큐 열기",
+    focusQueue: "큐 보기",
+    openQueue: "상세 열기",
     summaryVisible: "표시",
     summaryCritical: "긴급",
     summaryWatch: "주의",
     summarySelected: "선택",
-    focusCriticalQueue: "긴급 큐 포커스"
+    focusCriticalQueue: "긴급 큐 바로가기"
   },
   en: {
     title: "Approval Queue Search/Sort",
-    description: "Search all pending items in one place and reorder triage quickly.",
-    mobileHint: "Optimized for mobile quick-review flow",
+    description: "Find pending items in one place and reprioritize triage quickly.",
+    mobileHint: "Optimized for mobile quick-review flow.",
     controlsAriaLabel: "approval queue search and sort controls",
     scope: "Scope",
     scopeAll: "all fields",
-    scopeQueue: "queue",
+    scopeQueue: "request type",
     scopeEmployee: "employee",
-    scopeRequestId: "request id",
+    scopeRequestId: "request number",
     scopeDetail: "detail",
     sort: "Sort",
     sortPriority: "priority desc",
@@ -80,7 +84,7 @@ const searchSortCopyByLocale = {
     sortEmployee: "employee asc",
     sortQueue: "queue asc",
     query: "Search",
-    queryPlaceholder: "employee id, request id, status, memo",
+    queryPlaceholder: "employee number, request id, status, memo",
     pendingFirst: "pending first",
     urgentOnly: "urgent only",
     reset: "reset",
@@ -208,7 +212,10 @@ export function ApprovalQueueSearchSortPanel({
           </button>
         </div>
       </div>
-      <p className="small muted">{copy.summaryVisible} {summary.visible} / {copy.summaryCritical} {summary.critical} / {copy.summaryWatch} {summary.watch} / {copy.summarySelected} {summary.selected}</p>
+      <p className="small muted">
+        {copy.summaryVisible} {summary.visible} / {copy.summaryCritical} {summary.critical} / {copy.summaryWatch}{" "}
+        {summary.watch} / {copy.summarySelected} {summary.selected}
+      </p>
       {filteredQueueSearchSortRows.length === 0 ? (
         <p className="small muted">{copy.empty}</p>
       ) : (
@@ -217,7 +224,7 @@ export function ApprovalQueueSearchSortPanel({
             <li key={row.key} className={`severity-${row.severity}${row.selected ? " is-selected" : ""}`}>
               <div className="queue-search-sort-head">
                 <strong>
-                  [{row.queueLabel}] {row.itemId}
+                  {formatApprovalQueueRequestLabel(row.queue, locale)} · {formatPublicEmployeeNumber(row.employeeId)}
                 </strong>
                 <span className={`queue-sla-chip level-${row.severity}`}>
                   {copy.wait} {Math.round(row.waitHours)}h
@@ -225,7 +232,7 @@ export function ApprovalQueueSearchSortPanel({
               </div>
               <p className="small muted">{row.detail}</p>
               <div className="queue-search-sort-meta">
-                <span className="queue-history-chip">{row.employeeId}</span>
+                <span className="queue-history-chip">{formatPublicEmployeeNumber(row.employeeId)}</span>
                 <span className="queue-history-chip">
                   {copy.severity} {row.severity}
                 </span>

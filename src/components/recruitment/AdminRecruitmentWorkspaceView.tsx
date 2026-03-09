@@ -8,11 +8,13 @@ import {
   type RecruitmentReferralItem,
   type RecruitmentReferralStage
 } from "@/features/recruitment/types";
+import { formatPublicEmployeeNumber } from "@/lib/product-language";
 
 type AdminRecruitmentCopy = ReturnType<typeof resolveAdminRecruitmentCopy>;
 
 type AdminRecruitmentWorkspaceViewProps = {
   copy: AdminRecruitmentCopy;
+  isKoLocale: boolean;
   sourceHint: string;
   analyticsBackHref: string;
   analyticsBackLabel: string;
@@ -50,6 +52,7 @@ type AdminRecruitmentWorkspaceViewProps = {
 
 export default function AdminRecruitmentWorkspaceView({
   copy,
+  isKoLocale,
   sourceHint,
   analyticsBackHref,
   analyticsBackLabel,
@@ -84,6 +87,7 @@ export default function AdminRecruitmentWorkspaceView({
   onStageSelectionChange,
   onUpdateStage
 }: AdminRecruitmentWorkspaceViewProps) {
+  const adminSessionLabel = isKoLocale ? "관리자 세션이 연결되어 있습니다." : "Admin session connected.";
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -110,12 +114,7 @@ export default function AdminRecruitmentWorkspaceView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.sessionTitle}</h2>
-          {showDevTools ? (
-            <p className="small muted">
-              {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.actorIdLabel}:{" "}
-              <code>{sessionActorId || "-"}</code>
-            </p>
-          ) : null}
+          {showDevTools ? <p className="small muted">{adminSessionLabel}</p> : null}
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={onLoadWorkspace} disabled={pending}>
               {copy.refreshAction}
@@ -252,7 +251,7 @@ export default function AdminRecruitmentWorkspaceView({
                       <strong>{referral.candidateName}</strong>
                       <br />
                       <span className="small muted">
-                        {referral.candidateEmail} / {referral.referrerEmployeeId}
+                        {referral.candidateEmail} / {formatPublicEmployeeNumber(referral.referrerEmployeeId)}
                       </span>
                       <br />
                       <span className="small muted">

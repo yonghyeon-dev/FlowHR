@@ -1,11 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { extractEmployeeErrorMessage } from "@/app/employee/page-locale-helpers";
 import { apiClientFetch, parseApiResponseBody } from "@/lib/api-client";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatEmployeeStatusLabel,
+  formatPublicEmployeeNumber,
+  formatUserFacingErrorMessage
+} from "@/lib/product-language";
 
 type EmployeeProfile = {
   id: string;
@@ -19,12 +24,41 @@ type EmployeeProfile = {
   organizationId: string | null;
 };
 
+type DepartmentItem = {
+  id: string;
+  name: string;
+};
+
+type PositionItem = {
+  id: string;
+  name: string;
+};
+
+type OrganizationItem = {
+  id: string;
+  name: string;
+};
+
 type ListEmployeesResponse = {
   employees?: EmployeeProfile[];
+  error?: string;
+};
+
+type ListDepartmentsResponse = {
+  departments?: DepartmentItem[];
+};
+
+type ListPositionsResponse = {
+  positions?: PositionItem[];
+};
+
+type ListOrganizationsResponse = {
+  organizations?: OrganizationItem[];
 };
 
 type UpdateEmployeeResponse = {
   employee?: EmployeeProfile;
+  error?: string;
 };
 
 function getLabel(locale: string, ko: string, en: string) {
@@ -36,6 +70,9 @@ export default function EmployeeProfilePage() {
   const { loading: sessionLoading } = useSupabaseSession();
   const isKoLocale = locale === "ko";
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
+  const [organizationName, setOrganizationName] = useState<string | null>(null);
+  const [departmentName, setDepartmentName] = useState<string | null>(null);
+  const [positionName, setPositionName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -47,6 +84,38 @@ export default function EmployeeProfilePage() {
 
   const l = useCallback((ko: string, en: string) => getLabel(locale, ko, en), [locale]);
 
+  const loadReferenceLabels = useCallback(async (nextProfile: EmployeeProfile) => {
+    try {
+      const organizationQuery = nextProfile.organizationId
+        ? `?organizationId=${encodeURIComponent(nextProfile.organizationId)}`
+        : "";
+
+      const [departmentsResponse, positionsResponse, organizationsResponse] = await Promise.all([
+        apiClientFetch({ method: "GET", path: `/api/people/departments${organizationQuery}` }),
+        apiClientFetch({ method: "GET", path: `/api/people/positions${organizationQuery}` }),
+        apiClientFetch({ method: "GET", path: "/api/people/organizations" })
+      ]);
+
+      const [departmentsBody, positionsBody, organizationsBody] = await Promise.all([
+        parseApiResponseBody(departmentsResponse),
+        parseApiResponseBody(positionsResponse),
+        parseApiResponseBody(organizationsResponse)
+      ]);
+
+      const departments = ((departmentsBody as ListDepartmentsResponse)?.departments ?? []);
+      const positions = ((positionsBody as ListPositionsResponse)?.positions ?? []);
+      const organizations = ((organizationsBody as ListOrganizationsResponse)?.organizations ?? []);
+
+      setDepartmentName(departments.find((item) => item.id === nextProfile.departmentId)?.name ?? null);
+      setPositionName(positions.find((item) => item.id === nextProfile.positionId)?.name ?? null);
+      setOrganizationName(organizations.find((item) => item.id === nextProfile.organizationId)?.name ?? null);
+    } catch {
+      setDepartmentName(null);
+      setPositionName(null);
+      setOrganizationName(null);
+    }
+  }, []);
+
   const loadProfile = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -54,20 +123,27 @@ export default function EmployeeProfilePage() {
       const response = await apiClientFetch({ method: "GET", path: "/api/people/employees" });
       const body = (await parseApiResponseBody(response)) as ListEmployeesResponse;
       if (!response.ok) {
-        throw new Error(extractEmployeeErrorMessage(body, isKoLocale));
+        const message = extractEmployeeErrorMessage(body, isKoLocale);
+        throw new Error(formatUserFacingErrorMessage(message, locale));
       }
       const employees = body?.employees ?? [];
       if (employees.length > 0) {
-        setProfile(employees[0]);
+        const nextProfile = employees[0];
+        setProfile(nextProfile);
+        await loadReferenceLabels(nextProfile);
       } else {
         setProfile(null);
+        setDepartmentName(null);
+        setPositionName(null);
+        setOrganizationName(null);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+    } catch (loadError) {
+      const message = loadError instanceof Error ? loadError.message : String(loadError);
+      setError(formatUserFacingErrorMessage(message, locale));
     } finally {
       setIsLoading(false);
     }
-  }, [isKoLocale]);
+  }, [isKoLocale, loadReferenceLabels, locale]);
 
   const handleStartEdit = useCallback(() => {
     if (!profile) {
@@ -118,7 +194,7 @@ export default function EmployeeProfilePage() {
       });
       const body = (await parseApiResponseBody(response)) as UpdateEmployeeResponse;
       if (!response.ok) {
-        setFormError(extractEmployeeErrorMessage(body, isKoLocale));
+        setFormError(formatUserFacingErrorMessage(extractEmployeeErrorMessage(body, isKoLocale), locale));
         return;
       }
 
@@ -127,25 +203,31 @@ export default function EmployeeProfilePage() {
         setProfile(updatedProfile);
         setEditName(updatedProfile.name ?? "");
         setEditPhone(updatedProfile.phone ?? "");
+        await loadReferenceLabels(updatedProfile);
       } else {
         await loadProfile();
       }
       setIsEditing(false);
       setSuccessMessage(l("프로필을 저장했습니다.", "Profile saved."));
     } catch (saveError) {
-      setFormError(
-        saveError instanceof Error ? saveError.message : l("프로필 저장에 실패했습니다.", "Failed to save profile.")
-      );
+      const message =
+        saveError instanceof Error ? saveError.message : l("프로필 저장에 실패했습니다.", "Failed to save profile.");
+      setFormError(formatUserFacingErrorMessage(message, locale));
     } finally {
       setIsSaving(false);
     }
-  }, [editName, editPhone, isKoLocale, l, loadProfile, profile]);
+  }, [editName, editPhone, isKoLocale, l, loadProfile, loadReferenceLabels, locale, profile]);
 
   useEffect(() => {
     if (!sessionLoading) {
       void loadProfile();
     }
   }, [sessionLoading, loadProfile]);
+
+  const employeeStatusLabel = useMemo(
+    () => (profile ? formatEmployeeStatusLabel(profile.status, locale) : "-"),
+    [locale, profile]
+  );
 
   if (sessionLoading) return null;
 
@@ -154,7 +236,7 @@ export default function EmployeeProfilePage() {
       <header className="page-header">
         <div>
           <h1 className="page-title">{l("내 프로필", "My Profile")}</h1>
-          <p className="page-subtitle">{l("내 인사 정보를 확인합니다.", "View your profile information.")}</p>
+          <p className="page-subtitle">{l("개인 인사 정보를 확인합니다.", "View your profile information.")}</p>
         </div>
       </header>
 
@@ -231,33 +313,33 @@ export default function EmployeeProfilePage() {
               </div>
               <div className="info-row">
                 <dt>{l("상태", "Status")}</dt>
-                <dd>{profile.status}</dd>
+                <dd>{employeeStatusLabel}</dd>
               </div>
               <div className="info-row">
-                <dt>{l("활성", "Active")}</dt>
-                <dd>{profile.active ? l("예", "Yes") : l("아니오", "No")}</dd>
+                <dt>{l("계정 사용", "Account active")}</dt>
+                <dd>{profile.active ? l("사용 중", "Active") : l("비활성", "Inactive")}</dd>
               </div>
             </dl>
           </article>
 
           <article className="panel">
-            <h2>{l("조직 정보", "Organization Info")}</h2>
+            <h2>{l("소속 정보", "Organization Info")}</h2>
             <dl className="info-list">
               <div className="info-row">
-                <dt>{l("사번", "Employee ID")}</dt>
-                <dd>{profile.id}</dd>
+                <dt>{l("사번", "Employee Number")}</dt>
+                <dd>{formatPublicEmployeeNumber(profile.id)}</dd>
               </div>
               <div className="info-row">
-                <dt>{l("부서 ID", "Department ID")}</dt>
-                <dd>{profile.departmentId ?? "-"}</dd>
+                <dt>{l("부서", "Department")}</dt>
+                <dd>{departmentName ?? l("미지정", "Unassigned")}</dd>
               </div>
               <div className="info-row">
-                <dt>{l("직급 ID", "Position ID")}</dt>
-                <dd>{profile.positionId ?? "-"}</dd>
+                <dt>{l("직급", "Position")}</dt>
+                <dd>{positionName ?? l("미지정", "Unassigned")}</dd>
               </div>
               <div className="info-row">
-                <dt>{l("조직 ID", "Organization ID")}</dt>
-                <dd>{profile.organizationId ?? "-"}</dd>
+                <dt>{l("조직", "Organization")}</dt>
+                <dd>{organizationName ?? l("미지정", "Unassigned")}</dd>
               </div>
             </dl>
           </article>

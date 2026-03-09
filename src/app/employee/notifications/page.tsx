@@ -5,13 +5,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { InAppNotificationEntity } from "@/features/shared/data-access";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
+import {
+  formatNotificationTypeLabel,
+  formatUserFacingErrorMessage
+} from "@/lib/product-language";
 
 type ListNotificationsResponse = {
   notifications?: InAppNotificationEntity[];
+  error?: string;
 };
 
 type ReadNotificationResponse = {
   notification?: InAppNotificationEntity;
+  error?: string;
 };
 
 function formatDateTime(value: string) {
@@ -26,11 +32,11 @@ function formatDateTime(value: string) {
   }).format(parsed);
 }
 
-function toErrorMessage(response: Response, fallback: string) {
-  if (!response.ok) {
-    return fallback;
+function toErrorMessage(response: Response, payloadError: string | undefined, fallback: string) {
+  if (response.ok) {
+    return null;
   }
-  return null;
+  return formatUserFacingErrorMessage(payloadError ?? fallback, "ko-KR");
 }
 
 export default function EmployeeNotificationsPage() {
@@ -60,16 +66,17 @@ export default function EmployeeNotificationsPage() {
           authorization: `Bearer ${bearerToken}`
         }
       });
-      const requestError = toErrorMessage(response, "알림 목록을 불러오지 못했습니다.");
+      const payload = (await response.json()) as ListNotificationsResponse;
+      const requestError = toErrorMessage(response, payload?.error, "알림 목록을 불러오지 못했습니다.");
       if (requestError) {
         setErrorMessage(requestError);
         return;
       }
 
-      const payload = (await response.json()) as ListNotificationsResponse;
       setNotifications(Array.isArray(payload.notifications) ? payload.notifications : []);
-    } catch {
-      setErrorMessage("알림 목록을 불러오지 못했습니다.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "알림 목록을 불러오지 못했습니다.";
+      setErrorMessage(formatUserFacingErrorMessage(message, "ko-KR"));
     } finally {
       setIsFetching(false);
     }
@@ -89,13 +96,13 @@ export default function EmployeeNotificationsPage() {
           authorization: `Bearer ${bearerToken}`
         }
       });
-      const requestError = toErrorMessage(response, "알림 읽음 처리를 하지 못했습니다.");
+      const payload = (await response.json()) as ReadNotificationResponse;
+      const requestError = toErrorMessage(response, payload?.error, "알림 읽음 처리에 실패했습니다.");
       if (requestError) {
         setErrorMessage(requestError);
         return;
       }
 
-      const payload = (await response.json()) as ReadNotificationResponse;
       if (payload.notification) {
         const updatedNotification = payload.notification;
         setNotifications((previous) =>
@@ -109,8 +116,9 @@ export default function EmployeeNotificationsPage() {
           row.id === notificationId ? { ...row, isRead: true, readAt: new Date().toISOString() } : row
         )
       );
-    } catch {
-      setErrorMessage("알림 읽음 처리를 하지 못했습니다.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "알림 읽음 처리에 실패했습니다.";
+      setErrorMessage(formatUserFacingErrorMessage(message, "ko-KR"));
     } finally {
       setPendingReadId((current) => (current === notificationId ? null : current));
     }
@@ -132,7 +140,7 @@ export default function EmployeeNotificationsPage() {
       <section className="hero-panel">
         <p className="eyebrow">알림</p>
         <h1>내 알림</h1>
-        <p className="hero-copy">직원 계정으로 수신한 인앱 알림을 확인하고 읽음 처리할 수 있습니다.</p>
+        <p className="hero-copy">직원 계정으로 받은 알림을 확인하고 읽음 처리할 수 있습니다.</p>
         <div className="hero-meta">
           <span>전체 {notifications.length}건</span>
           <span>읽지 않음 {unreadCount}건</span>
@@ -145,7 +153,7 @@ export default function EmployeeNotificationsPage() {
       <section className="panel-grid">
         <article className="panel">
           <h2>알림 목록</h2>
-          <p className="small">읽지 않은 알림의 읽음 처리 버튼을 클릭하면 상태가 변경됩니다.</p>
+          <p className="small">읽지 않은 알림은 버튼을 눌러 읽음 처리할 수 있습니다.</p>
           {errorMessage ? (
             <p className="small" style={{ color: "var(--danger)", marginTop: 10 }}>
               {errorMessage}
@@ -153,12 +161,8 @@ export default function EmployeeNotificationsPage() {
           ) : null}
 
           {isFetching ? <p className="small">알림을 불러오는 중입니다...</p> : null}
-
           {!isFetching && !snapshot ? <p className="small">로그인이 필요합니다.</p> : null}
-
-          {!isFetching && snapshot && notifications.length === 0 ? (
-            <p className="small">수신된 알림이 없습니다.</p>
-          ) : null}
+          {!isFetching && snapshot && notifications.length === 0 ? <p className="small">수신한 알림이 없습니다.</p> : null}
 
           {!isFetching && notifications.length > 0 ? (
             <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 12 }}>
@@ -185,7 +189,7 @@ export default function EmployeeNotificationsPage() {
                       {notification.isRead ? "읽음 완료" : isPending ? "처리 중..." : "읽음 처리"}
                     </button>
                     <p className="small" style={{ marginBottom: 6 }}>
-                      유형: {notification.type}
+                      유형: {formatNotificationTypeLabel(notification.type, "ko-KR")}
                     </p>
                     <p style={{ marginTop: 0, marginBottom: 4, fontWeight: 600 }}>{notification.title}</p>
                     <p style={{ marginTop: 0, marginBottom: 8 }}>{notification.body}</p>
