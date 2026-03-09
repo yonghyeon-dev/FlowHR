@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { resolveContractDocumentActionRequest } from "@/components/contracts/action-payloads";
 import { type AdminContractsCopy, type ContractCategory } from "@/components/contracts/copy";
 import {
+  requireContractsAccessToken,
   normalizeContractsErrorMessageForRuntime,
   readJson
 } from "@/components/contracts/http";
@@ -43,10 +44,10 @@ export function useAdminContractsWorkspaceActions({
 
   const reload = useCallback(async () => {
     setError(null);
-    const authorizationHeader: Record<string, string> = {};
-    if (accessToken.length > 0) {
-      authorizationHeader.authorization = `Bearer ${accessToken}`;
-    }
+    const sessionToken = requireContractsAccessToken(accessToken);
+    const authorizationHeader: Record<string, string> = {
+      authorization: `Bearer ${sessionToken}`
+    };
     const [templateBodyRaw, documentBodyRaw] = await Promise.all([
       fetch("/api/contracts/templates", {
         cache: "no-store",
@@ -76,11 +77,12 @@ export function useAdminContractsWorkspaceActions({
     setError(null);
     setMessage(null);
     try {
+      const sessionToken = requireContractsAccessToken(accessToken);
       await fetch("/api/contracts/templates", {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          ...(accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {})
+          authorization: `Bearer ${sessionToken}`
         },
         body: JSON.stringify({
           name: templateName,
@@ -116,11 +118,12 @@ export function useAdminContractsWorkspaceActions({
     setError(null);
     setMessage(null);
     try {
+      const sessionToken = requireContractsAccessToken(accessToken);
       await fetch("/api/contracts/documents", {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          ...(accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {})
+          authorization: `Bearer ${sessionToken}`
         },
         body: JSON.stringify({
           templateId: selectedTemplateId,
@@ -160,11 +163,12 @@ export function useAdminContractsWorkspaceActions({
         copy.manualExpireReason
       );
       try {
+        const sessionToken = requireContractsAccessToken(accessToken);
         await fetch(request.endpoint, {
           method: "POST",
           headers: {
             "content-type": "application/json",
-            ...(accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {})
+            authorization: `Bearer ${sessionToken}`
           },
           body: JSON.stringify(request.payload)
         }).then((response) =>

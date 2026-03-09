@@ -26,7 +26,12 @@ import {
   sortInboxDocumentsByRisk
 } from "@/components/contracts/employee-inbox-filter-helpers";
 import { resolveEmployeeContractsNextActionHint } from "@/components/contracts/employee-inbox-journey-helpers";
-import { normalizeContractsErrorMessageForRuntime, readJson, setContractsRuntimeLocale } from "@/components/contracts/http";
+import {
+  normalizeContractsErrorMessageForRuntime,
+  readJson,
+  requireContractsAccessToken,
+  setContractsRuntimeLocale
+} from "@/components/contracts/http";
 import { type ContractSignatureEvidenceResponse, type EmployeeContractDocument as ContractDocument } from "@/components/contracts/types";
 import { resolveEmployeeContractsSourceEntry } from "@/components/contracts/employee-source-context";
 import { useI18n } from "@/lib/i18n/provider";
@@ -83,9 +88,10 @@ export default function EmployeeContractsInbox({ accessToken }: EmployeeContract
   const nextActionHint = useMemo(() => resolveEmployeeContractsNextActionHint(selected, copy), [copy, selected]);
   const reload = useCallback(async () => {
     setError(null);
+    const sessionToken = requireContractsAccessToken(accessToken);
     const data = (await fetch("/api/contracts/documents", {
       cache: "no-store",
-      headers: accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {}
+      headers: { authorization: `Bearer ${sessionToken}` }
     }).then((response) => readJson(response, copy.loadError))) as { documents?: ContractDocument[] };
     setDocuments(data.documents ?? []);
   }, [accessToken, copy.loadError]);
@@ -114,11 +120,12 @@ export default function EmployeeContractsInbox({ accessToken }: EmployeeContract
       return;
     }
     try {
+      const sessionToken = requireContractsAccessToken(accessToken);
       await fetch(`/api/contracts/documents/${selected.id}/respond`, {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          ...(accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {})
+          authorization: `Bearer ${sessionToken}`
         },
         body: JSON.stringify({
           action,
@@ -171,11 +178,12 @@ export default function EmployeeContractsInbox({ accessToken }: EmployeeContract
     setError(null);
     setMessage(null);
     try {
+      const sessionToken = requireContractsAccessToken(accessToken);
       const response = await fetch(
         `/api/contracts/documents/${selected.id}/signature-evidence?format=${format}`,
         {
           method: "GET",
-          headers: accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {}
+          headers: { authorization: `Bearer ${sessionToken}` }
         }
       );
       const body = (await readJson(response, copy.evidenceLoadError)) as ContractSignatureEvidenceResponse;

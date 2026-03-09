@@ -192,6 +192,18 @@ export function normalizeContractsErrorMessageForRuntime(message: string, fallba
   return shouldSuppressRawEnglishMessage(normalized, koRuntime) ? fallbackMessage : normalized;
 }
 
+export function requireContractsAccessToken(accessToken: string) {
+  const normalized = accessToken.trim();
+  if (normalized.length > 0) {
+    return normalized;
+  }
+  throw new Error(
+    isKoRuntimeLocale()
+      ? "인증 세션이 유효하지 않습니다. 다시 로그인해 주세요."
+      : "Your session expired. Sign in again."
+  );
+}
+
 export async function readJson(response: Response, fallbackMessage?: string) {
   let body: unknown;
   try {

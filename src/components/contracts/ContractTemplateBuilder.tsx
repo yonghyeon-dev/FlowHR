@@ -8,7 +8,12 @@ import {
   contractTemplateBuilderCopyByLocale,
   type ContractCategory
 } from "@/components/contracts/copy";
-import { readJson, setContractsRuntimeLocale } from "@/components/contracts/http";
+import {
+  normalizeContractsErrorMessageForRuntime,
+  readJson,
+  requireContractsAccessToken,
+  setContractsRuntimeLocale
+} from "@/components/contracts/http";
 import {
   buildTemplateBody,
   buildTemplateBodyDiffSummary,
@@ -118,6 +123,7 @@ export default function ContractTemplateBuilder() {
     setStatusMessage(null);
     setCreatedTemplate(null);
     try {
+      const sessionToken = requireContractsAccessToken(accessToken);
       const payload = {
         name: templateName.trim(),
         category,
@@ -128,7 +134,7 @@ export default function ContractTemplateBuilder() {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          ...(accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {})
+          authorization: `Bearer ${sessionToken}`
         },
         body: JSON.stringify(payload)
       });
@@ -138,7 +144,11 @@ export default function ContractTemplateBuilder() {
       setCreatedTemplate(body.template);
       setStatusMessage(`${copy.templateCreatedPrefix}: ${body.template.id} (v${body.template.version})`);
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : copy.templateCreateError);
+      setError(
+        createError instanceof Error
+          ? normalizeContractsErrorMessageForRuntime(createError.message, copy.templateCreateError)
+          : copy.templateCreateError
+      );
     } finally {
       setPending(false);
     }

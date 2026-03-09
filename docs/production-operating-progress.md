@@ -49,6 +49,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Removed the last non-ops `Organization ID` / `Employee ID` / `Actor ID` phrases from production surfaces after a repo-wide rescan.
 - Started `WI-1054` and rewrote approval-escalation plus leave-promotion webhook message bodies into operator-readable summaries with action guidance.
 - Started `WI-1057` and removed duplicated contract-session bootstrap reads by passing the resolved bearer token from route entry pages into contract workspaces.
+- Hardened `WI-1057` further by adding a shared contracts access-token requirement and applying it to admin reload/action paths, employee response/evidence paths, and the template builder so stale session clicks fail with user-facing guidance instead of bare unauthorized requests.
 - Started `WI-1058` and added shared conflict-to-guidance mapping for year-end settlement, filing, and withholding flows so production-valid `409` responses surface recovery steps instead of raw diagnostics.
 - Extended the same `WI-1058` guidance into the year-end preflight and employee year-end input consoles so adjacent guard failures no longer fall back to raw runtime text.
 - Started `WI-1056` cleanup of weak product feedback copy by replacing `request failed; check logs` / `invalid input` wording across payroll, receipt, and leave-related production surfaces with product-safe guidance.
@@ -99,7 +100,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Re-verify `WI-1057` in production to confirm admin and employee contracts no longer emit a first unauthorized request.
+1. Re-verify `WI-1057` in production to confirm admin and employee contracts no longer emit unauthorized bootstrap or post-click requests.
 2. Continue `WI-1058` by extending the same recovery guidance to remaining year-end preflight and employee year-end-input conflict surfaces if they still leak raw runtime text.
 3. Review `WI-1054` operator/webhook payload side-effects and any remaining non-user ops remnants that still need productization decisions.
 
