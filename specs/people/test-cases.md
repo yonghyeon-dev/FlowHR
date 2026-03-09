@@ -1,10 +1,13 @@
-# People Test Cases (Contract v0.3.18)
+# People Test Cases (Contract v0.3.20)
 
 ## Organization
 
 - Admin can create an organization.
 - Admin can list organizations.
 - Admin can fetch an organization by id.
+- Admin can read `/admin/operator-alerts` for organization fallback webhook settings.
+- Admin can update `/admin/operator-alerts` with webhook URL/provider and per-flow toggles.
+- Empty operator-alert webhook URL clears the stored organization fallback and leaves env fallback behavior intact.
 - Non-admin requests are rejected with `403`.
 
 ## Employee

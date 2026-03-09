@@ -21,6 +21,12 @@ export type ApprovalEscalationWebhookConfig = {
   source: string;
 };
 
+type ApprovalEscalationWebhookOverride = {
+  url: string;
+  provider: ApprovalEscalationWebhookProvider;
+  source: string;
+};
+
 function resolveExecutionDomainPriority(domain: ApprovalDomain) {
   if (domain === "PAYROLL") {
     return 300;
@@ -111,8 +117,13 @@ function resolveApprovalEscalationWebhookProvider(
 }
 
 export function resolveApprovalEscalationWebhookConfig(
-  env: NodeJS.ProcessEnv = process.env
+  env: NodeJS.ProcessEnv = process.env,
+  override?: ApprovalEscalationWebhookOverride | null
 ): ApprovalEscalationWebhookConfig | null {
+  if (override) {
+    return override;
+  }
+
   const candidates: Array<{ source: string; value: string }> = [
     {
       source: "FLOWHR_APPROVAL_EXECUTION_ESCALATION_WEBHOOK_URL",

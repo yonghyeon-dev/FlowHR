@@ -15,6 +15,7 @@ import {
   resolvePromotionEmailTemplateConfig,
   resolvePromotionWebhookConfig
 } from "@/features/leave/promotion-delivery-helpers";
+import { resolveOperatorAlertWebhookConfig } from "@/features/people/operator-alert-settings";
 import {
   toPromotionDeliveryRecipientView,
   toPromotionDeliverySummaryView,
@@ -336,7 +337,18 @@ export async function dispatchAnnualLeavePromotionNoticeImpl(
   const recipients = recipientStats.recipients;
   const recipientCount = recipientStats.recipientCount;
   const missingEmailCount = recipientStats.missingEmailCount;
-  const webhook = channel === "webhook" ? resolvePromotionWebhookConfig() : null;
+  const organization = await context.dataAccess.organizations.findById(preview.organizationId);
+  const webhook =
+    channel === "webhook"
+      ? resolvePromotionWebhookConfig(
+          organization
+            ? resolveOperatorAlertWebhookConfig({
+                organization,
+                flow: "leavePromotion"
+              })
+            : null
+        )
+      : null;
   const emailTemplateConfig =
     channel === "email_template" ? resolvePromotionEmailTemplateConfig() : null;
   const attempted = !dryRun && (channel === "webhook" ? targetCount > 0 : recipientCount > 0);
@@ -396,7 +408,7 @@ export async function dispatchAnnualLeavePromotionNoticeImpl(
     });
     throw new ServiceError(
       503,
-      "leave promotion webhook is not configured (set FLOWHR_LEAVE_PROMOTION_* or FLOWHR_ALERT_* webhook env)"
+      "leave promotion webhook is not configured (save an operator alert webhook in admin settings or configure the FLOWHR_LEAVE_PROMOTION_* / FLOWHR_ALERT_* env fallback)"
     );
   }
 

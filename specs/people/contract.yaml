@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.3.19
+version: 0.3.20
 scope:
   in:
     - organization master data (create/read/list)
@@ -16,6 +16,7 @@ scope:
     - recruitment referral queue priority sorting (`sort=stalled_priority`) for active stalled-referral-first review ordering
     - admin organization settings read/update API for post-onboarding organization configuration changes
     - admin-managed notification default settings with durable employee preference overrides
+    - admin-managed operator alert webhook fallback settings for approval escalation and leave-promotion flows
     - employee lifecycle status model (`ACTIVE`/`ON_LEAVE`/`RESIGNED`) with controlled transitions and resigned-session invalidation
     - onboarding default task template persistence and ACTIVE-state auto-assignment
   out:
@@ -73,6 +74,12 @@ api:
     - method: PUT
       path: /admin/notification-defaults
       description: Update organization-level default notification channels and categories.
+    - method: GET
+      path: /admin/operator-alerts
+      description: Read organization-level fallback webhook settings for operator alert flows.
+    - method: PUT
+      path: /admin/operator-alerts
+      description: Update organization-level fallback webhook settings and enabled operator flows.
     - method: GET
       path: /people/employees
       description: "List employees (optional filters: `active`, `status`, `organizationId`)."
@@ -219,6 +226,8 @@ db_changes:
       description: Rename onboarding task projection table and add onboarding task template persistence for default seeding.
     - id: 202603090003_wi1055_notification_durability_productization
       description: Add organization notification defaults and durable employee notification preference fields.
+    - id: 202603090004_wi1055_operator_alert_webhook_productization
+      description: Add organization-level operator alert webhook fallback settings for approval escalation and leave-promotion flows.
   backward_compatible: true
   notes: "Additive foundation tables only. Department/Position are organization-scoped catalogs, recruitment/benefits read models remain additive, and onboarding template persistence is added for default task seeding."
 invariants:
@@ -230,6 +239,7 @@ invariants:
   - Position delete is blocked when employees are assigned to the position.
   - Employee department and position assignments must match employee organization scope.
   - Employee notification preferences inherit organization defaults when employee-specific values are null.
+  - Approval escalation and leave-promotion webhook dispatch read organization fallback webhook settings before env fallback when the respective flow toggle is enabled.
   - Employee status transitions are restricted to ACTIVE<->ON_LEAVE and ACTIVE/ON_LEAVE->RESIGNED.
   - RESIGNED is terminal and cannot transition to another status.
 risk:
@@ -261,6 +271,7 @@ test_plan:
     - recruitment referral list supports `sort=stalled_priority` for stalled active-referral-first queue ordering
     - notice patch supports partial draft/scheduled updates and rejects empty payloads with 400
     - admin notification-defaults read/update persists organization-scoped defaults
+    - admin operator-alerts read/update persists organization-scoped fallback webhook settings
     - employee notification-preferences read resolves employee values against organization defaults
     - employee notification-preferences reset clears employee overrides back to organization defaults
   regression:
@@ -299,7 +310,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "People contract v0.3.19 additively documents admin notification-default management and durable employee notification preferences while preserving backward compatibility for existing people APIs."
+consumer_impact: "People contract v0.3.20 additively documents admin notification-default management, durable employee notification preferences, and operator alert webhook fallback settings while preserving backward compatibility for existing people APIs."
 references:
   - work-items/WI-0034-employee-organization-master-model.md
   - work-items/WI-0102-people-department-position-model.md

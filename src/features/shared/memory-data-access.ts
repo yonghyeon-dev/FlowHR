@@ -894,6 +894,22 @@ function updateOrganizationEntity(
       input.notificationDefaultPayrollEnabled !== undefined
         ? input.notificationDefaultPayrollEnabled
         : existing.notificationDefaultPayrollEnabled,
+    operatorAlertWebhookUrl:
+      input.operatorAlertWebhookUrl !== undefined
+        ? input.operatorAlertWebhookUrl
+        : existing.operatorAlertWebhookUrl,
+    operatorAlertWebhookProvider:
+      input.operatorAlertWebhookProvider !== undefined
+        ? input.operatorAlertWebhookProvider
+        : existing.operatorAlertWebhookProvider,
+    approvalEscalationUseOperatorAlertWebhook:
+      input.approvalEscalationUseOperatorAlertWebhook !== undefined
+        ? input.approvalEscalationUseOperatorAlertWebhook
+        : existing.approvalEscalationUseOperatorAlertWebhook,
+    leavePromotionUseOperatorAlertWebhook:
+      input.leavePromotionUseOperatorAlertWebhook !== undefined
+        ? input.leavePromotionUseOperatorAlertWebhook
+        : existing.leavePromotionUseOperatorAlertWebhook,
     isOnboardingComplete:
       input.isOnboardingComplete !== undefined
         ? input.isOnboardingComplete
@@ -1037,6 +1053,10 @@ export const memoryDataAccess: DataAccess = {
         notificationDefaultLeaveEnabled: true,
         notificationDefaultAttendanceEnabled: true,
         notificationDefaultPayrollEnabled: true,
+        operatorAlertWebhookUrl: null,
+        operatorAlertWebhookProvider: null,
+        approvalEscalationUseOperatorAlertWebhook: true,
+        leavePromotionUseOperatorAlertWebhook: true,
         isOnboardingComplete: false,
         createdAt: now,
         updatedAt: now

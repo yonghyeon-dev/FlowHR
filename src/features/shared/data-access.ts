@@ -29,6 +29,7 @@ export type RecruitmentReferralStage =
   | "WITHDRAWN";
 export type PayrollState = "PREVIEWED" | "CONFIRMED";
 export type PayPeriod = "MONTHLY" | "BIWEEKLY";
+export type WebhookProvider = "discord" | "slack";
 export type DeductionProfileMode = "manual" | "profile";
 export type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
 export type ApprovalStageResolution =
@@ -197,6 +198,10 @@ export type OrganizationEntity = {
   notificationDefaultLeaveEnabled: boolean;
   notificationDefaultAttendanceEnabled: boolean;
   notificationDefaultPayrollEnabled: boolean;
+  operatorAlertWebhookUrl: string | null;
+  operatorAlertWebhookProvider: WebhookProvider | null;
+  approvalEscalationUseOperatorAlertWebhook: boolean;
+  leavePromotionUseOperatorAlertWebhook: boolean;
   isOnboardingComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -743,6 +748,10 @@ export type UpdateOrganizationInput = {
   notificationDefaultLeaveEnabled?: boolean;
   notificationDefaultAttendanceEnabled?: boolean;
   notificationDefaultPayrollEnabled?: boolean;
+  operatorAlertWebhookUrl?: string | null;
+  operatorAlertWebhookProvider?: WebhookProvider | null;
+  approvalEscalationUseOperatorAlertWebhook?: boolean;
+  leavePromotionUseOperatorAlertWebhook?: boolean;
   isOnboardingComplete?: boolean;
 };
 
