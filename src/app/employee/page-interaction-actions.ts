@@ -22,6 +22,17 @@ function isElementTopInViewport(target: HTMLElement) {
   return rect.top >= -1 && rect.top <= viewportHeight && rect.bottom >= 0;
 }
 
+export function hasSettledSectionJumpAction(sectionId: string) {
+  if (typeof document === "undefined" || typeof window === "undefined") {
+    return true;
+  }
+  const target = document.getElementById(sectionId);
+  if (!target) {
+    return false;
+  }
+  return window.location.hash === `#${sectionId}` && isElementTopInViewport(target);
+}
+
 function waitForPaintThenScroll(sectionId: string, behavior: SectionJumpBehavior, startedAt: number) {
   if (typeof document === "undefined" || typeof window === "undefined") {
     return;

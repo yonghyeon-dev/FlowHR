@@ -2,7 +2,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEmployeeDashboardDerivedState } from "@/app/employee/page-dashboard-derived-state";
 import { buildEmployeeMutationRuntime } from "@/app/employee/page-mutation-runtime";
-import { buildEmployeeInteractionHandlers, jumpToSectionAction } from "@/app/employee/page-interaction-actions";
+import {
+  buildEmployeeInteractionHandlers,
+  hasSettledSectionJumpAction,
+  jumpToSectionAction
+} from "@/app/employee/page-interaction-actions";
 import { useEmployeeInteractionOrchestratorInput } from "@/app/employee/page-interaction-orchestrator";
 import {
   resolveAttendanceCorrectionSchedulePrefill,
@@ -50,6 +54,10 @@ import { EmployeeRequestFeedbackPanels } from "@/components/employee-dashboard/E
 import { EmployeeResubmitPanel } from "@/components/employee-dashboard/EmployeeResubmitPanel";
 import { useI18n } from "@/lib/i18n/provider";
 import { useSearchParams } from "next/navigation";
+
+const FOCUS_SECTION_RETRY_TIMEOUT_MS = 3500;
+const FOCUS_SECTION_RETRY_INTERVAL_MS = 120;
+
 export default function EmployeeSelfServicePage() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
@@ -340,15 +348,40 @@ export default function EmployeeSelfServicePage() {
       appliedFocusSectionRef.current = null;
       return;
     }
-    if (!snapshotLoaded || appliedFocusSectionRef.current === focusSectionId) {
+    if (!snapshotLoaded) {
       return;
     }
-    appliedFocusSectionRef.current = focusSectionId;
-    const timeoutId = window.setTimeout(() => {
+    if (
+      appliedFocusSectionRef.current === focusSectionId &&
+      hasSettledSectionJumpAction(focusSectionId)
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const startedAt =
+      typeof window === "undefined" ? 0 : window.performance.now();
+
+    const ensureFocusSectionVisible = () => {
+      if (cancelled || typeof window === "undefined") {
+        return;
+      }
+      if (hasSettledSectionJumpAction(focusSectionId)) {
+        appliedFocusSectionRef.current = focusSectionId;
+        return;
+      }
+      if (window.performance.now() - startedAt >= FOCUS_SECTION_RETRY_TIMEOUT_MS) {
+        return;
+      }
       jumpToSectionAction(focusSectionId, 0, "instant");
-    }, 0);
+      window.setTimeout(ensureFocusSectionVisible, FOCUS_SECTION_RETRY_INTERVAL_MS);
+    };
+
+    appliedFocusSectionRef.current = null;
+    ensureFocusSectionVisible();
+
     return () => {
-      window.clearTimeout(timeoutId);
+      cancelled = true;
     };
   }, [focusSectionId, snapshotLoaded]);
   useApplyAttendanceSchedulePrefillEffect({ attendanceSchedulePrefill, attendance, appliedAttendanceSchedulePrefillRef, setCheckInAt, setCheckOutAt, setAttendanceNotes, applyAttendanceRecordToCorrectionForm });
