@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { payrollYearEndPreflightCopyByLocale } from "@/components/payroll-year-end/copy";
+import { buildPayrollYearEndFailureMessage } from "@/components/payroll-year-end/request-failure-guidance";
 import {
-  extractPayrollYearEndErrorMessage,
   normalizePayrollYearEndRuntimeMessage
 } from "@/components/payroll-year-end/runtime-copy-helpers";
 import { isTruthyFlag } from "@/app/admin/page-helpers";
@@ -111,7 +111,14 @@ export default function PayrollYearEndPreflightConsole() {
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage(extractPayrollYearEndErrorMessage(body, locale, copy.statusRequestFailed));
+        setStatusMessage(
+          buildPayrollYearEndFailureMessage({
+            status: response.status,
+            body,
+            locale,
+            fallback: copy.statusRequestFailed
+          })
+        );
         return;
       }
       setChecklist(body);

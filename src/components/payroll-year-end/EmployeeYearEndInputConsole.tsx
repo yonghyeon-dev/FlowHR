@@ -17,9 +17,9 @@ import {
 } from "@/components/payroll-year-end/employee-year-end-input-helpers";
 import { employeeYearEndInputCopyByLocale } from "@/components/payroll-year-end/employee-year-end-input-copy";
 import {
-  extractPayrollYearEndErrorMessage,
   normalizePayrollYearEndRuntimeMessage
 } from "@/components/payroll-year-end/runtime-copy-helpers";
+import { buildWithholdingFailureMessage } from "@/components/payroll-year-end/request-failure-guidance";
 import { resolveEmployeeYearEndInputSourceEntry } from "@/components/payroll-year-end/employee-source-context";
 
 type ApiLog = {
@@ -230,7 +230,12 @@ export default function EmployeeYearEndInputConsole() {
       ]);
       if (!response.ok || "error" in body) {
         setStatusMessage(
-          extractPayrollYearEndErrorMessage(body, locale, copy.requestFailedCheckLogsStatus)
+          buildWithholdingFailureMessage({
+            status: response.status,
+            body,
+            locale,
+            fallback: copy.requestFailedCheckLogsStatus
+          })
         );
         return;
       }

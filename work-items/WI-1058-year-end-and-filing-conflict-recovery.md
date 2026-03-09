@@ -33,6 +33,8 @@ Make year-end and filing flows recoverable and production-credible when conflict
   - `src/components/payroll-year-end/request-failure-guidance.ts`
 - Replaced raw conflict/error output with recovery-oriented guidance in:
   - `src/components/payroll-year-end/PayrollYearEndConsole.tsx`
+  - `src/components/payroll-year-end/PayrollYearEndPreflightConsole.tsx`
+  - `src/components/payroll-year-end/EmployeeYearEndInputConsole.tsx`
   - `src/components/withholding-receipt/useWithholdingReceiptRequests.ts`
   - `src/components/payroll-year-end-filing/request-feedback-helpers.ts`
   - `src/components/payroll-year-end-filing/PayrollYearEndFilingConsole.tsx`
