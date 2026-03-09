@@ -94,9 +94,9 @@ async function run() {
   assert.doesNotMatch(adminChrome, /\(production\)/);
 
   assert.match(adminDebugLogsPanel, /Debug Logs/);
-  assert.match(adminOnboardingAccountPanels, /Dev\/Verification Settings/);
+  assert.match(adminOnboardingAccountPanels, /Dev and verification settings/);
   assert.match(adminPeopleInvitePanels, /Employee Management/);
-  assert.match(adminPeopleInvitePanels, /Create Invite Link/);
+  assert.match(adminPeopleInvitePanels, /Create invite link/);
 
   assert.match(employeeChrome, /Employee Portal/);
   assert.match(employeeChrome, /Pending Leave/);
