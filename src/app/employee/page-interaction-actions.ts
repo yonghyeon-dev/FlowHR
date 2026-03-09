@@ -22,6 +22,21 @@ function isElementTopInViewport(target: HTMLElement) {
   return rect.top >= -1 && rect.top <= viewportHeight && rect.bottom >= 0;
 }
 
+export function syncSectionHashAction(sectionId: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const nextHash = `#${sectionId}`;
+  if (window.location.hash === nextHash) {
+    return;
+  }
+  window.history.replaceState(
+    null,
+    "",
+    `${window.location.pathname}${window.location.search}${nextHash}`
+  );
+}
+
 export function hasSettledSectionJumpAction(sectionId: string) {
   if (typeof document === "undefined" || typeof window === "undefined") {
     return true;
@@ -50,7 +65,7 @@ function waitForPaintThenScroll(sectionId: string, behavior: SectionJumpBehavior
       const rect = target.getBoundingClientRect();
       const absoluteTop = window.scrollY + rect.top;
       window.scrollTo({ top: absoluteTop, behavior: behavior === "instant" ? "auto" : behavior });
-      window.history.replaceState(null, "", `#${sectionId}`);
+      syncSectionHashAction(sectionId);
       window.setTimeout(() => {
         const retryTarget = document.getElementById(sectionId);
         if (!retryTarget || isElementTopInViewport(retryTarget)) {

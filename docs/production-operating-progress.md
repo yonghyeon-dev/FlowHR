@@ -91,6 +91,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Closed `WI-1050` through the full GitHub flow and merged it to `main` as `2c6d518a9bfeb6a326960db1816d15076ac13cec`, then deleted the feature branch.
 - Started `WI-1059` as the current follow-up for the remaining desktop-only employee direct-load focus failures after production reverify still showed `5/12` on desktop and `12/12` on mobile.
 - Narrowed `WI-1059` to a settled-state retry guard so direct-load focus only closes after hash sync plus in-viewport visibility are both satisfied.
+- Started `WI-1060` as the direct follow-up after `WI-1059` left target-specific desktop direct-load gaps on sections that mount late or reflow after snapshot bootstrap.
+- Reworked employee direct-load focus handling so it no longer relies on a one-phase retry window alone; it now keeps hash synchronization aligned and observes later DOM insertion/replacement until the target section actually settles.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI
@@ -132,8 +134,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close the current `WI-1059` employee desktop focus deep-link follow-up through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
-2. Re-scan remaining core-journey reliability gaps and pick the next highest-value production blocker after `WI-1059`.
+1. Close the current `WI-1060` employee desktop focus direct-load follow-up through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
+2. Re-scan remaining core-journey reliability gaps and pick the next highest-value production blocker after `WI-1060`.
 3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 
 ## 5. Blockers Or Watch Items
