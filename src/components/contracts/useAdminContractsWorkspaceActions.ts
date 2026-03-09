@@ -11,11 +11,11 @@ import type {
   ContractDocumentAction,
   ContractTemplate
 } from "@/components/contracts/types";
-import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { formatEmployeeIdForLocaleDisplay } from "@/lib/i18n/employee-id-locale";
 import { type FlowLocale } from "@/lib/i18n/locales";
 
 type UseAdminContractsWorkspaceActionsInput = {
+  accessToken: string;
   copy: AdminContractsCopy;
   locale: FlowLocale;
   templateName: string;
@@ -26,6 +26,7 @@ type UseAdminContractsWorkspaceActionsInput = {
 };
 
 export function useAdminContractsWorkspaceActions({
+  accessToken,
   copy,
   locale,
   templateName,
@@ -34,8 +35,6 @@ export function useAdminContractsWorkspaceActions({
   normalizedEmployeeIdForApi,
   actionLabelByAction
 }: UseAdminContractsWorkspaceActionsInput) {
-  const { snapshot } = useSupabaseSession();
-  const accessToken = snapshot?.accessToken?.trim() ?? "";
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [message, setMessage] = useState<string | null>(null);

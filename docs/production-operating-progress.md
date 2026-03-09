@@ -48,6 +48,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Cleaned the remaining WI-1053 runtime and workflow wording on scheduling, filing workflow metadata, payslip/year-end runtime diagnostics, and onboarding dev-setting labels.
 - Removed the last non-ops `Organization ID` / `Employee ID` / `Actor ID` phrases from production surfaces after a repo-wide rescan.
 - Started `WI-1054` and rewrote approval-escalation plus leave-promotion webhook message bodies into operator-readable summaries with action guidance.
+- Started `WI-1057` and removed duplicated contract-session bootstrap reads by passing the resolved bearer token from route entry pages into contract workspaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI
@@ -89,8 +90,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Finish `WI-1054` follow-up by reviewing operator/webhook payload side-effects and any remaining non-user ops remnants that still need productization decisions.
-2. Fix `WI-1057` and remove contracts first-load unauthorized requests.
+1. Finish `WI-1057` follow-up by re-verifying that admin and employee contracts no longer emit a first unauthorized request.
+2. Review `WI-1054` operator/webhook payload side-effects and any remaining non-user ops remnants that still need productization decisions.
 3. Classify and recover `WI-1058` year-end and filing conflicts into product-grade behavior.
 
 ## 5. Blockers Or Watch Items

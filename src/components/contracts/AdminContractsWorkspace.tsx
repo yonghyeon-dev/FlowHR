@@ -30,7 +30,12 @@ import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-co
 import { resolveContractApprovalStatusLabel, resolveContractDocumentStatusLabel } from "@/components/contracts/status-label-helpers";
 import { formatEmployeeIdForLocaleDisplay, normalizeEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
-export default function AdminContractsWorkspace() {
+
+type AdminContractsWorkspaceProps = {
+  accessToken: string;
+};
+
+export default function AdminContractsWorkspace({ accessToken }: AdminContractsWorkspaceProps) {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
@@ -76,6 +81,7 @@ export default function AdminContractsWorkspace() {
     createDraftDocument,
     runDocumentAction
   } = useAdminContractsWorkspaceActions({
+    accessToken,
     copy,
     locale,
     templateName,

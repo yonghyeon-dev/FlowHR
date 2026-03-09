@@ -4,9 +4,10 @@ import EmployeeContractsInbox from "@/components/contracts/EmployeeContractsInbo
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 
 export default function EmployeeContractsPage() {
-  const { loading } = useSupabaseSession();
+  const { snapshot, loading } = useSupabaseSession();
+  const accessToken = snapshot?.accessToken?.trim() ?? "";
 
   if (loading) return null;
 
-  return <EmployeeContractsInbox />;
+  return <EmployeeContractsInbox accessToken={accessToken} />;
 }

@@ -29,14 +29,15 @@ import { resolveEmployeeContractsNextActionHint } from "@/components/contracts/e
 import { normalizeContractsErrorMessageForRuntime, readJson, setContractsRuntimeLocale } from "@/components/contracts/http";
 import { type ContractSignatureEvidenceResponse, type EmployeeContractDocument as ContractDocument } from "@/components/contracts/types";
 import { resolveEmployeeContractsSourceEntry } from "@/components/contracts/employee-source-context";
-import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
-export default function EmployeeContractsInbox() {
+type EmployeeContractsInboxProps = {
+  accessToken: string;
+};
+
+export default function EmployeeContractsInbox({ accessToken }: EmployeeContractsInboxProps) {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
-  const { snapshot } = useSupabaseSession();
-  const accessToken = snapshot?.accessToken?.trim() ?? "";
   const isKoLocale = locale === "ko";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = employeeContractsCopyByLocale[locale];
