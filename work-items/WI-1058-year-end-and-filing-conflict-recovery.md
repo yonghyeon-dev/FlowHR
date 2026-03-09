@@ -45,5 +45,6 @@ Make year-end and filing flows recoverable and production-credible when conflict
   - year-end settlement hash mismatch / already finalized
   - blocking year-end finalization and withholding guards
   - filing submit/resubmit/reopen/ack/cancel state conflicts
+- Extended the same guidance layer to `404 payroll run not found` cases so year-end and filing screens explain the missing payroll basis instead of falling back to generic request-failed text.
 - Local verification:
   - `npm run typecheck`
