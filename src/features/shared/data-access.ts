@@ -187,6 +187,11 @@ export type OrganizationEntity = {
   insuranceRateNhi: number | null;
   insuranceRateEi: number | null;
   insuranceRateWci: number | null;
+  attendanceGpsRequired: boolean;
+  attendanceGeofenceEnabled: boolean;
+  attendanceGeofenceLatitude: number | null;
+  attendanceGeofenceLongitude: number | null;
+  attendanceGeofenceRadiusMeters: number | null;
   isOnboardingComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -718,6 +723,11 @@ export type UpdateOrganizationInput = {
   insuranceRateNhi?: number | null;
   insuranceRateEi?: number | null;
   insuranceRateWci?: number | null;
+  attendanceGpsRequired?: boolean;
+  attendanceGeofenceEnabled?: boolean;
+  attendanceGeofenceLatitude?: number | null;
+  attendanceGeofenceLongitude?: number | null;
+  attendanceGeofenceRadiusMeters?: number | null;
   isOnboardingComplete?: boolean;
 };
 

@@ -834,6 +834,26 @@ function updateOrganizationEntity(
       input.insuranceRateEi !== undefined ? input.insuranceRateEi : existing.insuranceRateEi,
     insuranceRateWci:
       input.insuranceRateWci !== undefined ? input.insuranceRateWci : existing.insuranceRateWci,
+    attendanceGpsRequired:
+      input.attendanceGpsRequired !== undefined
+        ? input.attendanceGpsRequired
+        : existing.attendanceGpsRequired,
+    attendanceGeofenceEnabled:
+      input.attendanceGeofenceEnabled !== undefined
+        ? input.attendanceGeofenceEnabled
+        : existing.attendanceGeofenceEnabled,
+    attendanceGeofenceLatitude:
+      input.attendanceGeofenceLatitude !== undefined
+        ? input.attendanceGeofenceLatitude
+        : existing.attendanceGeofenceLatitude,
+    attendanceGeofenceLongitude:
+      input.attendanceGeofenceLongitude !== undefined
+        ? input.attendanceGeofenceLongitude
+        : existing.attendanceGeofenceLongitude,
+    attendanceGeofenceRadiusMeters:
+      input.attendanceGeofenceRadiusMeters !== undefined
+        ? input.attendanceGeofenceRadiusMeters
+        : existing.attendanceGeofenceRadiusMeters,
     isOnboardingComplete:
       input.isOnboardingComplete !== undefined
         ? input.isOnboardingComplete
@@ -967,6 +987,11 @@ export const memoryDataAccess: DataAccess = {
         insuranceRateNhi: null,
         insuranceRateEi: null,
         insuranceRateWci: null,
+        attendanceGpsRequired: false,
+        attendanceGeofenceEnabled: false,
+        attendanceGeofenceLatitude: null,
+        attendanceGeofenceLongitude: null,
+        attendanceGeofenceRadiusMeters: null,
         isOnboardingComplete: false,
         createdAt: now,
         updatedAt: now

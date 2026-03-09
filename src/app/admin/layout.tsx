@@ -35,6 +35,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin/attendance-live?focus=aggregate", label: t("admin.nav.aggregates") },
     { href: "/admin/leave-accrual", label: t("admin.nav.leaveAccrual") },
     { href: "/admin/leave-policies", label: t("admin.nav.leavePolicy") },
+    { href: "/admin/attendance-security", label: t("admin.nav.attendanceSecurity") },
     { href: "/admin/leave-calendar", label: t("admin.nav.leaveCalendar") },
     { href: "/admin/scheduling", label: t("admin.nav.scheduling") },
     { href: "/admin/notices", label: t("admin.nav.notices") },

@@ -42,3 +42,17 @@ Move required customer-admin operating controls into productized admin settings 
 - Regression coverage is attached to the integration chain:
   - `scripts/tests/e2e-wi1055-admin-leave-policies-productization.test.ts`
   - `package.json` `test:integration`
+- Second execution slice productizes attendance security with a dedicated admin page and org-level persistence:
+  - `src/app/admin/attendance-security/page.tsx`
+  - `src/app/api/admin/attendance-security/route.ts`
+  - `prisma/migrations/202603090002_wi1055_attendance_security_productization/migration.sql`
+  - admin navigation and workspace hubs now link to `/admin/attendance-security`
+- Attendance security settings now move GPS-required and geofence controls out of env-only operation:
+  - `attendanceGpsRequired`
+  - `attendanceGeofenceEnabled`
+  - `attendanceGeofenceLatitude`
+  - `attendanceGeofenceLongitude`
+  - `attendanceGeofenceRadiusMeters`
+- Regression coverage is attached to the integration chain:
+  - `scripts/tests/e2e-wi1055-admin-attendance-security-productization.test.ts`
+  - `package.json` `test:integration`

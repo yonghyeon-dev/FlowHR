@@ -26,6 +26,7 @@ import {
   assertGeofencePolicyForUpdate,
   assertGpsCapturePolicyForCreate,
   assertGpsCapturePolicyForUpdate,
+  resolveAttendanceSecurityPolicy,
   assertTrustedDevicePolicyForCreate,
   assertTrustedDevicePolicyForUpdate
 } from "@/features/attendance/helpers/capture-policy";
@@ -335,9 +336,13 @@ export async function createAttendanceRecord(
     context.actor,
     input.employeeId
   );
+  const organization = employee.organizationId
+    ? await context.dataAccess.organizations.findById(employee.organizationId)
+    : null;
+  const attendanceSecurityPolicy = resolveAttendanceSecurityPolicy(organization);
 
-  assertGpsCapturePolicyForCreate(actor, input);
-  assertGeofencePolicyForCreate(actor, input);
+  assertGpsCapturePolicyForCreate(actor, input, attendanceSecurityPolicy);
+  assertGeofencePolicyForCreate(actor, input, attendanceSecurityPolicy);
   assertTrustedDevicePolicyForCreate(actor, input);
   assertDeviceAttestationForCreate(actor, input);
   await assertAntiSpoofingPolicyForCreate(actor, input);
@@ -492,16 +497,20 @@ export async function updateAttendanceRecord(
   input: UpdateAttendanceInput
 ): Promise<AttendanceRecordEntity> {
   const existing = await requireEditableRecord(context, recordId);
-  assertGpsCapturePolicyForUpdate(context.actor!, existing, input);
-  assertGeofencePolicyForUpdate(context.actor!, existing, input);
-  assertTrustedDevicePolicyForUpdate(context.actor!, existing, input);
-  assertDeviceAttestationForUpdate(context.actor!, existing, input);
-  await assertAntiSpoofingPolicyForUpdate(context.actor!, existing, input);
   const employee = await requireEmployeeWithinTenant(
     context.dataAccess,
     context.actor,
     existing.employeeId
   );
+  const organization = employee.organizationId
+    ? await context.dataAccess.organizations.findById(employee.organizationId)
+    : null;
+  const attendanceSecurityPolicy = resolveAttendanceSecurityPolicy(organization);
+  assertGpsCapturePolicyForUpdate(context.actor!, existing, input, attendanceSecurityPolicy);
+  assertGeofencePolicyForUpdate(context.actor!, existing, input, attendanceSecurityPolicy);
+  assertTrustedDevicePolicyForUpdate(context.actor!, existing, input);
+  assertDeviceAttestationForUpdate(context.actor!, existing, input);
+  await assertAntiSpoofingPolicyForUpdate(context.actor!, existing, input);
   if (employee.organizationId) {
     await ensureAttendancePeriodMutable(context, employee.organizationId, existing.checkInAt);
     const nextCheckInAt = input.checkInAt ?? existing.checkInAt;

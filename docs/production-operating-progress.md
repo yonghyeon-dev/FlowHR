@@ -72,6 +72,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Closed `WI-1056` through the full GitHub flow and merged it to `main` as `e9bf022731d4849257a2e058d19656a156415b76`, then deleted the feature branch.
 - Started `WI-1055` with a dedicated `/admin/leave-policies` product surface so leave policy operations no longer depend on dashboard deep links.
 - Wired `WI-1055` into admin navigation and workspace hubs and attached a regression guard to `test:integration`.
+- Continued `WI-1055` with a dedicated `/admin/attendance-security` product surface and org-level persistence for GPS-required and geofence controls.
+- Wired `WI-1055` attendance security into admin navigation, workspace hubs, integration regression coverage, and a dedicated Prisma migration so attendance policy no longer depends on env-only toggles.
 - Removed a remaining shared-session dev remnant by replacing raw organization ID output in `src/components/SessionMenu.tsx` with role/account status language and user-facing session errors.
 - Adjusted notice compose behavior so `publishAt` no longer defaults to a filled value; notice creation now defaults to draft and explains when to use scheduled or immediate publish.
 - Verified the current implementation pass with `npm run typecheck`.
@@ -115,8 +117,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close the first `WI-1055` leave-policy productization slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
-2. Continue `WI-1055` on attendance security, notification durability, and operator-controlled integrations that still depend on env-only configuration.
+1. Close the current `WI-1055` attendance-security productization slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
+2. Continue `WI-1055` on notification durability and operator-controlled integrations that still depend on env-only configuration.
 3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 
 ## 5. Blockers Or Watch Items
