@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.3.20
+version: 0.3.21
 scope:
   in:
     - organization master data (create/read/list)
@@ -138,6 +138,9 @@ api:
       path: /notices/{noticeId}
       description: Partially update draft/scheduled notices; at least one field is required and omitted fields are preserved.
     - method: POST
+      path: /notices
+      description: Create draft notices without `publishAt` and scheduled notices with an offset-aware `publishAt`.
+    - method: POST
       path: /benefits/catalog
       description: Create organization-scoped benefits catalog item.
     - method: POST
@@ -270,6 +273,7 @@ test_plan:
     - benefits request list supports `sort=pending_priority` for submitted-first queue ordering
     - recruitment referral list supports `sort=stalled_priority` for stalled active-referral-first queue ordering
     - notice patch supports partial draft/scheduled updates and rejects empty payloads with 400
+    - notice create accepts omitted or null `publishAt` for draft creation and offset-aware `publishAt` for scheduled creation
     - admin notification-defaults read/update persists organization-scoped defaults
     - admin operator-alerts read/update persists organization-scoped fallback webhook settings
     - employee notification-preferences read resolves employee values against organization defaults
@@ -310,7 +314,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "People contract v0.3.20 additively documents admin notification-default management, durable employee notification preferences, and operator alert webhook fallback settings while preserving backward compatibility for existing people APIs."
+consumer_impact: "People contract v0.3.21 additively documents notice creation draft/scheduled semantics while preserving backward compatibility for existing people APIs."
 references:
   - work-items/WI-0034-employee-organization-master-model.md
   - work-items/WI-0102-people-department-position-model.md
@@ -330,6 +334,8 @@ references:
   - work-items/WI-0952-employee-status-transitions.md
   - work-items/WI-0998-onboarding-default-tasks-seed.md
   - work-items/WI-1030-announcement-partial-update.md
+  - work-items/WI-1042-notice-create-publishAt-nullable.md
+  - work-items/WI-1050-notice-create-publishAt-fix.md
   - work-items/WI-1055-admin-operational-settings-productization.md
   - docs/data-ownership.md
 approval:

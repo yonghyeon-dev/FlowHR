@@ -1,4 +1,4 @@
-# People Test Cases (Contract v0.3.20)
+# People Test Cases (Contract v0.3.21)
 
 ## Organization
 
@@ -72,6 +72,9 @@
 
 ## Notices
 
+- Admin or manager can create a draft notice via `POST /notices` without `publishAt`.
+- Admin or manager can create a draft notice via `POST /notices` with `publishAt: null`.
+- Admin or manager can create a scheduled notice via `POST /notices` with `publishAt`.
 - Admin or manager can partially update a draft notice via `PATCH /notices/{noticeId}`.
 - Admin or manager can partially update a scheduled notice via `PATCH /notices/{noticeId}` without clearing `publishAt`.
 - Title-only patch preserves existing body, audience, and scheduling metadata.
