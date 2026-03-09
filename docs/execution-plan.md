@@ -1,5 +1,7 @@
 ﻿# FlowHR Execution Plan (Priority-Driven)
 
+> Status note: for the current production operating target and live execution status, use `docs/production-operating-plan.md` and `docs/production-operating-progress.md`.
+
 Date: 2026-02-17  
 Goal: Shift/Flex 대비 상위호환 달성을 위해 contract-first 속도와 릴리즈 안정성을 동시에 유지한다.
 
