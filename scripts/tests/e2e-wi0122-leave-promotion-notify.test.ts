@@ -229,8 +229,12 @@ async function run() {
     const webhookPayload = JSON.parse(webhookServer.capturedRequests[0].body) as Record<string, unknown>;
     assert.equal(typeof webhookPayload.content, "string", "discord payload must use content field");
     assert.equal(webhookPayload.text, undefined, "discord payload must not use slack text field");
-    assert.match(String(webhookPayload.content), /\[FlowHR\] 연차 촉진 안내/);
-    assert.match(String(webhookPayload.content), /대상자 요약/);
+    const content = String(webhookPayload.content);
+    assert.match(content, /Notify Employee A/, "operator message should use employee names");
+    assert.doesNotMatch(content, new RegExp(organization.id, "i"), "operator message must not leak organization ids");
+    assert.doesNotMatch(content, /organizationId/i, "operator message must not leak organizationId labels");
+    assert.doesNotMatch(content, /EMP-NOTIFY-001|EMP-NOTIFY-002/, "operator message must not leak employee ids");
+    assert.doesNotMatch(content, /remaining=|eligible/i, "operator message must not use raw payload formatting");
 
     runtimeEnv.FLOWHR_LEAVE_PROMOTION_WEBHOOK_URL = "";
     const missingWebhookResponse = await leavePromotionNotifyRoute.POST(

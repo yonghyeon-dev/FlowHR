@@ -33,4 +33,13 @@ Turn external escalation and leave-promotion notifications into operator-readabl
 - Rewrote approval execution escalation webhook messages away from raw `organizationId`, channel labels, execution IDs, and enum-heavy payload formatting.
 - Added operator guidance plus a direct `/admin/approval-executions` link when a public base URL is available.
 - Rewrote annual leave promotion webhook messages away from raw organization and employee identifiers toward employee-name and remaining-leave summaries.
+- Added regression coverage to lock the new operator-facing payload contract:
+  - `scripts/tests/e2e-wi0123-approval-execution-escalation-automation.test.ts`
+  - `scripts/tests/e2e-wi0122-leave-promotion-notify.test.ts`
 - Current follow-up is limited to validating whether any downstream payload consumers rely on the previous raw text format.
+
+## Local Verification
+
+- `npm run typecheck`
+- `npx tsx scripts/tests/e2e-wi0123-approval-execution-escalation-automation.test.ts`
+- `npx tsx scripts/tests/e2e-wi0122-leave-promotion-notify.test.ts`

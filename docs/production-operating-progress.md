@@ -56,6 +56,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Started `WI-1058` and added shared conflict-to-guidance mapping for year-end settlement, filing, and withholding flows so production-valid `409` responses surface recovery steps instead of raw diagnostics.
 - Extended the same `WI-1058` guidance into the year-end preflight and employee year-end input consoles so adjacent guard failures no longer fall back to raw runtime text.
 - Extended the same runtime-message normalization into payroll close and payroll insurance consoles so adjacent catch/session errors no longer fall back to raw diagnostics.
+- Closed `WI-1057` through the full GitHub flow and merged it to `main` as `07e84c04ac7aa780fcbc90fc41aba731ccd3580f`, then deleted the feature branch.
+- Closed `WI-1058` through the full GitHub flow and merged it to `main` as `38d666fb34d07083d8c9866da9928b2c7931deb1`, then deleted the feature branch.
+- Added `WI-1054` regression guards so approval-escalation and leave-promotion operator messages keep their direct action link and stay free of raw `organizationId`, routing channel, and employee/entity identifier leakage.
 - Started `WI-1056` cleanup of weak product feedback copy by replacing `request failed; check logs` / `invalid input` wording across payroll, receipt, and leave-related production surfaces with product-safe guidance.
 - Continued `WI-1056` with actual interaction cleanup:
   - admin people profile updates now ask for confirmation before commit
@@ -104,9 +107,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close `WI-1057` through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`) now that production re-verification passed.
-2. Continue `WI-1058` by extending the same recovery guidance to remaining year-end preflight and employee year-end-input conflict surfaces if they still leak raw runtime text.
-3. Review `WI-1054` operator/webhook payload side-effects and any remaining non-user ops remnants that still need productization decisions.
+1. Close `WI-1054` through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`) now that the payload contract is covered by regression tests.
+2. Continue `WI-1056` on the remaining weak feedback/dev-remnant surfaces that still affect production UX.
+3. Start `WI-1055` discovery on which admin operational settings can be productized without reopening ops-only routes.
 
 ## 5. Blockers Or Watch Items
 
@@ -124,3 +127,4 @@ After every meaningful work item or production re-verification:
 Latest verification evidence:
 
 - `codex_test/results/prod-contracts-reverify-2026-03-09T09-53-21-595Z/REPORT.md`
+- `codex_test/results/prod-year-end-conflict-reverify-2026-03-09T10-07-21-859Z/REPORT.md`
