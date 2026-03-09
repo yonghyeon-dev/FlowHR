@@ -47,6 +47,8 @@ Move required customer-admin operating controls into productized admin settings 
   - `src/app/api/admin/attendance-security/route.ts`
   - `prisma/migrations/202603090002_wi1055_attendance_security_productization/migration.sql`
   - admin navigation and workspace hubs now link to `/admin/attendance-security`
+- Migration traceability:
+  - `prisma/migrations/202603090002_wi1055_attendance_security_productization`
 - Attendance security settings now move GPS-required and geofence controls out of env-only operation:
   - `attendanceGpsRequired`
   - `attendanceGeofenceEnabled`
