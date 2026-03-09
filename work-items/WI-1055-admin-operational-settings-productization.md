@@ -70,6 +70,18 @@ Move required customer-admin operating controls into productized admin settings 
 - Regression coverage is attached to the integration chain:
   - `scripts/tests/e2e-wi1055-notification-durability-productization.test.ts`
   - `package.json` `test:integration`
+- Fourth execution slice productizes organization-level operator alert webhook fallback settings:
+  - `src/app/admin/operator-alerts/page.tsx`
+  - `src/app/api/admin/operator-alerts/route.ts`
+  - `prisma/migrations/202603090004_wi1055_operator_alert_webhook_productization/migration.sql`
+- Operator alert settings now move approval-escalation and leave-promotion fallback webhook selection out of env-only operation:
+  - `operatorAlertWebhookUrl`
+  - `operatorAlertWebhookProvider`
+  - `approvalEscalationUseOperatorAlertWebhook`
+  - `leavePromotionUseOperatorAlertWebhook`
+- Regression coverage is attached to the integration chain:
+  - `scripts/tests/e2e-wi1055-operator-alert-webhook-settings.test.ts`
+  - `package.json` `test:integration`
 
 ## Data Changes (Tables and Migrations)
 
@@ -78,3 +90,4 @@ Move required customer-admin operating controls into productized admin settings 
 - Migrations:
   - `202603090002_wi1055_attendance_security_productization`
   - `202603090003_wi1055_notification_durability_productization`
+  - `202603090004_wi1055_operator_alert_webhook_productization`

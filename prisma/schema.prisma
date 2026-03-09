@@ -41,6 +41,10 @@ model Organization {
   notificationDefaultLeaveEnabled Boolean @default(true)
   notificationDefaultAttendanceEnabled Boolean @default(true)
   notificationDefaultPayrollEnabled Boolean @default(true)
+  operatorAlertWebhookUrl      String?
+  operatorAlertWebhookProvider String?
+  approvalEscalationUseOperatorAlertWebhook Boolean @default(true)
+  leavePromotionUseOperatorAlertWebhook Boolean @default(true)
   isOnboardingComplete       Boolean   @default(false)
   createdAt                  DateTime  @default(now())
   updatedAt                  DateTime  @updatedAt

@@ -22,6 +22,7 @@ import {
   toApprovalExecutionEscalationItems,
   type ApprovalExecutionEscalationItem
 } from "@/features/approval/execution-escalation-core-helpers";
+import { resolveOperatorAlertWebhookConfig } from "@/features/people/operator-alert-settings";
 import {
   normalizeApprovalExecutionListOptions,
   selectApprovalExecutionsForList
@@ -1296,7 +1297,16 @@ export async function triggerApprovalExecutionEscalation(
     dryRun
   });
 
-  const webhook = resolveApprovalEscalationWebhookConfig();
+  const organization = await context.dataAccess.organizations.findById(organizationId);
+  const webhook = resolveApprovalEscalationWebhookConfig(
+    process.env,
+    organization
+      ? resolveOperatorAlertWebhookConfig({
+          organization,
+          flow: "approvalEscalation"
+        })
+      : null
+  );
   const escalationAuditActor = buildApprovalExecutionEscalationAuditActorContext({
     organizationId,
     actorRole: actor.role,
@@ -1335,7 +1345,7 @@ export async function triggerApprovalExecutionEscalation(
     );
     throw new ServiceError(
       503,
-      "approval execution escalation webhook is not configured (set FLOWHR_APPROVAL_EXECUTION_ESCALATION_* or FLOWHR_ALERT_* webhook env)"
+      "approval execution escalation webhook is not configured (save an operator alert webhook in admin settings or configure the FLOWHR_APPROVAL_EXECUTION_ESCALATION_* / FLOWHR_ALERT_* env fallback)"
     );
   }
 

@@ -7,6 +7,12 @@ export type PromotionWebhookConfig = {
   source: string;
 };
 
+type PromotionWebhookOverride = {
+  url: string;
+  provider: PromotionWebhookProvider;
+  source: string;
+};
+
 export type PromotionEmailTemplateConfig = {
   url: string;
   token: string | null;
@@ -41,7 +47,13 @@ export function resolvePromotionWebhookProvider(webhookUrl: string): PromotionWe
   return "slack";
 }
 
-export function resolvePromotionWebhookConfig(): PromotionWebhookConfig | null {
+export function resolvePromotionWebhookConfig(
+  override?: PromotionWebhookOverride | null
+): PromotionWebhookConfig | null {
+  if (override) {
+    return override;
+  }
+
   const candidates: Array<{ source: string; value: string }> = [
     {
       source: "FLOWHR_LEAVE_PROMOTION_WEBHOOK_URL",

@@ -54,6 +54,7 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
         title: "공지/복리후생/채용/계약",
         description: "직원 커뮤니케이션과 지원 워크플로, 계약 위험 큐를 운영합니다.",
         links: [
+          { href: "/admin/operator-alerts", label: "운영 알림 연동" },
           { href: "/admin/notification-defaults", label: "알림 기본값" },
           {
             href: "/admin/notices?status=PUBLISHED&risk=no-read&source=admin-dashboard",
@@ -120,6 +121,7 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
       title: "Notices, benefits, recruitment, contracts",
       description: "Operate employee communication, support workflows, and contract risk queues.",
       links: [
+        { href: "/admin/operator-alerts", label: "Operator alert integrations" },
         { href: "/admin/notification-defaults", label: "Notification defaults" },
         {
           href: "/admin/notices?status=PUBLISHED&risk=no-read&source=admin-dashboard",

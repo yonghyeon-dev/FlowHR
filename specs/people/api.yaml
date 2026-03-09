@@ -1,8 +1,25 @@
 openapi: 3.1.0
 info:
   title: FlowHR People API
-  version: 0.3.19
+  version: 0.3.20
 paths:
+  /admin/operator-alerts:
+    get:
+      summary: Get operator alert fallback webhook settings
+      responses:
+        "200":
+          description: Operator alert settings returned
+        "403":
+          description: Admin role required
+    put:
+      summary: Update operator alert fallback webhook settings
+      responses:
+        "200":
+          description: Operator alert settings updated
+        "400":
+          description: Invalid payload
+        "403":
+          description: Admin role required
   /admin/notification-defaults:
     get:
       summary: Get organization notification defaults

@@ -133,6 +133,7 @@ import type {
   UpdateRecruitmentReferralInput,
   UpsertNoticeReadReceiptInput,
   UpsertLeavePolicyInput,
+  WebhookProvider,
   WorkScheduleTemplateEntity,
   WorkScheduleEntity
 } from "@/features/shared/data-access";
@@ -584,10 +585,18 @@ function toOrganizationEntity(record: {
   notificationDefaultLeaveEnabled?: boolean | null;
   notificationDefaultAttendanceEnabled?: boolean | null;
   notificationDefaultPayrollEnabled?: boolean | null;
+  operatorAlertWebhookUrl?: string | null;
+  operatorAlertWebhookProvider?: string | null;
+  approvalEscalationUseOperatorAlertWebhook?: boolean | null;
+  leavePromotionUseOperatorAlertWebhook?: boolean | null;
   isOnboardingComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
 }): OrganizationEntity {
+  const operatorAlertWebhookProvider =
+    record.operatorAlertWebhookProvider === "discord" || record.operatorAlertWebhookProvider === "slack"
+      ? (record.operatorAlertWebhookProvider as WebhookProvider)
+      : null;
   return {
     ...record,
     attendanceGpsRequired: record.attendanceGpsRequired ?? false,
@@ -599,7 +608,12 @@ function toOrganizationEntity(record: {
     notificationDefaultInAppEnabled: record.notificationDefaultInAppEnabled ?? true,
     notificationDefaultLeaveEnabled: record.notificationDefaultLeaveEnabled ?? true,
     notificationDefaultAttendanceEnabled: record.notificationDefaultAttendanceEnabled ?? true,
-    notificationDefaultPayrollEnabled: record.notificationDefaultPayrollEnabled ?? true
+    notificationDefaultPayrollEnabled: record.notificationDefaultPayrollEnabled ?? true,
+    operatorAlertWebhookUrl: record.operatorAlertWebhookUrl ?? null,
+    operatorAlertWebhookProvider,
+    approvalEscalationUseOperatorAlertWebhook:
+      record.approvalEscalationUseOperatorAlertWebhook ?? true,
+    leavePromotionUseOperatorAlertWebhook: record.leavePromotionUseOperatorAlertWebhook ?? true
   };
 }
 
@@ -1140,6 +1154,10 @@ const organizations: OrganizationStore = {
       notificationDefaultLeaveEnabled: true,
       notificationDefaultAttendanceEnabled: true,
       notificationDefaultPayrollEnabled: true,
+      operatorAlertWebhookUrl: null,
+      operatorAlertWebhookProvider: null,
+      approvalEscalationUseOperatorAlertWebhook: true,
+      leavePromotionUseOperatorAlertWebhook: true,
       isOnboardingComplete: false
     } as Prisma.OrganizationUncheckedCreateInput;
 
@@ -1263,6 +1281,23 @@ const organizations: OrganizationStore = {
           : {}),
         ...(input.notificationDefaultPayrollEnabled !== undefined
           ? { notificationDefaultPayrollEnabled: input.notificationDefaultPayrollEnabled }
+          : {}),
+        ...(input.operatorAlertWebhookUrl !== undefined
+          ? { operatorAlertWebhookUrl: input.operatorAlertWebhookUrl }
+          : {}),
+        ...(input.operatorAlertWebhookProvider !== undefined
+          ? { operatorAlertWebhookProvider: input.operatorAlertWebhookProvider }
+          : {}),
+        ...(input.approvalEscalationUseOperatorAlertWebhook !== undefined
+          ? {
+              approvalEscalationUseOperatorAlertWebhook:
+                input.approvalEscalationUseOperatorAlertWebhook
+            }
+          : {}),
+        ...(input.leavePromotionUseOperatorAlertWebhook !== undefined
+          ? {
+              leavePromotionUseOperatorAlertWebhook: input.leavePromotionUseOperatorAlertWebhook
+            }
           : {}),
         ...(input.isOnboardingComplete !== undefined
           ? { isOnboardingComplete: input.isOnboardingComplete }
