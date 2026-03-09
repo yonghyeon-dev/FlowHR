@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -8,6 +7,7 @@ import {
   employeeContractsCopyByLocale,
   toDateText
 } from "@/components/contracts/copy";
+import { EmployeeContractsInboxHeader } from "@/components/contracts/EmployeeContractsInboxHeader";
 import { EmployeeContractsInboxList } from "@/components/contracts/EmployeeContractsInboxList";
 import { EmployeeContractsResponsePanel } from "@/components/contracts/EmployeeContractsResponsePanel";
 import { canEmployeeRespondToContractDocument } from "@/components/contracts/document-action-policy";
@@ -199,20 +199,12 @@ export default function EmployeeContractsInbox({ accessToken }: EmployeeContract
   }
   return (
     <main className="saas-content">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">{copy.title}</h1>
-          <p className="page-subtitle">{copy.description}</p>
-          {sourceEntry ? <p className="small muted">{sourceEntry.hint}</p> : null}
-        </div>
-        <div className="page-actions">
-          {sourceEntry ? (
-            <Link className="btn btn-secondary" href="/employee">
-              {sourceEntry.returnLabel}
-            </Link>
-          ) : null}
-        </div>
-      </header>
+      <EmployeeContractsInboxHeader
+        title={copy.title}
+        description={copy.description}
+        sourceHint={sourceEntry?.hint ?? null}
+        returnLabel={sourceEntry?.returnLabel ?? null}
+      />
       {error ? <p className="inline-error">{error}</p> : null}
       {message ? <p className="small">{message}</p> : null}
       <section className="panel-grid">

@@ -1,7 +1,7 @@
 ﻿"use client";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { AdminContractsWorkspaceHeader } from "@/components/contracts/AdminContractsWorkspaceHeader";
 import {
   adminContractsCopyByLocale,
   contractApprovalStatusLabelByLocale,
@@ -33,7 +33,6 @@ import {
 import { resolveContractApprovalStatusLabel, resolveContractDocumentStatusLabel } from "@/components/contracts/status-label-helpers";
 import { formatEmployeeIdForLocaleDisplay, normalizeEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
-
 type AdminContractsWorkspaceProps = {
   accessToken: string;
 };
@@ -59,21 +58,15 @@ export default function AdminContractsWorkspace({ accessToken }: AdminContractsW
   const [templateCategory, setTemplateCategory] = useState<ContractCategory>("employment");
   const [templateBody, setTemplateBody] = useState(locale === "ko" ? "직원은 직무, 보상, 기밀 유지 조항에 동의합니다." : "Employee agrees to role, compensation, and confidentiality clauses.");
   const normalizedEmployeeIdForApi = normalizeEmployeeIdForApi(employeeId, locale);
-  const actionLabelByAction = useMemo<Record<ContractDocumentAction, string>>(
-    () => ({
-      request: copy.requestApprovalAction,
-      approve: copy.approveAction,
-      reject: copy.rejectAction,
-      send: copy.sendAction,
-      expire: copy.expireAction,
-      renew: copy.renewAction
-    }),
-    [copy]
-  );
-  const nextStepLabelByKey = useMemo<Record<ContractDocumentNextStepKey, string>>(
-    () => ({ REQUEST_APPROVAL: copy.nextStepRequestApproval, APPROVE_OR_REJECT: copy.nextStepApproveOrReject, SEND_DOCUMENT: copy.nextStepSendDocument, WAIT_EMPLOYEE_RESPONSE: copy.nextStepWaitEmployeeResponse, RENEW_DOCUMENT: copy.nextStepRenewDocument, NO_ACTION: copy.nextStepNoAction }),
-    [copy]
-  );
+  const actionLabelByAction = useMemo<Record<ContractDocumentAction, string>>(() => ({
+    request: copy.requestApprovalAction,
+    approve: copy.approveAction,
+    reject: copy.rejectAction,
+    send: copy.sendAction,
+    expire: copy.expireAction,
+    renew: copy.renewAction
+  }), [copy]);
+  const nextStepLabelByKey = useMemo<Record<ContractDocumentNextStepKey, string>>(() => ({ REQUEST_APPROVAL: copy.nextStepRequestApproval, APPROVE_OR_REJECT: copy.nextStepApproveOrReject, SEND_DOCUMENT: copy.nextStepSendDocument, WAIT_EMPLOYEE_RESPONSE: copy.nextStepWaitEmployeeResponse, RENEW_DOCUMENT: copy.nextStepRenewDocument, NO_ACTION: copy.nextStepNoAction }), [copy]);
   const {
     templates,
     selectedTemplateId,
@@ -128,41 +121,30 @@ export default function AdminContractsWorkspace({ accessToken }: AdminContractsW
   }, [locale]);
   return (
     <main className="saas-content">
-      <header className="page-header">
-        <div>
-          <p className="page-eyebrow">{copy.heroEyebrow}</p>
-          <h1 className="page-title">{copy.title}</h1>
-          <p className="page-subtitle">{copy.description}</p>
-          {analyticsSource === "admin-analytics" ? <p className="small muted">{copy.analyticsSourceBanner} · {copy.analyticsSourceFocusLabel}: {analyticsFocusLabel}</p> : null}
-          {analyticsSource === "admin-dashboard" ? <p className="small muted">{copy.dashboardSourceBanner} · {copy.dashboardSourceFocusLabel}: {dashboardFocusLabel}</p> : null}
-          <div className="contract-action-row">
-            {analyticsBackHref ? (
-              <Link href={analyticsBackHref} className="btn btn-secondary btn-small">
-                {analyticsBackLabel}
-              </Link>
-            ) : null}
-            <Link href="/admin/contracts/builder" className="btn btn-secondary btn-small">
-              {copy.openTemplateBuilderAction}
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AdminContractsWorkspaceHeader
+        heroEyebrow={copy.heroEyebrow}
+        title={copy.title}
+        description={copy.description}
+        analyticsSource={analyticsSource}
+        analyticsFocusLabel={analyticsFocusLabel}
+        analyticsSourceBanner={copy.analyticsSourceBanner}
+        analyticsSourceFocusLabel={copy.analyticsSourceFocusLabel}
+        dashboardSourceBanner={copy.dashboardSourceBanner}
+        dashboardSourceFocusLabel={copy.dashboardSourceFocusLabel}
+        dashboardFocusLabel={dashboardFocusLabel}
+        analyticsBackHref={analyticsBackHref}
+        analyticsBackLabel={analyticsBackLabel}
+        openTemplateBuilderAction={copy.openTemplateBuilderAction}
+        summaryKpiAria={copy.summaryKpiAria}
+        templatesKpiLabel={copy.templatesKpiLabel}
+        templatesCount={templates.length}
+        documentsKpiLabel={copy.documentsKpiLabel}
+        documentsCount={documents.length}
+        pendingApprovalKpiLabel={copy.pendingApprovalKpiLabel}
+        pendingApprovalCount={documents.filter((item) => item.approvalStatus === "PENDING").length}
+      />
       {error ? <p className="inline-error">{error}</p> : null}
       {message ? <p className="small">{message}</p> : null}
-      <section className="kpi-strip" aria-label={copy.summaryKpiAria}>
-        <article className="kpi-card">
-          <span>{copy.templatesKpiLabel}</span>
-          <strong>{templates.length}</strong>
-        </article>
-        <article className="kpi-card">
-          <span>{copy.documentsKpiLabel}</span>
-          <strong>{documents.length}</strong>
-        </article>
-        <article className="kpi-card">
-          <span>{copy.pendingApprovalKpiLabel}</span>
-          <strong>{documents.filter((item) => item.approvalStatus === "PENDING").length}</strong>
-        </article>
-      </section>
       <section className="panel-grid">
         <article id="contract-template-library" className="panel panel-contract-template-library">
           <h2>{copy.templateLibraryTitle}</h2>
