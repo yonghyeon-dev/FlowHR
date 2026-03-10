@@ -60,13 +60,14 @@ function run() {
   }
 
   const requiredEmployeeRoutes = [
-    "/employee?focus=attendance",
-    "/employee?focus=leave",
-    "/employee?focus=leave-calendar",
-    "/employee?focus=schedule",
-    "/employee?focus=request-feedback",
-    "/employee/payslips#payslip-search-sort",
-    "/employee/payslips#compare-view"
+    "/employee/guide",
+    "/employee/onboarding",
+    "/employee/schedule",
+    "/employee/benefits",
+    "/employee/contracts",
+    "/employee/payslips",
+    "/employee/notifications",
+    "/employee/notices"
   ];
 
   for (const route of requiredEmployeeRoutes) {
