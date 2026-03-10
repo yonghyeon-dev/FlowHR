@@ -154,6 +154,7 @@ export default function PayrollYearEndFilingConsole() {
     ackStatus === "accepted"
       ? copy.defaultAcceptedResponseOptionLabel
       : copy.defaultRejectedResponseOptionLabel;
+  const unresolvedRejectionReasonLabel = copy.defaultRejectionReasonOptionLabel;
   const settlementHashFilterChips = useMemo(() => {
     const chips: string[] = [];
     const seen = new Set<string>();
@@ -1115,7 +1116,7 @@ export default function PayrollYearEndFilingConsole() {
               ) : (
                 ackCodeOptions.map((item) => (
                   <option key={item.code} value={item.code}>
-                    {item.code} - {item.label}
+                    {item.label}
                   </option>
                 ))
               )}
@@ -1129,13 +1130,11 @@ export default function PayrollYearEndFilingConsole() {
                   onChange={(event) => setRejectionReasonCode(event.target.value)}
                 >
                   {rejectionReasonOptions.length === 0 ? (
-                    <option value={rejectionReasonCode || "OTHER"}>
-                      {rejectionReasonCode || "OTHER"}
-                    </option>
+                    <option value={rejectionReasonCode || "OTHER"}>{unresolvedRejectionReasonLabel}</option>
                   ) : (
                     rejectionReasonOptions.map((item) => (
                       <option key={item.code} value={item.code}>
-                        {item.code} - {item.label}
+                        {item.label}
                       </option>
                     ))
                   )}
