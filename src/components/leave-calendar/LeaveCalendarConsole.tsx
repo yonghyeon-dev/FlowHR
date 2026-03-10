@@ -1,13 +1,9 @@
 "use client";
+
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useI18n } from "@/lib/i18n/provider";
-import {
-  formatAdminSessionConnectionState,
-  formatWorkspaceConnectionState
-} from "@/lib/product-language";
+
 import {
   normalizeAdminAnalyticsFocusMetric,
   resolveAdminAnalyticsBackHref
@@ -15,6 +11,15 @@ import {
 import { leaveCalendarCopyByLocale } from "@/components/leave-calendar/copy";
 import type { ApiLog, LeaveCalendarResponse } from "@/components/leave-calendar/types";
 import { addDays, defaultCalendarRange, toDateInputValue, toSeoulIsoStart } from "@/components/leave-calendar/types";
+import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
+import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatAdminSessionConnectionState,
+  formatEmployeeDisplayName,
+  formatPublicEmployeeNumber,
+  formatUserFacingErrorMessage,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
@@ -26,14 +31,12 @@ export default function LeaveCalendarConsole() {
   const { locale } = useI18n();
   const copy = leaveCalendarCopyByLocale[locale];
   const source = searchParams.get("source");
-  const analyticsFocusMetric = normalizeAdminAnalyticsFocusMetric(
-    searchParams.get("analyticsFocus")
-  );
+  const analyticsFocusMetric = normalizeAdminAnalyticsFocusMetric(searchParams.get("analyticsFocus"));
   const analyticsBackHref = resolveAdminAnalyticsBackHref(source, analyticsFocusMetric);
   const analyticsFocusLabel =
     searchParams.get("focusMetric") === "leaveApprovedDays"
       ? locale === "ko"
-        ? "승인 휴가일"
+        ? "승인 휴가 일수"
         : "Approved leave days"
       : copy.title;
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
@@ -70,25 +73,36 @@ export default function LeaveCalendarConsole() {
   const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const hasWorkspaceSession = organizationId.length > 0;
+  const hasAdminSession = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "").trim().length > 0;
+  const workspaceStatusLabel = locale === "ko" ? "작업 공간 상태" : "Workspace status";
+  const adminSessionStatusLabel = locale === "ko" ? "관리자 세션 상태" : "Admin session status";
+  const currentWorkspaceLabel = locale === "ko" ? "현재 작업 공간" : "Current workspace";
+  const employeeNumberLabel = locale === "ko" ? "직원 번호" : "Employee number";
   const stats = useMemo(() => {
     const total = logs.length;
     const success = logs.filter((log) => log.ok).length;
     return { total, success, fail: total - success };
   }, [logs]);
+
   async function callApi() {
     if (!organizationId.trim()) {
-      setStatusMessage(locale === "ko" ? "세션 조직 정보가 없어 조회할 수 없습니다." : "Missing session organization context; cannot query.");
+      setStatusMessage(
+        formatUserFacingErrorMessage("missing session organization context; cannot query.", runtimeLocale)
+      );
       return;
     }
     if (!fromDate || !toDate) {
       setStatusMessage(copy.fromToRequiredStatus);
       return;
     }
+
     const threshold = Number(overlapWarningThreshold);
     if (!Number.isInteger(threshold) || threshold < 1 || threshold > 100) {
       setStatusMessage(copy.overlapThresholdInvalidStatus);
       return;
     }
+
     const from = toSeoulIsoStart(fromDate);
     const to = toSeoulIsoStart(addDays(toDate, 1));
     const query = new URLSearchParams({
@@ -101,6 +115,7 @@ export default function LeaveCalendarConsole() {
     if (departmentId.trim()) {
       query.set("departmentId", departmentId.trim());
     }
+
     setPendingLabel(copy.pendingLeaveCalendarQuery);
     try {
       const headers: Record<string, string> = {};
@@ -111,6 +126,7 @@ export default function LeaveCalendarConsole() {
         headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
         headers["x-actor-organization-id"] = organizationId.trim();
       }
+
       const response = await fetch(`/api/leave/calendar?${query.toString()}`, {
         method: "GET",
         headers
@@ -124,6 +140,7 @@ export default function LeaveCalendarConsole() {
           body = text;
         }
       }
+
       setLogs((prev) => [
         {
           id: Date.now(),
@@ -134,10 +151,16 @@ export default function LeaveCalendarConsole() {
         },
         ...prev
       ]);
+
       if (!response.ok || !body || typeof body !== "object") {
-        setStatusMessage(copy.requestFailedCheckLogsStatus);
+        setStatusMessage(
+          typeof body === "string"
+            ? formatUserFacingErrorMessage(body, runtimeLocale)
+            : copy.requestFailedCheckLogsStatus
+        );
         return;
       }
+
       const parsed = body as LeaveCalendarResponse;
       setResult(parsed);
       setStatusMessage(
@@ -148,6 +171,7 @@ export default function LeaveCalendarConsole() {
       setPendingLabel(null);
     }
   }
+
   return (
     <main className="saas-content">
       <header className="hero">
@@ -156,9 +180,7 @@ export default function LeaveCalendarConsole() {
         <p>{copy.description}</p>
         {source === "admin-dashboard" ? (
           <p className="small muted">
-            {locale === "ko"
-              ? "관리자 대시보드에서 이동했습니다"
-              : "Opened from admin dashboard"}
+            {locale === "ko" ? "관리자 대시보드에서 이동했습니다" : "Opened from admin dashboard"}
           </p>
         ) : null}
         {source === "admin-analytics" ? (
@@ -180,8 +202,8 @@ export default function LeaveCalendarConsole() {
           <h2>{copy.queryTitle}</h2>
           {showDevTools ? (
             <p className="small">
-              <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong> /{" "}
-              <strong>{formatAdminSessionConnectionState(Boolean(adminActorId.trim()), runtimeLocale)}</strong>
+              {workspaceStatusLabel}: <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, runtimeLocale)}</strong> /{" "}
+              {adminSessionStatusLabel}: <strong>{formatAdminSessionConnectionState(hasAdminSession, runtimeLocale)}</strong>
             </p>
           ) : null}
           <label>
@@ -223,7 +245,11 @@ export default function LeaveCalendarConsole() {
             </button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
+          {supabaseSessionError ? (
+            <p className="small fail">
+              {copy.sessionErrorPrefix}: {formatUserFacingErrorMessage(supabaseSessionError, runtimeLocale)}
+            </p>
+          ) : null}
         </article>
         <article className="panel">
           <h2>{copy.summaryTitle}</h2>
@@ -232,8 +258,8 @@ export default function LeaveCalendarConsole() {
           ) : (
             <ul className="simple-list">
               <li>
-                <span>{copy.organizationLabel}</span>
-                <strong>{result.organizationId}</strong>
+                <span>{currentWorkspaceLabel}</span>
+                <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, runtimeLocale)}</strong>
               </li>
               <li>
                 <span>{copy.rangeLabel}</span>
@@ -265,9 +291,11 @@ export default function LeaveCalendarConsole() {
                 .map((day) => (
                   <li key={day.date}>
                     <span>
-                    <strong>{day.date}</strong>
+                      <strong>{day.date}</strong>
                       <br />
-                      <span className="small">{copy.approvedPendingLabel} {day.approvedCount} / {day.pendingCount}</span>
+                      <span className="small">
+                        {copy.approvedPendingLabel} {day.approvedCount} / {day.pendingCount}
+                      </span>
                     </span>
                   </li>
                 ))}
@@ -275,7 +303,9 @@ export default function LeaveCalendarConsole() {
           )}
         </article>
         <article className="panel">
-          <h2>{copy.entriesTitle} {result ? `(${result.entries.length})` : ""}</h2>
+          <h2>
+            {copy.entriesTitle} {result ? `(${result.entries.length})` : ""}
+          </h2>
           {!result || result.entries.length === 0 ? (
             <p className="small">{copy.noLeaveEntryInRange}</p>
           ) : (
@@ -283,12 +313,13 @@ export default function LeaveCalendarConsole() {
               {result.entries.slice(0, 80).map((entry) => (
                 <li key={entry.requestId}>
                   <span>
-                    <strong>{entry.employeeId}</strong>
-                    {entry.employeeName ? ` / ${entry.employeeName}` : ""}
+                    <strong>{formatEmployeeDisplayName(entry.employeeName, runtimeLocale)}</strong>
+                    {entry.employeeId ? ` / ${employeeNumberLabel} ${formatPublicEmployeeNumber(entry.employeeId)}` : ""}
                     {entry.departmentName ? ` / ${entry.departmentName}` : ""}
                     <br />
                     <span className="small">
-                      {stateLabelByCode[entry.state]} / {leaveTypeLabelByCode[entry.leaveType]} / {unitLabelByCode[entry.unit]} / {entry.days}{copy.daysLabel}
+                      {stateLabelByCode[entry.state]} / {leaveTypeLabelByCode[entry.leaveType]} / {unitLabelByCode[entry.unit]} / {entry.days}
+                      {copy.daysLabel}
                       {entry.hours !== null ? ` (${entry.hours}h)` : ""}
                     </span>
                     <br />
