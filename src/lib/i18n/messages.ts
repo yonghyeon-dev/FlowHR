@@ -75,6 +75,11 @@ const messages = {
     "admin.nav.settings": "조직 설정",
     "admin.nav.auditLogs": "감사로그",
     "admin.nav.reports": "리포트",
+    "admin.navGroup.controlTower": "컨트롤 타워",
+    "admin.navGroup.peopleAndPolicy": "인사 및 정책",
+    "admin.navGroup.operations": "운영 워크스페이스",
+    "admin.navGroup.payrollAndFiling": "급여 및 신고",
+    "admin.navGroup.settingsAndReporting": "설정 및 리포트",
 
     "employee.badge": "Employee",
     "employee.nav.aria": "직원 네비게이션",
@@ -272,6 +277,11 @@ const messages = {
     "admin.nav.settings": "Settings",
     "admin.nav.auditLogs": "Audit Logs",
     "admin.nav.reports": "Reports",
+    "admin.navGroup.controlTower": "Control Tower",
+    "admin.navGroup.peopleAndPolicy": "People & Policy",
+    "admin.navGroup.operations": "Operations",
+    "admin.navGroup.payrollAndFiling": "Payroll & Filing",
+    "admin.navGroup.settingsAndReporting": "Settings & Reporting",
 
     "employee.badge": "Employee",
     "employee.nav.aria": "Employee navigation",
