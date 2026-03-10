@@ -53,7 +53,9 @@ async function run() {
   assert.match(withholdingKo, /pendingReceiptRunsLabel:\s*"수신확인 대기 실행"/);
   assert.match(withholdingKo, /finalizationIdLabel:\s*"확정 번호"/);
   assert.match(withholdingKo, /runGuardSnapshotLabel:\s*"실행 가드 스냅샷"/);
-  assert.match(withholdingKo, /contentSha256Label:\s*"콘텐츠 해시값"/);
+  assert.match(withholdingKo, /contentSha256Label:\s*"문서 무결성"/);
+  assert.match(withholdingKo, /metadataContentSha256Label:\s*"문서 무결성"/);
+  assert.match(withholdingKo, /documentIntegrityVerifiedLabel:\s*"검증 정보 포함"/);
   assert.doesNotMatch(
     withholdingKo,
     /employeeIdLabel|organizationIdFallbackLabel|Employee ID|Organization ID\(dev fallback\)/
