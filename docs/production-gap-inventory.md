@@ -50,6 +50,7 @@ Legend:
 | 51 | Employee account and guide session copy surface | Employee account card still falls back to raw userId text and employee guide still labels public employee number as a session artifact | Employee home surfaces should show signed-in account and signed-in employee number with product wording only | New -> WI-1087 |
 | 52 | Shared session menu account copy surface | Session menu still falls back to raw `userId` text and uses ad-hoc organization-connected wording | Shared session menu should show signed-in account and workspace status with product wording only | New -> WI-1088 |
 | 53 | Admin payroll operational session copy surface | Leave accrual, payroll close, and payslip delivery consoles still show raw devtools session labels and identifier-like account context | Payroll operational devtools should show workspace and admin session status with product wording only | New -> WI-1089 |
+| 54 | Scheduling session copy surface | Admin and employee scheduling devtools still use raw session organization / actor / employee wording instead of connection-state product labels | Scheduling devtools should show workspace, admin session, and employee session status wording only | New -> WI-1090 |
 
 ## B. External Notification Productization
 
@@ -131,3 +132,4 @@ Legend:
 30. WI-1087 employee account and guide session copy productization
 31. WI-1088 session menu copy productization
 32. WI-1089 admin payroll operational session copy follow-up
+33. WI-1090 scheduling session copy follow-up

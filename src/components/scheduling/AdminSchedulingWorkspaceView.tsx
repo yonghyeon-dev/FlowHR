@@ -1,6 +1,10 @@
 import type { AdminSchedulingWorkspaceViewProps } from "@/components/scheduling/AdminSchedulingWorkspaceView.types";
 import AdminSchedulingIncidentPanel from "@/components/scheduling/AdminSchedulingIncidentPanel";
 import { formatDateTime } from "@/components/scheduling/helpers";
+import {
+  formatAdminSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 
 export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorkspaceViewProps) {
   const {
@@ -54,6 +58,8 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
     onUpdateSelectedSchedule,
     onDeleteSelectedSchedule
   } = props;
+  const hasWorkspaceSession = sessionOrganizationId.trim().length > 0;
+  const hasAdminSession = sessionActorId.trim().length > 0;
 
   return (
     <main className="saas-content">
@@ -68,8 +74,9 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
           <h2>{copy.filtersTitle}</h2>
           {showDevTools ? (
             <p className="small muted">
-              {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.actorIdLabel}:{" "}
-              <code>{sessionActorId || "-"}</code>
+              {copy.organizationIdLabel}:{" "}
+              <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, runtimeLocale)}</strong> /{" "}
+              {copy.actorIdLabel}: <strong>{formatAdminSessionConnectionState(hasAdminSession, runtimeLocale)}</strong>
             </p>
           ) : null}
           {isProductionRuntime && !usesBearerToken ? (
