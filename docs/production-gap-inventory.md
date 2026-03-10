@@ -36,6 +36,7 @@ Legend:
 | 37 | Vercel production deploy stability | `next build` started failing with Vercel build OOM from `WI-1064` onward | Next production build scopes lint/typecheck to app source, uses memory-optimized webpack build settings, throttles worker concurrency, isolates hidden `/ops` client surfaces from heavy route entrypoints, resets cached Vercel deploy state when needed, and deploys consistently on Vercel | Partial -> WI-1069, WI-1070, WI-1071, WI-1072, WI-1073 |
 | 38 | Department management surface | Missing manager or parent department lookups fall back to raw internal IDs in the admin table and select labels | Human-readable manager and parent labels with public employee number or pending-state copy, never raw IDs | New -> WI-1074 |
 | 39 | Admin people org chart surface | Employee pills fall back to raw internal employee IDs in the title and metadata line | Human-readable employee name, public employee number, and employment status only | New -> WI-1075 |
+| 40 | Admin scheduling surface | Schedule list exposes raw `employeeId` and `schedule.id` in the admin dashboard | Public employee number plus schedule timing only, never raw internal schedule or employee identifiers | New -> WI-1076 |
 
 ## B. External Notification Productization
 
@@ -103,3 +104,4 @@ Legend:
 16. WI-1071 Next build worker count throttle
 17. WI-1074 department management surface humanization
 18. WI-1075 admin org chart surface humanization
+19. WI-1076 admin scheduling surface humanization
