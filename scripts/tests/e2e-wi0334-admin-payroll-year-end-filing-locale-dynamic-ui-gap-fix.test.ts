@@ -49,8 +49,8 @@ async function run() {
   assert.match(filingCopy, /export const payrollYearEndFilingCopyByLocale/);
   assert.match(filingCopy, /ko:\s*\{/);
   assert.match(filingCopy, /en: filingCopyEn/);
-  assert.match(filingCopy, /title: "연말정산 확정 및 신고 콘솔"/);
-  assert.match(filingCopy, /title: "Payroll Year-End Finalization and Filing Console"/);
+  assert.match(filingCopy, /title: "연말정산 확정 및 신고 관리"/);
+  assert.match(filingCopy, /title: "Payroll Year-End Finalization and Filing"/);
   assert.match(filingCopy, /loadAckCatalogAction/);
   assert.match(filingCopy, /loadSubmissionTimelineAction/);
 

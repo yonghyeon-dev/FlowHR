@@ -50,12 +50,12 @@ export function buildActiveSubmissionFiltersSummary(input: BuildActiveSubmission
     submissionSortDirection
   } = input;
   return [
-    `status=${copy.submissionStatusOptionLabels[submissionStatusFilter] ?? submissionStatusFilter}`,
-    `ackStatus=${copy.ackStatusOptionLabels[submissionAckStatusFilter] ?? submissionAckStatusFilter}`,
-    `validation=${copy.validationStatusOptionLabels[submissionValidationStatusFilter] ?? submissionValidationStatusFilter}`,
-    `transport=${copy.submissionTransportOptionLabels[submissionTransportFilter] ?? submissionTransportFilter}`,
-    `settlementHash=${submissionSettlementHashFilter.trim() || copy.dashLabel}`,
-    `search=${submissionSearch.trim() || copy.dashLabel}`,
-    `sort=${copy.submissionSortByOptionLabels[submissionSortBy] ?? submissionSortBy}:${copy.submissionSortDirectionOptionLabels[submissionSortDirection] ?? submissionSortDirection}`
+    `${copy.submissionStatusFilterLabel}: ${copy.submissionStatusOptionLabels[submissionStatusFilter] ?? submissionStatusFilter}`,
+    `${copy.ackStatusFilterLabel}: ${copy.ackStatusOptionLabels[submissionAckStatusFilter] ?? submissionAckStatusFilter}`,
+    `${copy.validationStatusFilterLabel}: ${copy.validationStatusOptionLabels[submissionValidationStatusFilter] ?? submissionValidationStatusFilter}`,
+    `${copy.transportFilterLabel}: ${copy.submissionTransportOptionLabels[submissionTransportFilter] ?? submissionTransportFilter}`,
+    `${copy.settlementHashFilterLabel}: ${submissionSettlementHashFilter.trim() || copy.dashLabel}`,
+    `${copy.submissionSearchLabel}: ${submissionSearch.trim() || copy.dashLabel}`,
+    `${copy.submissionSortByLabel}: ${copy.submissionSortByOptionLabels[submissionSortBy] ?? submissionSortBy} / ${copy.submissionSortDirectionOptionLabels[submissionSortDirection] ?? submissionSortDirection}`
   ].join(", ");
 }
