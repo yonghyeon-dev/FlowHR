@@ -1,6 +1,6 @@
 # FlowHR Production Operating Progress
 
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 Status: active
 
 ## 1. Current Phase
@@ -140,6 +140,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Closed `WI-1078` through the full GitHub flow and merged it to `main` as `e927dfe645352624a35931da95c852a402d1f118`, then deleted the feature branch.
 - Re-verified `WI-1078` at deploy time and confirmed `vercel-production-deploy` stays green after the admin attendance live surface cleanup.
 - Started `WI-1079` to remove raw `Run ID` wording and free-text internal run selection from the admin payroll confirmation surface.
+- Closed `WI-1079` through the full GitHub flow and merged it to `main` as `9839644820edb97f0536b26bf95c4da70796896c`, then deleted the feature branch.
+- Re-verified `WI-1079` at deploy time and confirmed `vercel-production-deploy` stays green after the admin payroll confirmation cleanup.
+- Started `WI-1080` to remove the remaining raw target-organization editing from the admin invite surface and keep invite creation on the selected workspace only.
 - Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
@@ -182,8 +185,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close `WI-1079` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
-2. Rescan remaining production admin surfaces for raw ID fallback after payroll confirmation cleanup.
+1. Close `WI-1080` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
+2. Rescan remaining production admin surfaces for raw workspace/actor fallback after invite cleanup.
 3. Resume the next production-surface cleanup slice from the updated inventory.
 
 ## 5. Blockers Or Watch Items
