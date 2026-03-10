@@ -103,6 +103,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Started `WI-1064` to remove the remaining ACK-centric recovery wording and English-only filing workflow copy from year-end and filing operator surfaces.
 - Closed `WI-1065` through the full GitHub flow and merged it to `main` as `5c0a7aeafa067545fdc93c57abd6699b40c99e19`, then deleted the feature branch.
 - Started `WI-1066` to replace the remaining year-end and withholding explanation labels that still exposed vector-hash, reason-code, and settlement-hash terminology.
+- Closed `WI-1066` through the full GitHub flow and merged it to `main` as `011f5bc52395de96279e5c2771decd1d7df5e509`, then deleted the feature branch.
+- Started `WI-1067` to remove the remaining raw code leakage from filing response-category and rejection-reason selectors.
 - Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
@@ -145,8 +147,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close the current `WI-1066` year-end explanation-copy slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
-2. Re-scan remaining year-end / filing operator inputs for any still-visible explanation-level technical wording after `WI-1066`.
+1. Close the current `WI-1067` filing response-catalog humanization slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
+2. Re-scan remaining year-end / filing operator inputs for any still-visible explanation-level technical wording after `WI-1067`.
 3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 
 ## 5. Blockers Or Watch Items
