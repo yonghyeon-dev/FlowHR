@@ -26,7 +26,7 @@ function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
           "출퇴근 정정 초안은 홈의 근태 작업면에서 이어지고, 이곳에서는 요청 상태와 후속 조치를 관리합니다.",
         actions: [
           {
-            href: "/employee?focus=attendance",
+            href: "/employee/attendance",
             label: "출퇴근 정정 열기",
             tone: "primary"
           },
@@ -44,12 +44,12 @@ function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
           "휴가 신청 초안은 홈의 휴가 작업면에서 이어지고, 이곳에서는 요청 상태와 재제출 준비를 모읍니다.",
         actions: [
           {
-            href: "/employee?focus=leave",
+            href: "/employee/leave",
             label: "휴가 신청 열기",
             tone: "primary"
           },
           {
-            href: "/employee?focus=leave-calendar",
+            href: "/employee/leave#leave-calendar",
             label: "휴가 캘린더 보기",
             tone: "secondary"
           }
@@ -103,7 +103,7 @@ function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
         "Attendance correction drafts stay on the Today work surface, while this route handles request status and follow-up.",
       actions: [
         {
-          href: "/employee?focus=attendance",
+          href: "/employee/attendance",
           label: "Open attendance correction",
           tone: "primary"
         },
@@ -121,12 +121,12 @@ function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
         "Leave drafts continue on the Today work surface, while this route gathers request state and resubmit follow-up.",
       actions: [
         {
-          href: "/employee?focus=leave",
+          href: "/employee/leave",
           label: "Open leave request",
           tone: "primary"
         },
         {
-          href: "/employee?focus=leave-calendar",
+          href: "/employee/leave#leave-calendar",
           label: "Open leave calendar",
           tone: "secondary"
         }

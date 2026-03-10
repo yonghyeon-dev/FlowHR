@@ -20,13 +20,37 @@ async function run() {
     "employee-dashboard",
     "EmployeeAttendanceLeaveFormsPanel.tsx"
   );
+  const employeeAttendanceFormPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAttendanceFormPanel.tsx"
+  );
+  const employeeLeaveRequestPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeLeaveRequestPanel.tsx"
+  );
   const employeeLeaveCalendarPanel = readUtf8(
     "src",
     "components",
     "employee-dashboard",
     "EmployeeLeaveCalendarPanel.tsx"
   );
-  const employeeSectionSources = `${employeePage}\n${employeeAttendanceLeavePanels}\n${employeeAttendanceLeaveFormsPanel}\n${employeeLeaveCalendarPanel}`;
+  const employeeSchedulePanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeSchedulePanel.tsx"
+  );
+  const employeeApiLogsPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeApiLogsPanel.tsx"
+  );
+  const employeeSectionSources = `${employeePage}\n${employeeAttendanceLeavePanels}\n${employeeAttendanceLeaveFormsPanel}\n${employeeAttendanceFormPanel}\n${employeeLeaveRequestPanel}\n${employeeLeaveCalendarPanel}\n${employeeSchedulePanel}\n${employeeApiLogsPanel}`;
   const localeHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
   const workItem = readUtf8(
     "work-items",

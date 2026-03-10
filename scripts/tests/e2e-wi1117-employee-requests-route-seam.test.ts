@@ -29,14 +29,14 @@ function run() {
 
   assert.match(layout, /href: "\/employee\/requests"/);
   assert.match(guidePage, /href="\/employee\/requests"/);
-  assert.match(guidePage, /href: "\/employee\/requests#attendance-actions"/);
-  assert.match(guidePage, /href: "\/employee\/requests#leave-actions"/);
+  assert.match(guidePage, /href: "\/employee\/attendance"/);
+  assert.match(guidePage, /href: "\/employee\/leave"/);
 
-  assert.match(workspaceHubs, /\/employee\/requests#attendance-actions/);
-  assert.match(workspaceHubs, /\/employee\/requests#leave-actions/);
+  assert.match(workspaceHubs, /\/employee\/attendance/);
+  assert.match(workspaceHubs, /\/employee\/leave/);
 
-  assert.match(accountPanels, /href: "\/employee\/requests#attendance-actions"/);
-  assert.match(accountPanels, /href: "\/employee\/requests#leave-actions"/);
+  assert.match(accountPanels, /href: "\/employee\/attendance"/);
+  assert.match(accountPanels, /href: "\/employee\/leave"/);
   assert.match(accountPanels, /href: "\/employee\/requests#request-monitoring"/);
   assert.match(accountPanels, /href: "\/employee\/requests#resubmit-workbench"/);
 

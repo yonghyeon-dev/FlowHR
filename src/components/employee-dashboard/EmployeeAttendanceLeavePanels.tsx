@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import type { resolveEmployeeLocaleLabelBundle } from "@/app/employee/page-locale-helpers";
@@ -13,7 +12,9 @@ import type {
   WorkScheduleDto
 } from "@/app/employee/page-types";
 import { EmployeeAttendanceLeaveFormsPanel } from "@/components/employee-dashboard/EmployeeAttendanceLeaveFormsPanel";
+import { EmployeeApiLogsPanel } from "@/components/employee-dashboard/EmployeeApiLogsPanel";
 import { EmployeeLeaveCalendarPanel } from "@/components/employee-dashboard/EmployeeLeaveCalendarPanel";
+import { EmployeeSchedulePanel } from "@/components/employee-dashboard/EmployeeSchedulePanel";
 
 type EmployeeLocaleBundle = ReturnType<typeof resolveEmployeeLocaleLabelBundle>;
 type RequestStatusValue = "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
@@ -122,83 +123,13 @@ export type EmployeeAttendanceLeavePanelsProps = {
 };
 
 export function EmployeeAttendanceLeavePanels(props: EmployeeAttendanceLeavePanelsProps) {
-  const {
-    sectionTitles,
-    scheduleCopy,
-    apiLogsCopy,
-    listBadgeLabels,
-    showDevTools,
-    schedules,
-    pendingLabel,
-    logs,
-    stats,
-    latestPayload,
-    formatDateTime,
-    onClearLogs
-  } = props;
+  const { showDevTools } = props;
   return (
     <>
       <EmployeeAttendanceLeaveFormsPanel {...props} />
       <EmployeeLeaveCalendarPanel {...props} />
-
-      <article className="panel" id="schedule">
-        <h2>{sectionTitles.schedule}</h2>
-        {showDevTools ? (
-          <div className="actions">
-            <Link className="btn btn-secondary" href="/ops/scheduling-cockpit">
-              {scheduleCopy.devSchedulingCockpit}
-            </Link>
-          </div>
-        ) : null}
-        <ul className="log-list">
-          {schedules.length === 0 ? (
-            <li>
-              <span className="fail">{listBadgeLabels.empty}</span>
-              <span>{scheduleCopy.noSchedules}</span>
-              <time>-</time>
-            </li>
-          ) : (
-            schedules.map((schedule) => (
-              <li key={schedule.id}>
-                <span className="ok">{schedule.isHoliday ? listBadgeLabels.holiday : listBadgeLabels.work}</span>
-                <span>
-                  {formatDateTime(schedule.startAt)} ~ {formatDateTime(schedule.endAt)} ({scheduleCopy.breakMinutesFormat(schedule.breakMinutes)})
-                </span>
-                <time>{schedule.id}</time>
-              </li>
-            ))
-          )}
-        </ul>
-      </article>
-
-      {showDevTools ? (
-        <article className="panel panel-log">
-          <h2>{sectionTitles.apiLogs}</h2>
-          <p className="small">
-            {apiLogsCopy.runningNow}: <strong>{pendingLabel ?? apiLogsCopy.none}</strong> / {apiLogsCopy.totalCalls} {stats.total}
-            {apiLogsCopy.summary(stats.success, stats.fail)}
-          </p>
-          <div className="actions">
-            <button className="btn btn-secondary" onClick={onClearLogs} disabled={logs.length === 0}>
-              {apiLogsCopy.clearLogs}
-            </button>
-          </div>
-          <pre>{latestPayload}</pre>
-          <ul className="log-list">
-            {logs.map((log) => (
-              <li key={log.id}>
-                <span className={log.ok ? "ok" : "fail"}>
-                  {log.ok ? listBadgeLabels.success : listBadgeLabels.fail} {log.status}
-                </span>
-                <span>
-                  {log.label} ({Math.max(0, Math.round(log.durationMs))}ms)
-                </span>
-                <time>{log.at}</time>
-              </li>
-            ))}
-          </ul>
-        </article>
-      ) : null}
+      <EmployeeSchedulePanel {...props} />
+      {showDevTools ? <EmployeeApiLogsPanel {...props} /> : null}
     </>
   );
 }

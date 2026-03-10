@@ -28,6 +28,18 @@ async function run() {
     "employee-dashboard",
     "EmployeeAttendanceLeaveFormsPanel.tsx"
   );
+  const attendanceForm = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAttendanceFormPanel.tsx"
+  );
+  const leaveRequestPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeLeaveRequestPanel.tsx"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-0893-employee-root-production-session-gate-completion.md"
@@ -36,33 +48,34 @@ async function run() {
 
   assert.match(
     employeePage,
-    /const allowHeaderActorFallback = showDevTools \|\| !isProductionRuntime;/
+    /const requiresLoginSession = !supabaseSessionLoading && isProductionRuntime && !usesBearerToken && !showDevTools;/
   );
-  assert.match(
-    employeePage,
-    /const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;/
-  );
-  assert.match(employeePage, /allowHeaderActorFallback,/);
+  assert.match(employeePage, /const blocksEmployeeApiActions = requiresLoginSession \|\| missingEmployeeIdBinding;/);
   assert.match(employeePage, /requiresLoginSession,/);
-  assert.match(employeePage, /productionSessionRequiredNotice,/);
-  assert.match(employeePage, /requiresLoginSession=\{requiresLoginSession\}/);
+  assert.match(employeePage, /const productionSessionRequiredNotice = missingEmployeeIdBinding/);
+  assert.match(employeePage, /requiresLoginSession=\{blocksEmployeeApiActions\}/);
   assert.match(
     employeePage,
     /productionSessionRequiredNotice=\{productionSessionRequiredNotice\}/
   );
 
-  assert.match(employeeApiHelpers, /allowHeaderActorFallback: boolean;/);
-  assert.match(employeeApiHelpers, /if \(!input\.allowHeaderActorFallback\) \{\s*return headers;\s*\}/);
+  assert.match(employeeApiHelpers, /export async function performEmployeeApiCall\(/);
+  assert.match(employeeApiHelpers, /apiClientFetch\(/);
+  assert.match(employeeApiHelpers, /status:\s*401,/);
 
-  assert.match(employeeMutationRuntime, /allowHeaderActorFallback: boolean;/);
   assert.match(employeeMutationRuntime, /requiresLoginSession: boolean;/);
+  assert.match(employeeMutationRuntime, /requiresEmployeeIdBinding: boolean;/);
   assert.match(employeeMutationRuntime, /productionSessionRequiredNotice: string;/);
+  assert.match(employeeMutationRuntime, /productionEmployeeIdRequiredNotice: string;/);
   assert.match(
     employeeMutationRuntime,
     /if \(requiresLoginSession\) \{\s*const body = \{\s*error: productionSessionRequiredNotice,\s*reason: "requires_login_session"/
   );
   assert.match(employeeMutationRuntime, /status: 401,/);
-  assert.match(employeeMutationRuntime, /allowHeaderActorFallback,/);
+  assert.match(
+    employeeMutationRuntime,
+    /if \(requiresEmployeeIdBinding && mutationInput\.employeeId\.trim\(\)\.length === 0\) \{\s*const body = \{\s*error: productionEmployeeIdRequiredNotice,\s*reason: "requires_employee_id_binding"/
+  );
 
   assert.match(dashboardChrome, /requiresLoginSession: boolean;/);
   assert.match(dashboardChrome, /productionSessionRequiredNotice: string;/);
@@ -74,21 +87,23 @@ async function run() {
   assert.match(accountOverviewPanels, /requiresLoginSession: boolean;/);
   assert.match(accountOverviewPanels, /disabled=\{requiresLoginSession\}/);
 
-  assert.match(attendanceLeaveForms, /disabled=\{requiresLoginSession\}/);
+  assert.match(attendanceLeaveForms, /EmployeeAttendanceFormPanel/);
+  assert.match(attendanceLeaveForms, /EmployeeLeaveRequestPanel/);
+  assert.match(attendanceForm, /disabled=\{requiresLoginSession\}/);
   assert.match(
-    attendanceLeaveForms,
+    attendanceForm,
     /disabled=\{!lastAttendanceId \|\| requiresLoginSession\}/
   );
   assert.match(
-    attendanceLeaveForms,
+    attendanceForm,
     /disabled=\{!correctionValidationIsValid \|\| !attendancePreSubmitValid \|\| requiresLoginSession\}/
   );
   assert.match(
-    attendanceLeaveForms,
+    leaveRequestPanel,
     /disabled=\{!leavePreSubmitValid \|\| requiresLoginSession\}/
   );
   assert.match(
-    attendanceLeaveForms,
+    leaveRequestPanel,
     /disabled=\{!lastLeaveRequestId \|\| requiresLoginSession\}/
   );
 

@@ -38,6 +38,8 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
       title: t("employee.navGroup.requests"),
       links: [
         { href: "/employee/requests", label: locale === "ko" ? "요청 센터" : "Requests hub" },
+        { href: "/employee/attendance", label: locale === "ko" ? "근태 작업" : "Attendance workspace" },
+        { href: "/employee/leave", label: locale === "ko" ? "휴가 작업" : "Leave workspace" },
         { href: "/employee/schedule", label: t("employee.nav.scheduleBoard") },
         { href: "/employee/benefits", label: t("employee.nav.benefits") }
       ]

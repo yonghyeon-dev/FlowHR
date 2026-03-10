@@ -41,19 +41,19 @@ const SHORTCUTS = {
       key: "attendance",
       label: "출퇴근 정정",
       detail: "오늘 근태 기록을 확인하고 정정 요청 폼으로 바로 이동합니다.",
-      sectionId: "attendance"
+      href: "/employee/attendance"
     },
     {
       key: "leave",
       label: "휴가 요청",
       detail: "휴가 유형과 기간을 입력하는 신청 폼으로 이동합니다.",
-      sectionId: "leave"
+      href: "/employee/leave"
     },
     {
       key: "leave-calendar",
       label: "휴가 캘린더",
       detail: "팀 휴가 밀도를 확인하고 날짜별 일정을 살펴봅니다.",
-      sectionId: "leave-calendar"
+      href: "/employee/leave#leave-calendar"
     },
     {
       key: "request-feedback",
@@ -73,19 +73,19 @@ const SHORTCUTS = {
       key: "attendance",
       label: "Attendance correction",
       detail: "Review today's attendance and move into the correction form.",
-      sectionId: "attendance"
+      href: "/employee/attendance"
     },
     {
       key: "leave",
       label: "Leave request",
       detail: "Jump into the leave request form with the main input fields ready.",
-      sectionId: "leave"
+      href: "/employee/leave"
     },
     {
       key: "leave-calendar",
       label: "Leave calendar",
       detail: "Check team leave density and open the date-based calendar view.",
-      sectionId: "leave-calendar"
+      href: "/employee/leave#leave-calendar"
     },
     {
       key: "request-feedback",

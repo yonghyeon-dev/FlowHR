@@ -55,6 +55,20 @@ async function run() {
     "employee-dashboard",
     "EmployeeRequestFeedbackPanels.tsx"
   );
+  const employeeAttendancePage = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "attendance",
+    "page.tsx"
+  );
+  const employeeLeavePage = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "leave",
+    "page.tsx"
+  );
   const employeeResubmitPanel = readUtf8(
     "src",
     "components",
@@ -101,8 +115,9 @@ async function run() {
   assert.match(employeePage, /from "@\/components\/employee-dashboard\/EmployeeAccountOverviewPanels"/);
   assert.match(employeePage, /<EmployeeDashboardChrome/);
   assert.match(employeePage, /<EmployeeAccountOverviewPanels/);
-  assert.match(employeePage, /resolveEmployeeRequestsRouteForFocusSection/);
+  assert.match(employeePage, /resolveEmployeePromotedRouteForFocusSection/);
   assert.match(employeePage, /resolveEmployeeResubmitDraftPrefill/);
+  assert.match(employeePage, /mode = "home"/);
   assert.doesNotMatch(employeePage, /<article className="panel panel-request-feedback" id="request-feedback">/);
   assert.doesNotMatch(employeePage, /<article className="panel panel-request-resubmit" id="request-resubmit">/);
   assert.doesNotMatch(employeePage, /<EmployeeRequestFeedbackPanels/);
@@ -118,6 +133,8 @@ async function run() {
   assert.match(employeeRequestFeedbackPanels, /id="request-search-sort"/);
   assert.match(employeeRequestFeedbackPanels, /id="request-timeline"/);
   assert.match(employeeRequestFeedbackPanels, /Math\.round\(row\.pendingHours\)/);
+  assert.match(employeeAttendancePage, /EmployeeSelfServicePage mode="attendance"/);
+  assert.match(employeeLeavePage, /EmployeeSelfServicePage mode="leave"/);
   assert.match(employeeResubmitPanel, /id="request-resubmit"/);
 
   assert.match(workItem, /WI-0305/i);

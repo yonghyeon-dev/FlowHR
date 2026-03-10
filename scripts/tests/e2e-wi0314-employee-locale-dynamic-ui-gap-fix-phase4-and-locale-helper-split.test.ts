@@ -22,13 +22,31 @@ async function run() {
     "employee-dashboard",
     "EmployeeAttendanceLeaveFormsPanel.tsx"
   );
+  const employeeAttendanceFormPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAttendanceFormPanel.tsx"
+  );
+  const employeeLeaveRequestPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeLeaveRequestPanel.tsx"
+  );
   const employeeLeaveCalendarPanel = readUtf8(
     "src",
     "components",
     "employee-dashboard",
     "EmployeeLeaveCalendarPanel.tsx"
   );
-  const employeeSurfaceSources = `${employeePage}\n${employeeAttendanceLeavePanels}\n${employeeAttendanceLeaveFormsPanel}\n${employeeLeaveCalendarPanel}`;
+  const employeeSchedulePanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeSchedulePanel.tsx"
+  );
+  const employeeSurfaceSources = `${employeePage}\n${employeeAttendanceLeavePanels}\n${employeeAttendanceLeaveFormsPanel}\n${employeeAttendanceFormPanel}\n${employeeLeaveRequestPanel}\n${employeeLeaveCalendarPanel}\n${employeeSchedulePanel}`;
   const employeeLocaleSources = `${employeePage}\n${employeeHelpers}`;
   const workItem = readUtf8(
     "work-items",
@@ -39,7 +57,15 @@ async function run() {
   assert.match(employeePage, /from "@\/app\/employee\/page-locale-helpers"/);
   assert.match(
     employeePage,
-    /from "@\/components\/employee-dashboard\/EmployeeAttendanceLeavePanels"/
+    /from "@\/components\/employee-dashboard\/EmployeeAttendanceFormPanel"/
+  );
+  assert.match(
+    employeePage,
+    /from "@\/components\/employee-dashboard\/EmployeeLeaveRequestPanel"/
+  );
+  assert.match(
+    employeePage,
+    /from "@\/components\/employee-dashboard\/EmployeeSchedulePanel"/
   );
   assert.match(
     employeePage,
