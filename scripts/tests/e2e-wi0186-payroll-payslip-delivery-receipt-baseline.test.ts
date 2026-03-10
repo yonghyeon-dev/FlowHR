@@ -56,7 +56,7 @@ async function run() {
   resetMemoryDataAccess();
   runtimeEnv.FLOWHR_PAYROLL_PAYSLIP_DELIVERY_V1 = "true";
 
-  const adminLayoutSource = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const employeeLayoutSource = readUtf8("src", "app", "employee", "layout.tsx");
   const adminPageSource = readUtf8("src", "app", "admin", "payroll-payslip-delivery", "page.tsx");
   const employeePageSource = readUtf8("src", "app", "employee", "payslip-receipts", "page.tsx");
@@ -76,7 +76,7 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
-  assert.match(adminLayoutSource, /\/admin\/payroll-payslip-delivery/, "admin nav should include payslip delivery route");
+  assert.match(adminNavSource, /\/admin\/payroll-payslip-delivery/, "admin nav should include payslip delivery route");
   assert.match(employeeLayoutSource, /\/employee\/payslip-receipts/, "employee nav should include payslip receipt route");
   assert.match(adminPageSource, /PayrollPayslipDeliveryConsole/, "admin page should render payslip delivery console");
   assert.match(employeePageSource, /PayslipReceiptConsole/, "employee page should render payslip receipt console");

@@ -52,7 +52,7 @@ async function run() {
   runtimeEnv.FLOWHR_PAYROLL_YEAR_END_DEDUCTION_INPUT_V1 = "true";
   runtimeEnv.FLOWHR_PAYROLL_YEAR_END_FILING_EXPORT_V1 = "true";
 
-  const adminLayoutSource = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const filingPageSource = readUtf8("src", "app", "admin", "payroll-year-end-filing", "page.tsx");
   const filingConsoleSource = readUtf8(
     "src",
@@ -65,7 +65,7 @@ async function run() {
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
   assert.match(
-    adminLayoutSource,
+    adminNavSource,
     /\/admin\/payroll-year-end-filing/,
     "admin nav should include payroll year-end filing route"
   );

@@ -53,7 +53,7 @@ async function run() {
   runtimeEnv.FLOWHR_PAYROLL_YEAR_END_V1 = "true";
   runtimeEnv.FLOWHR_PAYROLL_YEAR_END_DEDUCTION_INPUT_V1 = "true";
 
-  const adminLayoutSource = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const adminConsoleSource = readUtf8("src", "components", "payroll-year-end", "PayrollYearEndConsole.tsx");
   const recalculationRouteSource = readUtf8(
     "src",
@@ -67,7 +67,7 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
-  assert.match(adminLayoutSource, /\/admin\/payroll-year-end/, "admin nav should include payroll year-end route");
+  assert.match(adminNavSource, /\/admin\/payroll-year-end/, "admin nav should include payroll year-end route");
   assert.match(
     adminConsoleSource,
     /copy\.recalculateSettlementAction/,

@@ -6,15 +6,12 @@ function readUtf8(...parts: string[]) {
   return readFileSync(join(process.cwd(), ...parts), "utf8");
 }
 
-function extractAdminNavHrefs(layoutSource: string) {
-  const match = layoutSource.match(/const adminLinks:[\s\S]*?=\s*\[([\s\S]*?)\];/);
-  assert.ok(match, "adminLinks array should exist in admin layout");
-  const body = match[1] ?? "";
-  return [...body.matchAll(/href:\s*"([^"]+)"/g)].map((item) => item[1]);
+function extractAdminNavHrefs(navSource: string) {
+  return [...navSource.matchAll(/href:\s*"([^"]+)"/g)].map((item) => item[1]);
 }
 
 function run() {
-  const layout = readUtf8("src", "app", "admin", "layout.tsx");
+  const navSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const onboardingReadiness = readUtf8(
     "src",
     "components",
@@ -40,7 +37,7 @@ function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  const adminNavHrefs = extractAdminNavHrefs(layout);
+  const adminNavHrefs = extractAdminNavHrefs(navSource);
   assert.ok(adminNavHrefs.length > 0, "admin navigation hrefs should be defined");
   assert.equal(
     new Set(adminNavHrefs).size,
@@ -48,16 +45,31 @@ function run() {
     "admin navigation should not contain duplicate href values"
   );
   assert.ok(
-    adminNavHrefs.includes("/admin/attendance-live?focus=aggregate"),
-    "attendance aggregate link should remain available with unique href"
+    adminNavHrefs.includes("/admin/attendance-live"),
+    "attendance workspace link should remain available with unique href"
   );
   assert.ok(
-    adminNavHrefs.includes("/admin/leave-accrual?focus=policy"),
-    "leave policy link should remain available with unique href"
+    adminNavHrefs.includes("/admin/leave-policies"),
+    "leave policy route should remain available with unique href"
   );
   assert.ok(
-    adminNavHrefs.includes("/admin/payroll-close?focus=all"),
+    adminNavHrefs.includes("/admin/payroll-close"),
     "payroll overview link should remain available with unique href"
+  );
+  assert.equal(
+    adminNavHrefs.includes("/admin/attendance-live?focus=aggregate"),
+    false,
+    "legacy attendance focus route should be removed from admin navigation"
+  );
+  assert.equal(
+    adminNavHrefs.includes("/admin/leave-accrual?focus=policy"),
+    false,
+    "legacy leave policy focus route should be removed from admin navigation"
+  );
+  assert.equal(
+    adminNavHrefs.includes("/admin/payroll-close?focus=all"),
+    false,
+    "legacy payroll focus route should be removed from admin navigation"
   );
 
   assert.match(onboardingReadiness, /departments:\s*"\/admin\/people"/);

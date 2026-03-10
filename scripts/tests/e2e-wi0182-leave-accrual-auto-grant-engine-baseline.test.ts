@@ -50,7 +50,7 @@ async function run() {
 
   resetMemoryDataAccess();
 
-  const adminLayoutSource = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const leaveAccrualPageSource = readUtf8("src", "app", "admin", "leave-accrual", "page.tsx");
   const leaveAccrualConsoleSource = readUtf8(
     "src",
@@ -61,7 +61,7 @@ async function run() {
   const leaveApiSpec = readUtf8("specs", "leave", "api.yaml");
   const leaveContract = readUtf8("specs", "leave", "contract.yaml");
 
-  assert.match(adminLayoutSource, /\/admin\/leave-accrual/, "admin navigation should include leave accrual route");
+  assert.match(adminNavSource, /\/admin\/leave-accrual/, "admin navigation should include leave accrual route");
   assert.match(
     leaveAccrualPageSource,
     /LeaveAccrualAutoGrantConsole/,
