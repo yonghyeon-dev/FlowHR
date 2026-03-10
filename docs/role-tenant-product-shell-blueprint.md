@@ -182,10 +182,9 @@ This gives structural improvement without forcing a full rewrite of route topolo
 
 ### WI-1103
 
-- Choose the first IA seam:
-  - employee shell regrouping
-  - admin shell regrouping
-  - hidden-subpage promotion rules
+- Choose the first IA seam and document the migration order in `docs/first-ia-refactor-seam-migration-plan.md`:
+  - selected first seam: employee shell regrouping and hidden-subpage reduction
+  - deferred seams: admin shell regrouping, ops boundary cleanup, shared workspace contract
 
 ### WI-1104
 
