@@ -48,8 +48,8 @@ async function run() {
     /function parseRequiredInt\(value: string, fieldName: string, locale: FlowLocale\)/
   );
   assert.match(withholdingSource, /`\$\{fieldName\}은\(는\) 0 이상의 정수여야 합니다`/);
-  assert.match(withholdingKo, /sessionOrganizationLabel:\s*"세션 조직"/);
-  assert.match(withholdingKo, /sessionEmployeeLabel:\s*"세션 직원"/);
+  assert.match(withholdingKo, /sessionOrganizationLabel:\s*"작업 공간 상태"/);
+  assert.match(withholdingKo, /sessionEmployeeLabel:\s*"직원 세션 상태"/);
   assert.match(withholdingKo, /pendingReceiptRunsLabel:\s*"수신확인 대기 실행"/);
   assert.match(withholdingKo, /finalizationIdLabel:\s*"확정 번호"/);
   assert.match(withholdingKo, /runGuardSnapshotLabel:\s*"실행 가드 스냅샷"/);
@@ -62,8 +62,8 @@ async function run() {
   );
 
   const payslipKo = section(payslipReceiptCopySource, "ko: {", "  en: {");
-  assert.match(payslipKo, /sessionOrganizationLabel:\s*"세션 조직"/);
-  assert.match(payslipKo, /sessionEmployeeLabel:\s*"세션 직원"/);
+  assert.match(payslipKo, /sessionOrganizationLabel:\s*"작업 공간 상태"/);
+  assert.match(payslipKo, /sessionEmployeeLabel:\s*"직원 세션 상태"/);
   assert.match(payslipKo, /totalConfirmedRunsLabel:\s*"확정 실행 수"/);
   assert.match(payslipKo, /runsTitle:\s*"실행 목록"/);
   assert.match(payslipKo, /receiptAlreadyConfirmedPrefix:\s*"이미 수신 확인된 실행"/);

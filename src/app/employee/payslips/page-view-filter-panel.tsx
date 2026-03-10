@@ -6,6 +6,12 @@ import type { SupabaseSessionSnapshot } from "@/lib/client/useSupabaseSession";
 import type { PayslipPageCopy } from "@/app/employee/payslips/page-locale-helpers";
 import { minutesToHours, type AttendanceAggregateDto } from "@/app/employee/payslips/page-helpers";
 import type { ApiStats } from "@/app/employee/payslips/page-view-types";
+import {
+  formatActorRoleLabel,
+  formatEmployeeSessionConnectionState,
+  formatSignedInAccountLabel,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 
 type EmployeePayslipFilterPanelProps = {
   pageCopy: PayslipPageCopy;
@@ -22,8 +28,6 @@ type EmployeePayslipFilterPanelProps = {
     totalNet: number;
   };
   stats: ApiStats;
-  organizationId: string;
-  employeeId: string;
   periodStart: string;
   setPeriodStart: (value: string) => void;
   periodEnd: string;
@@ -54,8 +58,6 @@ export function EmployeePayslipFilterPanel({
   usesBearerToken,
   payslipStats,
   stats,
-  organizationId,
-  employeeId,
   periodStart,
   setPeriodStart,
   periodEnd,
@@ -75,6 +77,9 @@ export function EmployeePayslipFilterPanel({
   aggregate,
   formatKrw
 }: EmployeePayslipFilterPanelProps) {
+  const locale = isKoLocale ? "ko" : "en";
+  const hasWorkspaceSession = Boolean((supabaseSession?.organizationId ?? "").trim());
+  const hasEmployeeSession = Boolean((supabaseSession?.actorId ?? supabaseSession?.userId ?? "").trim());
   const sourceContextLabel =
     sourceContext === "employee-dashboard"
       ? isKoLocale
@@ -149,8 +154,10 @@ export function EmployeePayslipFilterPanel({
         <h2>{pageCopy.filters.title}</h2>
         {showDevTools ? (
           <p className="small muted">
-            {pageCopy.filters.organizationIdOptional}: <code>{organizationId || "-"}</code> /{" "}
-            {pageCopy.filters.employeeId}: <code>{employeeId || "-"}</code>
+            {pageCopy.devTools.sessionOrganizationLabel}:{" "}
+            <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, locale)}</strong> /{" "}
+            {pageCopy.devTools.sessionActorLabel}:{" "}
+            <strong>{formatEmployeeSessionConnectionState(hasEmployeeSession, locale)}</strong>
           </p>
         ) : null}
         <div className="input-grid">
@@ -209,7 +216,17 @@ export function EmployeePayslipFilterPanel({
               <p className="small muted">
                 {pageCopy.devTools.session}:{" "}
                 {supabaseSession
-                  ? `${supabaseSession.email ?? supabaseSession.userId} / ${pageCopy.devTools.sessionRoleLabel}: ${supabaseSession.role ?? "-"} / ${pageCopy.devTools.sessionOrganizationLabel}: ${supabaseSession.organizationId ?? "-"} / ${pageCopy.devTools.sessionActorLabel}: ${supabaseSession.actorId ?? "-"}`
+                  ? `${formatSignedInAccountLabel(supabaseSession.email, locale)} / ${
+                      pageCopy.devTools.sessionRoleLabel
+                    }: ${
+                      supabaseSession.role ? formatActorRoleLabel(supabaseSession.role, locale) : "-"
+                    } / ${pageCopy.devTools.sessionOrganizationLabel}: ${formatWorkspaceConnectionState(
+                      hasWorkspaceSession,
+                      locale
+                    )} / ${pageCopy.devTools.sessionActorLabel}: ${formatEmployeeSessionConnectionState(
+                      hasEmployeeSession,
+                      locale
+                    )}`
                   : pageCopy.devTools.none}{" "}
                 ({pageCopy.devTools.bearerStatusLabel}{" "}
                 {usesBearerToken ? pageCopy.devTools.bearerOn : pageCopy.devTools.bearerOff})

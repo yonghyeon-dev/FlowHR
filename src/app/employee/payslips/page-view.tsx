@@ -27,7 +27,6 @@ export function EmployeePayslipsPageView({
   usesBearerToken,
   payslipStats,
   stats,
-  organizationId,
   employeeId,
   periodStart,
   setPeriodStart,
@@ -121,8 +120,6 @@ export function EmployeePayslipsPageView({
         usesBearerToken={usesBearerToken}
         payslipStats={payslipStats}
         stats={stats}
-        organizationId={organizationId}
-        employeeId={employeeId}
         periodStart={periodStart}
         setPeriodStart={setPeriodStart}
         periodEnd={periodEnd}

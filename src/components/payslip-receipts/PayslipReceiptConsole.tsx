@@ -32,6 +32,10 @@ import {
   normalizeEmployeeIdForLocaleInput
 } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatEmployeeSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 import { useSearchParams } from "next/navigation";
 export default function PayslipReceiptConsole() {
   const { locale } = useI18n();
@@ -67,6 +71,8 @@ export default function PayslipReceiptConsole() {
         localeEmployeeIdDefault,
       locale
     ) || localeEmployeeIdDefault;
+  const hasWorkspaceSession = (supabaseSession?.organizationId ?? "").trim().length > 0;
+  const hasEmployeeSession = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "").trim().length > 0;
   const [periodStartDate, setPeriodStartDate] = useState(range.periodStartDate);
   const [periodEndDate, setPeriodEndDate] = useState(range.periodEndDate);
   const [runsSearchQuery, setRunsSearchQuery] = useState("");
@@ -229,8 +235,10 @@ export default function PayslipReceiptConsole() {
           <h2>{copy.filtersTitle}</h2>
           {showDevTools ? (
             <p className="small muted">
-              {copy.sessionOrganizationLabel}: <code>{organizationId || "-"}</code> /{" "}
-              {copy.sessionEmployeeLabel}: <code>{employeeId || "-"}</code>
+              {copy.sessionOrganizationLabel}:{" "}
+              <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, locale)}</strong> /{" "}
+              {copy.sessionEmployeeLabel}:{" "}
+              <strong>{formatEmployeeSessionConnectionState(hasEmployeeSession, locale)}</strong>
             </p>
           ) : null}
           <div className="input-grid">

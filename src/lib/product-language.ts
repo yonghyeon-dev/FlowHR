@@ -281,6 +281,14 @@ export function formatEmployeeSessionConnectionState(hasEmployeeSession: boolean
   return toLocaleKey(locale) === "ko" ? "직원 세션 미연결" : "Employee session unavailable";
 }
 
+export function formatSignedInAccountLabel(email: string | null | undefined, locale: string) {
+  const trimmed = email?.trim() ?? "";
+  if (trimmed.length > 0) {
+    return trimmed;
+  }
+  return toLocaleKey(locale) === "ko" ? "로그인된 계정" : "Signed-in account";
+}
+
 export function formatPublicEmployeeNumber(id: string | null | undefined) {
   const normalized = id?.trim() ?? "";
   if (!normalized) {

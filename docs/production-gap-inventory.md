@@ -1,6 +1,6 @@
 # FlowHR Production Gap Inventory
 
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 Purpose: track the full production gap set in one place and map each gap to an existing WI or a new execution bundle.
 
 Legend:
@@ -46,6 +46,7 @@ Legend:
 | 47 | Admin approval session context surface | Approval policy, approval history, and approval templates still show raw session organization or actor identifiers in devtools context lines | Devtools context should keep session visibility but show connection-state product wording instead of raw IDs | New -> WI-1083 |
 | 48 | Admin payroll session context surface | Payroll insurance, leave calendar, year-end, preflight, and filing consoles still show raw session organization or admin actor identifiers in devtools context lines | Devtools context should keep session visibility but show connection-state product wording instead of raw IDs | New -> WI-1084 |
 | 49 | Employee session context surface | Employee dashboard account overview and employee year-end input console still show raw session organization or employee identifiers in devtools context lines | Devtools context should keep session visibility but show connection-state product wording instead of raw IDs | New -> WI-1085 |
+| 50 | Employee payroll self-service session copy surface | Withholding receipt, payslip receipt, and payslip filter devtools still expose raw session organization or employee identifiers and userId-based session fallback text | Employee payroll self-service devtools should show signed-in account, localized role, workspace status, and employee session status without raw internal identifiers | New -> WI-1086 |
 
 ## B. External Notification Productization
 
@@ -123,3 +124,4 @@ Legend:
 26. WI-1083 admin approval session context humanization
 27. WI-1084 admin payroll session context humanization
 28. WI-1085 employee session context humanization
+29. WI-1086 employee session copy productization
