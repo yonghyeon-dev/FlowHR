@@ -49,6 +49,7 @@ Legend:
 | 50 | Employee payroll self-service session copy surface | Withholding receipt, payslip receipt, and payslip filter devtools still expose raw session organization or employee identifiers and userId-based session fallback text | Employee payroll self-service devtools should show signed-in account, localized role, workspace status, and employee session status without raw internal identifiers | New -> WI-1086 |
 | 51 | Employee account and guide session copy surface | Employee account card still falls back to raw userId text and employee guide still labels public employee number as a session artifact | Employee home surfaces should show signed-in account and signed-in employee number with product wording only | New -> WI-1087 |
 | 52 | Shared session menu account copy surface | Session menu still falls back to raw `userId` text and uses ad-hoc organization-connected wording | Shared session menu should show signed-in account and workspace status with product wording only | New -> WI-1088 |
+| 53 | Admin payroll operational session copy surface | Leave accrual, payroll close, and payslip delivery consoles still show raw devtools session labels and identifier-like account context | Payroll operational devtools should show workspace and admin session status with product wording only | New -> WI-1089 |
 
 ## B. External Notification Productization
 
@@ -129,3 +130,4 @@ Legend:
 29. WI-1086 employee session copy productization
 30. WI-1087 employee account and guide session copy productization
 31. WI-1088 session menu copy productization
+32. WI-1089 admin payroll operational session copy follow-up

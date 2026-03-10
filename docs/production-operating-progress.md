@@ -164,6 +164,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Closed `WI-1087` through the full GitHub flow and merged it to `main` as `8d87be5906727d5ceaa0e209b552805c69c8f458`, then deleted the feature branch.
 - Re-verified `WI-1087` at deploy time and confirmed both `ci` and `vercel-production-deploy` stay green after the employee account and guide session-copy cleanup.
 - Started `WI-1088` to remove the remaining raw `userId` fallback and ad-hoc session wording from the shared admin/employee session menu.
+- Closed `WI-1088` through the full GitHub flow and merged it to `main` as `5a2bc2b98305c5030f31aae93e4e7dc220c71271`, then deleted the feature branch.
+- Re-verified `WI-1088` at deploy time and confirmed both `ci` and `vercel-production-deploy` stay green after the shared session-menu copy cleanup.
+- Started `WI-1089` to replace raw session organization and session actor code-like devtools context on leave accrual, payroll close, and payslip delivery with workspace/admin session status wording.
 - Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
@@ -206,7 +209,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close `WI-1088` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
+1. Close `WI-1089` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
 2. Re-scan remaining payroll operational session-copy surfaces for the next compact WI.
 3. Continue the next production-surface cleanup slice from the updated inventory.
 
