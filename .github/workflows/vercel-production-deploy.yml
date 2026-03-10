@@ -131,4 +131,4 @@ jobs:
 
           run_vercel link --yes --project "$VERCEL_PROJECT_NAME"
           run_vercel pull --yes --environment=production
-          run_vercel deploy --prod --yes
+          run_vercel deploy --prod --yes --force
