@@ -36,7 +36,7 @@ const preflightPanelCopyByLocale = {
     warnLabel: "\uacbd\uace0",
     openPayrollCloseAction: "\uae09\uc5ec \ub9c8\uac10 \ud654\uba74 \uc5f4\uae30",
     openPayslipDeliveryAction: "\uba85\uc138\uc11c \ubc30\ud3ec \ud654\uba74 \uc5f4\uae30",
-    refreshSettlementHashAction: "\uc815\uc0b0 \ud574\uc2dc \uac31\uc2e0",
+    refreshSettlementHashAction: "\ucd5c\uc2e0 \uc815\uc0b0 \uae30\uc900 \ub2e4\uc2dc \ubd88\ub7ec\uc624\uae30",
     openRejectedSubmissionsAction: "\uac70\uc808 \uc2e0\uace0 \ud070\uc218 \uc5f4\uae30"
   },
   en: {
@@ -54,7 +54,7 @@ const preflightPanelCopyByLocale = {
     warnLabel: "WARN",
     openPayrollCloseAction: "Open payroll close",
     openPayslipDeliveryAction: "Open payslip delivery",
-    refreshSettlementHashAction: "Refresh settlement hash",
+    refreshSettlementHashAction: "Reload settlement basis",
     openRejectedSubmissionsAction: "Open rejected submissions"
   }
 } as const;
