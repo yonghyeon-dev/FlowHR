@@ -65,6 +65,8 @@ export default function WithholdingReceiptConsole() {
         localeEmployeeIdDefault,
       locale
     ) || localeEmployeeIdDefault;
+  const hasWorkspaceSession = organizationId.length > 0;
+  const hasEmployeeSession = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "").trim().length > 0;
   const [year, setYear] = useState(String(currentYear()));
   const [documentFormat, setDocumentFormat] = useState<"json" | "text">("json");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
@@ -229,12 +231,13 @@ export default function WithholdingReceiptConsole() {
       <section className="panel-grid">
         <WithholdingReceiptInputPanel
           copy={copy}
+          locale={locale}
           showDevTools={showDevTools}
           requiresLoginSession={requiresLoginSession}
           year={year}
           documentFormat={documentFormat}
-          sessionOrganizationId={organizationId}
-          sessionEmployeeId={employeeId}
+          hasWorkspaceSession={hasWorkspaceSession}
+          hasEmployeeSession={hasEmployeeSession}
           pendingLabel={pendingLabel}
           statusMessage={statusMessage}
           normalizedSupabaseSessionError={normalizedSupabaseSessionError}

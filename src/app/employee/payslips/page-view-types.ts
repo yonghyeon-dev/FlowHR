@@ -38,7 +38,6 @@ export type EmployeePayslipsPageViewProps = {
   usesBearerToken: boolean;
   payslipStats: PayslipStats;
   stats: ApiStats;
-  organizationId: string;
   employeeId: string;
   periodStart: string;
   setPeriodStart: (value: string) => void;

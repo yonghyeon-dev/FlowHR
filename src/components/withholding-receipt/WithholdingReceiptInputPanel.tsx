@@ -1,13 +1,18 @@
 import { type WithholdingReceiptCopy } from "@/components/withholding-receipt/copy-runtime";
+import {
+  formatEmployeeSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 
 type WithholdingReceiptInputPanelProps = {
   copy: WithholdingReceiptCopy;
+  locale: "ko" | "en";
   showDevTools: boolean;
   requiresLoginSession: boolean;
   year: string;
   documentFormat: "json" | "text";
-  sessionOrganizationId: string;
-  sessionEmployeeId: string;
+  hasWorkspaceSession: boolean;
+  hasEmployeeSession: boolean;
   pendingLabel: string | null;
   statusMessage: string;
   normalizedSupabaseSessionError: string | null;
@@ -20,12 +25,13 @@ type WithholdingReceiptInputPanelProps = {
 
 export function WithholdingReceiptInputPanel({
   copy,
+  locale,
   showDevTools,
   requiresLoginSession,
   year,
   documentFormat,
-  sessionOrganizationId,
-  sessionEmployeeId,
+  hasWorkspaceSession,
+  hasEmployeeSession,
   pendingLabel,
   statusMessage,
   normalizedSupabaseSessionError,
@@ -53,8 +59,10 @@ export function WithholdingReceiptInputPanel({
       </div>
       {showDevTools ? (
         <p className="small muted">
-          {copy.sessionOrganizationLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.sessionEmployeeLabel}:{" "}
-          <code>{sessionEmployeeId || "-"}</code>
+          {copy.sessionOrganizationLabel}:{" "}
+          <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, locale)}</strong> /{" "}
+          {copy.sessionEmployeeLabel}:{" "}
+          <strong>{formatEmployeeSessionConnectionState(hasEmployeeSession, locale)}</strong>
         </p>
       ) : null}
       <div className="panel-actions">

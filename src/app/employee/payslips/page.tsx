@@ -43,7 +43,6 @@ export default function EmployeePayslipsPage() {
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
   const { snapshot: supabaseSession, error: supabaseSessionError, loading } = useSupabaseSession();
-  const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const employeeId = normalizeEmployeeIdForLocaleInput(
     (supabaseSession?.actorId ?? supabaseSession?.userId ?? getLocalizedEmployeeIdInputDefault(locale)).trim() ||
       getLocalizedEmployeeIdInputDefault(locale),
@@ -373,7 +372,6 @@ export default function EmployeePayslipsPage() {
       usesBearerToken={usesBearerToken}
       payslipStats={payslipStats}
       stats={stats}
-      organizationId={organizationId}
       employeeId={employeeId}
       periodStart={periodStart}
       setPeriodStart={setPeriodStart}
