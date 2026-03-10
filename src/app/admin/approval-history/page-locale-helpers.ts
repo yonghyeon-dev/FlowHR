@@ -62,8 +62,8 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalHistoryLocaleCopy> = {
     },
     filters: {
       title: "작업 조건",
-      organizationId: "조직",
-      adminActorId: "세션 액터",
+      organizationId: "작업 공간 상태",
+      adminActorId: "관리자 세션 상태",
       accessTokenOptional: "액세스 토큰 (선택)",
       bearerPlaceholder: "Bearer 토큰",
       domain: "도메인",
@@ -115,8 +115,8 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalHistoryLocaleCopy> = {
     },
     filters: {
       title: "Work conditions",
-      organizationId: "Organization",
-      adminActorId: "Session actor",
+      organizationId: "Workspace status",
+      adminActorId: "Admin session status",
       accessTokenOptional: "Access Token (optional)",
       bearerPlaceholder: "Bearer token",
       domain: "Domain",

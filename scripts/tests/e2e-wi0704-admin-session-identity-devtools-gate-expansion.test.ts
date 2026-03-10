@@ -51,7 +51,7 @@ async function run() {
   assert.match(approvalWorkConditionsPanel, /showDevTools: boolean;/);
   assert.match(
     approvalWorkConditionsPanel,
-    /\{showDevTools \? \([\s\S]*Session actor[\s\S]*\) : null\}/
+    /\{showDevTools \? \([\s\S]*workspaceStatusLabel[\s\S]*adminSessionStatusLabel[\s\S]*\) : null\}/
   );
 
   assert.match(adminPeopleViewLayout, /showDevTools=\{showDevTools\}/);
