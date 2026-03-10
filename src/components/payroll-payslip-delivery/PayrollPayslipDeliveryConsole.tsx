@@ -8,6 +8,10 @@ import { payrollPayslipDeliveryCopyByLocale } from "@/components/payroll-payslip
 import { isTruthyFlag } from "@/app/admin/page-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatAdminSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 import type { ApiLog, PayrollPayslipDistributionResponse } from "@/components/payroll-payslip-delivery/types";
 import {
   defaultMonthRange,
@@ -32,6 +36,8 @@ export default function PayrollPayslipDeliveryConsole() {
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const adminActorId = (supabaseSession?.actorId ?? "PAY-1001").trim() || "PAY-1001";
+  const hasWorkspaceSession = organizationId.length > 0;
+  const hasAdminSession = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "").trim().length > 0;
   const { locale } = useI18n();
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = payrollPayslipDeliveryCopyByLocale[locale];
@@ -136,8 +142,10 @@ export default function PayrollPayslipDeliveryConsole() {
           <h2>{copy.inputTitle}</h2>
           {showDevTools ? (
             <p className="small muted">
-              {copy.sessionOrganizationLabel}: <code>{organizationId || "-"}</code> /{" "}
-              {copy.sessionActorLabel}: <code>{adminActorId || "-"}</code>
+              {copy.sessionOrganizationLabel}:{" "}
+              <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, runtimeLocale)}</strong> /{" "}
+              {copy.sessionActorLabel}:{" "}
+              <strong>{formatAdminSessionConnectionState(hasAdminSession, runtimeLocale)}</strong>
             </p>
           ) : null}
           <div className="input-grid">

@@ -31,7 +31,7 @@ async function run() {
 
   assert.match(
     leaveAccrualConsole,
-    /\{showDevTools \? \(\s*<p className="small">[\s\S]*sessionOrganizationLabel[\s\S]*sessionAdminLabel[\s\S]*\) : null\}/
+    /\{showDevTools \? \(\s*<p className="small">[\s\S]*sessionWorkspaceLabel[\s\S]*formatWorkspaceConnectionState\([\s\S]*sessionAdminLabel[\s\S]*formatAdminSessionConnectionState\([\s\S]*\) : null\}/
   );
 
   assert.match(workItem, /WI-0706/i);

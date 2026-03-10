@@ -5,6 +5,10 @@ import { useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatAdminSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 import type { ApiLog, AutoGrantResponse } from "@/components/leave-accrual/types";
 import { formatDays, isTruthyFlag } from "@/components/leave-accrual/types";
 
@@ -166,6 +170,10 @@ export default function LeaveAccrualAutoGrantConsole() {
 
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
+  const hasWorkspaceSession = organizationId.length > 0;
+  const hasAdminSession = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "").trim().length > 0;
+  const sessionWorkspaceLabel = locale === "ko" ? "작업 공간 상태" : "Workspace status";
+  const sessionAdminLabel = locale === "ko" ? "관리자 세션 상태" : "Admin session status";
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
@@ -274,8 +282,10 @@ export default function LeaveAccrualAutoGrantConsole() {
           <h2>{copy.conditionsTitle}</h2>
           {showDevTools ? (
             <p className="small">
-              {copy.sessionOrganizationLabel}: <code>{organizationId || "-"}</code> / {copy.sessionAdminLabel}:{" "}
-              <code>{adminActorId || "-"}</code>
+              {sessionWorkspaceLabel}:{" "}
+              <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, runtimeLocale)}</strong> /{" "}
+              {sessionAdminLabel}:{" "}
+              <strong>{formatAdminSessionConnectionState(hasAdminSession, runtimeLocale)}</strong>
             </p>
           ) : null}
           <div className="input-grid">
