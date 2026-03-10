@@ -150,6 +150,10 @@ export default function PayrollYearEndFilingConsole() {
   }, [ackStatus, ackCatalog]);
 
   const rejectionReasonOptions = useMemo(() => ackCatalog?.rejectionReasons ?? [], [ackCatalog]);
+  const unresolvedAckCodeLabel =
+    ackStatus === "accepted"
+      ? copy.defaultAcceptedResponseOptionLabel
+      : copy.defaultRejectedResponseOptionLabel;
   const settlementHashFilterChips = useMemo(() => {
     const chips: string[] = [];
     const seen = new Set<string>();
@@ -1107,7 +1111,7 @@ export default function PayrollYearEndFilingConsole() {
           <label>{copy.ackCodeLabel}
             <select value={ackCode} onChange={(event) => setAckCode(event.target.value)}>
               {ackCodeOptions.length === 0 ? (
-                <option value={ackCode}>{ackCode || "ACK-OK"}</option>
+                <option value={ackCode}>{unresolvedAckCodeLabel}</option>
               ) : (
                 ackCodeOptions.map((item) => (
                   <option key={item.code} value={item.code}>

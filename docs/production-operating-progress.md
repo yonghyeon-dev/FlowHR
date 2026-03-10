@@ -101,6 +101,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Started `WI-1063` to rewrite remaining year-end filing operator labels, filter summaries, and response wording away from raw hash/ACK/submission key terminology.
 - Closed `WI-1063` through the full GitHub flow and merged it to `main` as `4d4359109867847f7f34b5209684846958ef02ba`, then deleted the feature branch.
 - Started `WI-1064` to remove the remaining ACK-centric recovery wording and English-only filing workflow copy from year-end and filing operator surfaces.
+- Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI
@@ -142,8 +143,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close the current `WI-1064` year-end filing guidance-copy slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
-2. Re-scan remaining year-end / filing operator inputs for any still-visible raw guard terminology after `WI-1064`.
+1. Close the current `WI-1065` year-end filing control-copy slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
+2. Re-scan remaining year-end / filing operator inputs for any still-visible raw control terminology after `WI-1065`.
 3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 
 ## 5. Blockers Or Watch Items
