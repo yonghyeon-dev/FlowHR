@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import { formatEmployeeDisplayName, formatPublicEmployeeNumber } from "@/lib/product-language";
 
 type DepartmentItem = {
   id: string;
@@ -287,16 +288,28 @@ export default function AdminDepartmentManagementWorkspace() {
 
   function employeeLabel(employeeId: string | null) {
     if (!employeeId) {
-      return "-";
+      return isKoLocale ? "미지정" : "Unassigned";
     }
     const employee = employeeById.get(employeeId);
     if (!employee) {
-      return employeeId;
+      return isKoLocale ? "담당자 정보 확인 필요" : "Manager details pending";
     }
-    if (employee.name && employee.name.trim().length > 0) {
-      return `${employee.name} (${employee.id})`;
+    const displayName = formatEmployeeDisplayName(employee.name, locale);
+    const publicEmployeeNumber = formatPublicEmployeeNumber(employee.id);
+    return isKoLocale
+      ? `${displayName} · 사번 ${publicEmployeeNumber}`
+      : `${displayName} · Employee ${publicEmployeeNumber}`;
+  }
+
+  function parentDepartmentLabel(parentDepartmentId: string | null) {
+    if (!parentDepartmentId) {
+      return "-";
     }
-    return employee.id;
+    const parentDepartment = departmentById.get(parentDepartmentId);
+    if (parentDepartment?.name.trim()) {
+      return parentDepartment.name;
+    }
+    return isKoLocale ? "상위 부서 연결 대기" : "Parent department pending";
   }
 
   return (
@@ -345,7 +358,7 @@ export default function AdminDepartmentManagementWorkspace() {
                 departments.map((department) => (
                   <tr key={department.id}>
                     <td>{department.name}</td>
-                    <td>{department.parentId ? (departmentById.get(department.parentId)?.name ?? department.parentId) : "-"}</td>
+                    <td>{parentDepartmentLabel(department.parentId)}</td>
                     <td>{employeeLabel(department.managerId)}</td>
                     <td>{employeeCountByDepartmentId.get(department.id) ?? 0}</td>
                     <td>
