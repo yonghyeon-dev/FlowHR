@@ -10,6 +10,7 @@
 - 첫 IA 리팩토링 seam을 하나로 좁힌다.
 - 선택 이유, 기대 효과, 리스크, 이관 단계를 문서화한다.
 - 이후 구현 WI의 안전한 순서를 정의한다.
+- `docs/first-ia-refactor-seam-migration-plan.md`를 추가한다.
 
 ## Acceptance Criteria
 
@@ -20,3 +21,4 @@
 ## Verification
 
 - `docs/role-tenant-product-shell-blueprint.md`와 `docs/ui-ux-first-refactor-blueprint.md`를 기준으로 설명된다.
+- `docs/first-ia-refactor-seam-migration-plan.md`가 첫 seam, 기각한 seam, 이관 순서, 다음 구현 WI 연결을 포함한다.
