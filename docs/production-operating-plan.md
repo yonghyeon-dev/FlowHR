@@ -1,6 +1,6 @@
 # FlowHR Production Operating Plan
 
-Last updated: 2026-03-09
+Last updated: 2026-03-11
 Owner: PM + Dev execution loop
 Primary goal: make FlowHR operationally credible for real production use.
 
@@ -133,6 +133,23 @@ Exit criteria:
 2. All meaningful write actions provide clear confirmation and success/failure feedback.
 3. Dates and times render in user-facing locale formats.
 
+Execution track:
+
+1. Remove trust-breaking UX first:
+   - missing confirmation before destructive or irreversible actions
+   - missing success/error feedback after write actions
+   - empty states that look broken
+2. Normalize user-facing wording:
+   - Korean headings
+   - localized date/time formatting
+   - human-readable status labels
+3. Simplify interaction flows:
+   - reduce fragile deep-link-only entry points
+   - prefer stable dedicated routes when a section behaves like a page
+4. Finish cross-device consistency:
+   - mobile anchor/section movement
+   - responsive navigation and sticky action behavior
+
 ### Epic F. CI Hardening
 
 Status: deferred until product surface and journey issues are under control.
@@ -176,7 +193,42 @@ When to start:
 - Split true ops-only controls from customer-admin controls.
 - Implement durable settings and safe defaults.
 
-## 5. Delivery Rules
+### Bundle 5. UI/UX Finish Track
+
+- Standardize confirmation, toast, and recovery feedback across employee/admin write actions.
+- Normalize Korean copy, date/time formatting, and status wording on remaining mixed-language surfaces.
+- Revisit employee self-service IA where sections still behave like hidden subpages.
+- Re-check mobile/desktop parity after each UX slice so navigation and feedback stay consistent across devices.
+
+## 5.1 UI/UX Finish Plan
+
+Treat Epic E as a rolling finish track, not a single cleanup ticket.
+
+Wave 1. Trust and recovery feedback
+
+- Add confirmation before destructive or irreversible actions.
+- Standardize success, warning, and recovery feedback after write actions.
+- Replace broken-looking empty states with clear guidance and next actions.
+
+Wave 2. Product language and localization
+
+- Remove remaining mixed Korean/English headings and enum leakage.
+- Normalize date/time, status, and summary wording to user-facing Korean product language.
+- Replace technical fallback messages with recovery-oriented copy.
+
+Wave 3. Flow and IA simplification
+
+- Reduce fragile deep-link-only entry points.
+- Promote sections that behave like full pages into clearer dedicated routes when needed.
+- Revisit dashboards and hubs where hidden subpages still create navigation ambiguity.
+
+Wave 4. Cross-device parity
+
+- Re-check mobile anchor and section movement after each UX slice.
+- Align sticky actions, navigation affordances, and feedback surfaces between desktop and mobile.
+- Close parity gaps only after the corresponding desktop product flow is already stable.
+
+## 6. Delivery Rules
 
 Implementation must follow the verified repo process:
 
@@ -189,7 +241,7 @@ Implementation must follow the verified repo process:
 7. Verify on the actual deployed production site.
 8. Update `docs/production-operating-progress.md`.
 
-## 6. Decision Rules
+## 7. Decision Rules
 
 1. Do not add new surface area while a higher-priority production defect remains in the same flow.
 2. Prefer deleting dead product entry points over preserving broken routes.
