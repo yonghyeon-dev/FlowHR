@@ -1,7 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import SaasMobileMenu, { type SaasMobileMenuLink } from "@/components/layout/SaasMobileMenu";
+import SaasMobileMenu, {
+  type SaasMobileMenuLink,
+  type SaasMobileMenuSection
+} from "@/components/layout/SaasMobileMenu";
 import NotificationBell from "@/components/NotificationBell";
 import SessionMenu from "@/components/SessionMenu";
 import { createTranslator } from "@/lib/i18n/messages";
@@ -22,42 +25,66 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
   const locale = await getRequestLocale();
   const t = createTranslator(locale);
 
-  const adminLinks: SaasMobileMenuLink[] = [
-    { href: "/admin", label: t("admin.nav.dashboard") },
-    { href: "/admin/onboarding", label: t("admin.nav.onboarding") },
-    { href: "/admin/people", label: t("admin.nav.people") },
-    { href: "/admin/departments", label: t("admin.nav.departments") },
-    { href: "/admin/positions", label: t("admin.nav.positions") },
-    { href: "/admin/approval-executions", label: t("admin.nav.approvals") },
-    { href: "/admin/kpi", label: t("admin.nav.kpi") },
-    { href: "/admin/analytics", label: t("admin.nav.analytics") },
-    { href: "/admin/attendance-live", label: t("admin.nav.attendanceLive") },
-    { href: "/admin/attendance-live?focus=aggregate", label: t("admin.nav.aggregates") },
-    { href: "/admin/leave-accrual", label: t("admin.nav.leaveAccrual") },
-    { href: "/admin/leave-policies", label: t("admin.nav.leavePolicy") },
-    { href: "/admin/approval-escalation-settings", label: t("admin.nav.approvalEscalationSettings") },
-    { href: "/admin/leave-promotion-email", label: t("admin.nav.leavePromotionEmail") },
-    { href: "/admin/attendance-security", label: t("admin.nav.attendanceSecurity") },
-    { href: "/admin/operator-alerts", label: t("admin.nav.operatorAlerts") },
-    { href: "/admin/notification-defaults", label: t("admin.nav.notificationDefaults") },
-    { href: "/admin/feature-management", label: t("admin.nav.featureManagement") },
-    { href: "/admin/leave-calendar", label: t("admin.nav.leaveCalendar") },
-    { href: "/admin/scheduling", label: t("admin.nav.scheduling") },
-    { href: "/admin/notices", label: t("admin.nav.notices") },
-    { href: "/admin/benefits", label: t("admin.nav.benefits") },
-    { href: "/admin/recruitment", label: t("admin.nav.recruitment") },
-    { href: "/admin/payroll-close", label: t("admin.nav.payrollClose") },
-    { href: "/admin/payroll-close?focus=all", label: t("admin.nav.payroll") },
-    { href: "/admin/payroll-payslip-delivery", label: t("admin.nav.payslipDelivery") },
-    { href: "/admin/payroll-insurance", label: t("admin.nav.insurance") },
-    { href: "/admin/payroll-year-end", label: t("admin.nav.yearEnd") },
-    { href: "/admin/payroll-year-end-filing", label: t("admin.nav.yearEndFiling") },
-    { href: "/admin/contracts", label: t("admin.nav.contracts") },
-    { href: "/admin/approval-policy", label: t("admin.nav.approvalPolicy") },
-    { href: "/admin/settings", label: t("admin.nav.settings") },
-    { href: "/admin/audit-logs", label: t("admin.nav.auditLogs") },
-    { href: "/admin/reports", label: t("admin.nav.reports") }
+  const navSections: SaasMobileMenuSection[] = [
+    {
+      title: t("admin.navGroup.controlTower"),
+      links: [
+        { href: "/admin", label: t("admin.nav.dashboard") },
+        { href: "/admin/approval-executions", label: t("admin.nav.approvals") },
+        { href: "/admin/kpi", label: t("admin.nav.kpi") },
+        { href: "/admin/analytics", label: t("admin.nav.analytics") }
+      ]
+    },
+    {
+      title: t("admin.navGroup.peopleAndPolicy"),
+      links: [
+        { href: "/admin/onboarding", label: t("admin.nav.onboarding") },
+        { href: "/admin/people", label: t("admin.nav.people") },
+        { href: "/admin/departments", label: t("admin.nav.departments") },
+        { href: "/admin/positions", label: t("admin.nav.positions") },
+        { href: "/admin/approval-policy", label: t("admin.nav.approvalPolicy") },
+        { href: "/admin/leave-policies", label: t("admin.nav.leavePolicy") }
+      ]
+    },
+    {
+      title: t("admin.navGroup.operations"),
+      links: [
+        { href: "/admin/attendance-live", label: t("admin.nav.attendanceLive") },
+        { href: "/admin/leave-accrual", label: t("admin.nav.leaveAccrual") },
+        { href: "/admin/leave-calendar", label: t("admin.nav.leaveCalendar") },
+        { href: "/admin/scheduling", label: t("admin.nav.scheduling") },
+        { href: "/admin/notices", label: t("admin.nav.notices") },
+        { href: "/admin/benefits", label: t("admin.nav.benefits") },
+        { href: "/admin/recruitment", label: t("admin.nav.recruitment") },
+        { href: "/admin/contracts", label: t("admin.nav.contracts") }
+      ]
+    },
+    {
+      title: t("admin.navGroup.payrollAndFiling"),
+      links: [
+        { href: "/admin/payroll-close", label: t("admin.nav.payrollClose") },
+        { href: "/admin/payroll-payslip-delivery", label: t("admin.nav.payslipDelivery") },
+        { href: "/admin/payroll-insurance", label: t("admin.nav.insurance") },
+        { href: "/admin/payroll-year-end", label: t("admin.nav.yearEnd") },
+        { href: "/admin/payroll-year-end-filing", label: t("admin.nav.yearEndFiling") }
+      ]
+    },
+    {
+      title: t("admin.navGroup.settingsAndReporting"),
+      links: [
+        { href: "/admin/approval-escalation-settings", label: t("admin.nav.approvalEscalationSettings") },
+        { href: "/admin/leave-promotion-email", label: t("admin.nav.leavePromotionEmail") },
+        { href: "/admin/attendance-security", label: t("admin.nav.attendanceSecurity") },
+        { href: "/admin/operator-alerts", label: t("admin.nav.operatorAlerts") },
+        { href: "/admin/notification-defaults", label: t("admin.nav.notificationDefaults") },
+        { href: "/admin/feature-management", label: t("admin.nav.featureManagement") },
+        { href: "/admin/settings", label: t("admin.nav.settings") },
+        { href: "/admin/audit-logs", label: t("admin.nav.auditLogs") },
+        { href: "/admin/reports", label: t("admin.nav.reports") }
+      ]
+    }
   ];
+  const adminLinks: SaasMobileMenuLink[] = navSections.flatMap((section) => section.links);
 
   const mobileFooterLinks: SaasMobileMenuLink[] = [{ href: "/employee", label: t("admin.nav.employeePortal") }];
   if (showDevTools) {
@@ -75,6 +102,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
         menuLabel={t("shell.mobileMenu")}
         navAriaLabel={t("admin.nav.aria")}
         navLinks={adminLinks}
+        navSections={navSections}
         footerLinks={mobileFooterLinks}
       />
       <div className="saas-shell">
@@ -85,10 +113,17 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
           </div>
 
           <nav className="saas-nav" aria-label={t("admin.nav.aria")}>
-            {adminLinks.map((item) => (
-              <Link key={item.href} href={item.href}>
-                {item.label}
-              </Link>
+            {navSections.map((section) => (
+              <div key={section.title} className="saas-nav-section">
+                <p className="saas-nav-section-title">{section.title}</p>
+                <div className="saas-nav-link-list">
+                  {section.links.map((item) => (
+                    <Link key={item.href} href={item.href}>
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
             ))}
           </nav>
 
