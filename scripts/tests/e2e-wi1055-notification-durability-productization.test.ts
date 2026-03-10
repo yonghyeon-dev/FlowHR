@@ -7,7 +7,7 @@ function readUtf8(...parts: string[]) {
 }
 
 async function run() {
-  const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavigation = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const workspaceHubs = readUtf8("src", "app", "admin", "page-workspace-hubs.ts");
   const adminPage = readUtf8("src", "app", "admin", "notification-defaults", "page.tsx");
   const employeePage = readUtf8("src", "app", "employee", "notifications", "settings", "page.tsx");
@@ -35,7 +35,7 @@ async function run() {
   );
   assert.ok(existsSync(migrationPath), "notification durability migration must exist");
 
-  assert.match(adminLayout, /href: "\/admin\/notification-defaults"/);
+  assert.match(adminNavigation, /href: "\/admin\/notification-defaults"/);
   assert.match(workspaceHubs, /href: "\/admin\/notification-defaults"/);
   assert.match(adminPage, /path: "\/api\/admin\/notification-defaults"/);
   assert.match(employeePage, /path: "\/api\/employee\/notification-preferences"/);

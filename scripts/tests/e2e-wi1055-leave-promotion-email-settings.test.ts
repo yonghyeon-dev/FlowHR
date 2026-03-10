@@ -7,7 +7,7 @@ function readUtf8(...parts: string[]) {
 }
 
 async function run() {
-  const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavigation = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const workspaceHubs = readUtf8("src", "app", "admin", "page-workspace-hubs.ts");
   const page = readUtf8("src", "app", "admin", "leave-promotion-email", "page.tsx");
   const route = readUtf8("src", "app", "api", "admin", "leave-promotion-email-settings", "route.ts");
@@ -31,7 +31,7 @@ async function run() {
   assert.ok(existsSync(join(process.cwd(), "src", "app", "api", "admin", "leave-promotion-email-settings", "route.ts")));
   assert.ok(existsSync(migrationPath), "leave promotion email settings migration must exist");
 
-  assert.match(adminLayout, /href: "\/admin\/leave-promotion-email"/);
+  assert.match(adminNavigation, /href: "\/admin\/leave-promotion-email"/);
   assert.match(workspaceHubs, /href: "\/admin\/leave-promotion-email"/);
   assert.match(page, /path: "\/api\/admin\/leave-promotion-email-settings"/);
   assert.match(route, /defaultTemplateId/);

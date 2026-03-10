@@ -7,7 +7,7 @@ function readUtf8(...parts: string[]) {
 }
 
 async function run() {
-  const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavigation = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const workspaceHubs = readUtf8("src", "app", "admin", "page-workspace-hubs.ts");
   const page = readUtf8("src", "app", "admin", "operator-alerts", "page.tsx");
   const route = readUtf8("src", "app", "api", "admin", "operator-alerts", "route.ts");
@@ -30,7 +30,7 @@ async function run() {
   assert.ok(existsSync(join(process.cwd(), "src", "app", "api", "admin", "operator-alerts", "route.ts")));
   assert.ok(existsSync(migrationPath), "operator alert webhook migration must exist");
 
-  assert.match(adminLayout, /href: "\/admin\/operator-alerts"/);
+  assert.match(adminNavigation, /href: "\/admin\/operator-alerts"/);
   assert.match(workspaceHubs, /href: "\/admin\/operator-alerts"/);
   assert.match(page, /path: "\/api\/admin\/operator-alerts"/);
   assert.match(route, /approvalEscalation/);

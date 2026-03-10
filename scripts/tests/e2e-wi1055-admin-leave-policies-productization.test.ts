@@ -7,7 +7,7 @@ function readUtf8(...parts: string[]) {
 }
 
 async function run() {
-  const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavigation = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const workspaceHubs = readUtf8("src", "app", "admin", "page-workspace-hubs.ts");
   const workItem = readUtf8("work-items", "WI-1055-admin-operational-settings-productization.md");
   const progress = readUtf8("docs", "production-operating-progress.md");
@@ -17,7 +17,7 @@ async function run() {
 
   const page = readUtf8("src", "app", "admin", "leave-policies", "page.tsx");
 
-  assert.match(adminLayout, /href: "\/admin\/leave-policies"/, "admin nav should expose the leave policies page");
+  assert.match(adminNavigation, /href: "\/admin\/leave-policies"/, "admin nav should expose the leave policies page");
   assert.match(
     workspaceHubs,
     /href: "\/admin\/leave-policies"/,

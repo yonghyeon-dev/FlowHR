@@ -7,7 +7,7 @@ function readUtf8(...parts: string[]) {
 }
 
 async function run() {
-  const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavigation = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const workspaceHubs = readUtf8("src", "app", "admin", "page-workspace-hubs.ts");
   const messages = readUtf8("src", "lib", "i18n", "messages.ts");
   const page = readUtf8("src", "app", "admin", "feature-management", "page.tsx");
@@ -34,7 +34,7 @@ async function run() {
   assert.ok(existsSync(join(process.cwd(), "src", "app", "api", "admin", "feature-management", "route.ts")));
   assert.ok(existsSync(migrationPath), "feature management migration must exist");
 
-  assert.match(adminLayout, /href: "\/admin\/feature-management"/);
+  assert.match(adminNavigation, /href: "\/admin\/feature-management"/);
   assert.match(workspaceHubs, /href: "\/admin\/feature-management"/);
   assert.match(messages, /admin\.nav\.featureManagement/);
   assert.match(page, /path: "\/api\/admin\/feature-management"/);
