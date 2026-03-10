@@ -11,10 +11,12 @@ import { apiClientFetch, parseApiResponseBody } from "@/lib/api-client";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import {
+  formatAdminSessionConnectionState,
   formatActorRoleLabel,
   formatApprovalDomainLabel,
   formatApprovalEntityTypeLabel,
   formatApprovalStageResolutionLabel,
+  formatWorkspaceConnectionState,
   formatUserFacingErrorMessage
 } from "@/lib/product-language";
 
@@ -203,8 +205,10 @@ export default function AdminApprovalHistoryPage() {
           <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
           {showDevTools ? (
             <p className="small muted">
-              {copy.filters.organizationId}: <code>{organizationId || "-"}</code> / {copy.filters.adminActorId}:{" "}
-              <code>{adminActorId || "-"}</code>
+              {copy.filters.organizationId}:{" "}
+              <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong> /{" "}
+              {copy.filters.adminActorId}:{" "}
+              <strong>{formatAdminSessionConnectionState(Boolean(adminActorId.trim()), runtimeLocale)}</strong>
             </p>
           ) : null}
           <label>

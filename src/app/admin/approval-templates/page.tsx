@@ -20,7 +20,9 @@ import { apiClientFetch, parseApiResponseBody } from "@/lib/api-client";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import {
+  formatAdminSessionConnectionState,
   formatActorRoleLabel,
+  formatWorkspaceConnectionState,
   formatUserFacingErrorMessage
 } from "@/lib/product-language";
 
@@ -254,8 +256,10 @@ export default function AdminApprovalTemplatesPage() {
           <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
           {showDevTools ? (
             <p className="small muted">
-              {copy.context.organizationId}: <code>{organizationId || "-"}</code> / {copy.context.adminActorId}:{" "}
-              <code>{adminActorId || "-"}</code>
+              {copy.context.organizationId}:{" "}
+              <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong> /{" "}
+              {copy.context.adminActorId}:{" "}
+              <strong>{formatAdminSessionConnectionState(Boolean(adminActorId.trim()), runtimeLocale)}</strong>
             </p>
           ) : null}
           <div className="panel-actions">
