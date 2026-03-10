@@ -33,7 +33,7 @@ Legend:
 | 34 | Year-end explanation labels | Year-end and withholding cards still expose `벡터 해시`, `사유 코드`, `정산 해시` style explanation labels | Summary cards use operator-facing explanation and 기준 wording | New -> WI-1066 |
 | 35 | Filing response catalog options | Response and rejection selectors still expose raw code values like `code - label` and `OTHER` | Catalog selectors show product labels without raw codes | New -> WI-1067 |
 | 36 | Withholding integrity traces | Withholding summary and copied metadata still expose raw finalization IDs and content-hash fragments | Product surfaces show human-readable completion state without internal integrity values | New -> WI-1068 |
-| 37 | Vercel production deploy stability | `next build` started failing with Vercel build OOM from `WI-1064` onward | Next production build scopes lint/typecheck to app source, uses memory-optimized webpack build settings, throttles worker concurrency, and deploys consistently on Vercel | Partial -> WI-1069, WI-1070, WI-1071 |
+| 37 | Vercel production deploy stability | `next build` started failing with Vercel build OOM from `WI-1064` onward | Next production build scopes lint/typecheck to app source, uses memory-optimized webpack build settings, throttles worker concurrency, isolates hidden `/ops` client surfaces from heavy route entrypoints, and deploys consistently on Vercel | Partial -> WI-1069, WI-1070, WI-1071, WI-1072 |
 
 ## B. External Notification Productization
 
