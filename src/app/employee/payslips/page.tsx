@@ -11,6 +11,7 @@ import {
   normalizeEmployeeIdForLocaleInput
 } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
+import { formatLoginSessionRequiredNotice } from "@/lib/product-language";
 import {
   type DeductionDescriptionMap,
   extractErrorMessage,
@@ -62,10 +63,7 @@ export default function EmployeePayslipsPage() {
 
   const showDevTools = isDevToolsEnabled();
   const isProductionRuntime = process.env.NODE_ENV === "production";
-  const productionSessionRequiredNotice =
-    locale === "ko"
-      ? "\ud504\ub85c\ub355\uc158\uc5d0\uc11c\ub294 \ub85c\uadf8\uc778 \uc138\uc158\uc774 \ud544\uc694\ud569\ub2c8\ub2e4. /login\uc5d0\uc11c \ub2e4\uc2dc \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694."
-      : "A login session is required in production. Please sign in again at /login.";
+  const productionSessionRequiredNotice = formatLoginSessionRequiredNotice(locale);
   const sourceContext =
     (searchParams.get("source") ?? "").trim().toLowerCase() === "employee-dashboard"
       ? "employee-dashboard"

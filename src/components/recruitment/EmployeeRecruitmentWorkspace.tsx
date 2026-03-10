@@ -24,6 +24,7 @@ import type {
 } from "@/features/recruitment/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import { formatLoginSessionRequiredNotice } from "@/lib/product-language";
 
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
@@ -34,10 +35,7 @@ export default function EmployeeRecruitmentWorkspace() {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
   const copy = resolveEmployeeRecruitmentCopy(locale);
-  const productionSessionRequiredNotice =
-    locale === "ko"
-      ? "\ud504\ub85c\ub355\uc158\uc5d0\uc11c\ub294 \ub85c\uadf8\uc778 \uc138\uc158\uc774 \ud544\uc694\ud569\ub2c8\ub2e4. /login\uc5d0\uc11c \ub2e4\uc2dc \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694."
-      : "A login session is required in production. Please sign in again at /login.";
+  const productionSessionRequiredNotice = formatLoginSessionRequiredNotice(locale);
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();

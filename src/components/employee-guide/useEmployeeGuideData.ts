@@ -13,6 +13,7 @@ import {
   employeeGuideProgressPercent
 } from "@/features/employee-guide/checklist";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
+import { formatLoginSessionRequiredNotice } from "@/lib/product-language";
 
 type AttendanceRecordLite = { id: string };
 type LeaveRequestLite = { id: string };
@@ -38,10 +39,9 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
 
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
-  const productionSessionRequiredNotice =
-    input.runtimeLocale === "ko-KR"
-      ? "프로덕션에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요."
-      : "A login session is required in production. Please sign in again at /login.";
+  const productionSessionRequiredNotice = formatLoginSessionRequiredNotice(
+    input.runtimeLocale === "ko-KR" ? "ko" : "en"
+  );
   const { snapshot: supabaseSession } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const employeeId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "EMP-1001").trim() || "EMP-1001";

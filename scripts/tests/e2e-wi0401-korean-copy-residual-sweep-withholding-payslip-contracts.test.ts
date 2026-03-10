@@ -54,6 +54,7 @@ function isAllowedKoAsciiToken(token: string) {
     /^FlowHR$/.test(token) ||
     /^EMP-\d+$/.test(token) ||
     /^EMP$/.test(token) ||
+    /^ko$/.test(token) ||
     /^u[0-9A-Fa-f]{4}$/.test(token)
   );
 }

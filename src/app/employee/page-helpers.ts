@@ -3,6 +3,10 @@ import type {
   RequestSearchScope,
   RequestSortOption
 } from "@/app/employee/page-types";
+import {
+  formatEmployeeNumberRequiredNotice,
+  formatLoginSessionRequiredNotice
+} from "@/lib/product-language";
 
 export function isDevToolsEnabled() {
   const raw = process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS ?? "";
@@ -16,13 +20,10 @@ export function toLocalInputValue(value: Date) {
 }
 
 export function resolveEmployeeProductionSessionNotices(isKoLocale: boolean) {
+  const locale = isKoLocale ? "ko" : "en";
   return {
-    loginSessionRequiredNotice: isKoLocale
-      ? "프로덕션에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요."
-      : "A login session is required in production. Please sign in again at /login.",
-    productionEmployeeIdRequiredNotice: isKoLocale
-      ? "운영 환경에서는 세션에 직원 번호가 필요합니다. /login에서 다시 로그인해 주세요."
-      : "In production, an employee number must be present in the session. Please sign in again at /login."
+    loginSessionRequiredNotice: formatLoginSessionRequiredNotice(locale),
+    productionEmployeeIdRequiredNotice: formatEmployeeNumberRequiredNotice(locale)
   };
 }
 

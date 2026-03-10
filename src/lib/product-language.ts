@@ -289,6 +289,18 @@ export function formatSignedInAccountLabel(email: string | null | undefined, loc
   return toLocaleKey(locale) === "ko" ? "로그인된 계정" : "Signed-in account";
 }
 
+export function formatLoginSessionRequiredNotice(locale: string) {
+  return toLocaleKey(locale) === "ko"
+    ? "로그인 상태를 확인할 수 없습니다. 다시 로그인한 뒤 이용해 주세요."
+    : "Your sign-in session could not be verified. Please sign in again.";
+}
+
+export function formatEmployeeNumberRequiredNotice(locale: string) {
+  return toLocaleKey(locale) === "ko"
+    ? "직원 번호를 확인할 수 없습니다. 다시 로그인한 뒤 이용해 주세요."
+    : "Your employee number could not be verified. Please sign in again.";
+}
+
 export function formatPublicEmployeeNumber(id: string | null | undefined) {
   const normalized = id?.trim() ?? "";
   if (!normalized) {
