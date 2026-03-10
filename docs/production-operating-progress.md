@@ -122,6 +122,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Closed `WI-1072` through the full GitHub flow and merged it to `main` as `cf6af29befaebb1f12a4a81163178760b27da63d`, then deleted the feature branch.
 - Re-verified `WI-1072` at deploy time and confirmed `vercel-production-deploy` still fails with the same `Restored build cache -> next build -> SIGKILL/OOM` pattern.
 - Started `WI-1073` to force a cold Vercel production deploy without reusing build cache.
+- Closed `WI-1073` through the full GitHub flow and merged it to `main` as `7e804760975bc5b1e679d9da36c7e7368da8b605`, then deleted the feature branch.
+- Re-verified `WI-1073` at deploy time and confirmed `vercel-production-deploy` returns to green when production deploy runs with a forced cold Vercel build.
+- Started `WI-1074` to remove the remaining raw parent and manager identifier fallback from the admin department-management surface.
 - Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
@@ -164,9 +167,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close `WI-1073` through the full GitHub flow and confirm the next `vercel-production-deploy` run completes successfully.
-2. If deploy OOM persists, cut workflow noise in `vercel-production-deploy` and inspect the next build hotspot.
-3. Resume production-surface cleanup after the deploy loop is stable again.
+1. Close `WI-1074` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
+2. Rescan remaining production admin surfaces for raw ID fallback after department-management cleanup.
+3. Resume the next production-surface cleanup slice from the updated inventory.
 
 ## 5. Blockers Or Watch Items
 
