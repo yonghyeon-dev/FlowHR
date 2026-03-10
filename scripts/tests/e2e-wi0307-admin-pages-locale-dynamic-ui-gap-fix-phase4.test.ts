@@ -69,7 +69,7 @@ async function run() {
   assert.doesNotMatch(adminApprovalExecutionsSurface, /Escalation Channel/);
 
   assert.match(adminPeoplePage, /const \{ locale \} = useI18n\(\);/);
-  assert.match(adminPeopleSurface, /Session organization/);
+  assert.match(adminPeopleSurface, /Workspace status/);
   assert.match(adminPeopleSurface, /Department filter/);
   assert.match(adminPeopleSurface, /Position filter/);
   assert.match(adminPeopleSurface, /Reset filters/);

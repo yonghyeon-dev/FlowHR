@@ -37,8 +37,8 @@ async function run() {
   assert.doesNotMatch(peopleFiltersPanel, /setOrganizationId/);
   assert.doesNotMatch(peopleFiltersPanel, /setAdminActorId/);
   assert.doesNotMatch(peopleFiltersPanel, /setAccessToken/);
-  assert.match(peopleFiltersPanel, /Session organization|세션 조직/);
-  assert.match(peopleFiltersPanel, /Session actor|세션 액터/);
+  assert.match(peopleFiltersPanel, /Workspace status|\uC791\uC5C5 \uACF5\uAC04 \uC0C1\uD0DC/);
+  assert.match(peopleFiltersPanel, /Admin session status|\uAD00\uB9AC\uC790 \uC138\uC158 \uC0C1\uD0DC/);
 
   assert.match(workItem, /WI-0618/i);
   assert.match(workItem, /dashboard|session|admin|people/i);
