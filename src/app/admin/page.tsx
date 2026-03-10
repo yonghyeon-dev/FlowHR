@@ -16,6 +16,7 @@ import {
   buildAdminDashboardFocusCards,
   summarizeAdminDashboardFocusCards
 } from "@/app/admin/page-focus-cards";
+import { buildAdminDashboardEntryLinks } from "@/app/admin/admin-shell-navigation";
 import { buildAdminQueueBadges } from "@/app/admin/page-queue-badges";
 import { buildAdminWorkspaceHubs } from "@/app/admin/page-workspace-hubs";
 import {
@@ -36,7 +37,7 @@ import { useI18n } from "@/lib/i18n/provider";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const resolveContractStepForRegression = resolveAdminContractDocumentNextStep;
   void resolveContractStepForRegression;
   const isKoLocale = locale === "ko";
@@ -285,6 +286,7 @@ export default function AdminDashboardPage() {
   }
 
   const workspaceHubs = buildAdminWorkspaceHubs(isKoLocale);
+  const dashboardEntryLinks = buildAdminDashboardEntryLinks(t);
   const dashboardQueueContextLinks = {
     approvalQueue: { href: "/admin/approval-executions?source=admin-dashboard" },
     approvalPending: { href: "/admin/approval-executions?state=PENDING&source=admin-dashboard" },
@@ -520,15 +522,11 @@ export default function AdminDashboardPage() {
             : "Use the dashboard for summary only and continue detailed work in dedicated routes."}
         </p>
         <div className="actions">
-          <Link className="btn btn-secondary" href="/admin/people">
-            {isKoLocale ? "인사 워크스페이스" : "People workspace"}
-          </Link>
-          <Link className="btn btn-secondary" href="/admin/scheduling">
-            {isKoLocale ? "근무 일정" : "Scheduling"}
-          </Link>
-          <Link className="btn btn-secondary" href="/admin/payroll-year-end">
-            {isKoLocale ? "연말정산" : "Year-end payroll"}
-          </Link>
+          {dashboardEntryLinks.map((entry) => (
+            <Link className="btn btn-secondary" href={entry.href} key={entry.key}>
+              {entry.label}
+            </Link>
+          ))}
         </div>
       </section>
 
