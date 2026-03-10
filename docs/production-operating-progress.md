@@ -98,6 +98,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Closed `WI-1061` through the full GitHub flow and merged it to `main` as `d9e6c66082ce63050e719cddc664ff1d82122e40`, then deleted the feature branch.
 - Re-verified the deployed `WI-1061` pass and confirmed `codex_test/results/prod-completed-items-reverify-2026-03-10T03-38-09-835Z` closes at `focus desktop 12/12`, `focus mobile 12/12`, `admin checks 8/8`, `failures 0`.
 - Started `WI-1062` to remove the remaining raw hash/ID/code traces from year-end and filing summaries, timelines, and success feedback.
+- Started `WI-1063` to rewrite remaining year-end filing operator labels, filter summaries, and response wording away from raw hash/ACK/submission key terminology.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI
@@ -139,8 +140,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close the current `WI-1062` year-end and filing surface humanization slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
-2. Re-scan remaining year-end / filing operator inputs for any still-visible raw guard terminology after `WI-1062`.
+1. Close the current `WI-1063` year-end filing operator-copy slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
+2. Re-scan remaining year-end / filing operator inputs for any still-visible raw guard terminology after `WI-1063`.
 3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 
 ## 5. Blockers Or Watch Items
