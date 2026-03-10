@@ -13,7 +13,7 @@ Inventory note:
 
 - This file remains the master gap list even after some mapped WI are merged.
 - Real-time merge, deploy, and next-wave status lives in `docs/production-operating-progress.md`.
-- UI/UX finish work should be tracked against Epic E in `docs/production-operating-plan.md` and then mapped back here when a slice becomes a concrete WI.
+- UI/UX gaps are now the primary organizing axis. Structural UX problems should be mapped to the active epics in `docs/production-operating-plan.md` first, then tracked back here when they become concrete WI slices.
 
 ## A. User-Facing Developer Trace And Technical Language
 

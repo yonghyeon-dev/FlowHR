@@ -2,233 +2,223 @@
 
 Last updated: 2026-03-11
 Owner: PM + Dev execution loop
-Primary goal: make FlowHR operationally credible for real production use.
+Primary goal: make FlowHR operationally credible by treating UI/UX as the organizing principle of the product, not a finishing layer.
 
 ## 1. Source Of Truth
 
 Use these documents in this order:
 
-1. This file for production target, scope, epics, and execution rules.
-2. `docs/production-operating-progress.md` for live status and the current wave.
-3. `docs/production-gap-inventory.md` for the detailed production gap list and WI mapping.
-4. `work-items/*` for implementation units.
-5. `ROADMAP.md` and `docs/execution-plan.md` for historical and governance context.
-6. `codex_test/results/prod-*` for production evidence only.
+1. This file for production target, epics, and execution rules.
+2. `docs/ui-ux-first-refactor-blueprint.md` for the large/medium/small refactor structure and contradiction map.
+3. `docs/production-operating-progress.md` for live status and the active wave.
+4. `docs/production-gap-inventory.md` for the detailed gap list and WI mapping.
+5. `work-items/*` for implementation units.
+6. `ROADMAP.md` and `docs/execution-plan.md` for historical and governance context.
+7. `codex_test/results/prod-*` for production evidence only.
 
-## 2. Production Bar
+## 2. Reframed Operating Goal
 
 FlowHR is production-ready only when all of the following are true:
 
-1. User-visible surfaces no longer expose internal IDs, enums, actor context, entity types, or developer-formatted payloads.
-2. Admin and employee core journeys complete end-to-end without manual data fixes or tenant mismatches.
-3. Operators can manage required settings through product UI instead of only environment variables.
-4. Navigation, messaging, date/time formatting, and feedback behave like a user-facing product, not an internal toolset.
+1. A customer can understand what the product is and who it is for from the UI alone.
+2. Admin and employee experiences feel like role-based views of one product, not two loosely joined apps.
+3. Permissions, tenant boundaries, navigation, messaging, and settings behave consistently with the mental model shown in the UI.
+4. User-facing surfaces no longer leak internal identifiers, technical wording, or developer-only recovery paths.
+5. Core journeys are reliable enough that the UI can be trusted as the source of action, not a shell over manual intervention.
 
-## 3. Active Epics
+## 3. Product Diagnosis
 
-### Epic A. User-Facing Developer Trace Removal
+The remaining issues are no longer best described as isolated bugs.
+
+The main contradictions are:
+
+1. UI/UX has been treated as polish, while the real problems are product-structure problems expressed through UI.
+2. Admin, employee, and internal ops concerns are still mixed in the product model and sometimes in the visible surface.
+3. Tenant, actor, employee, and organization concepts are not represented cleanly enough to support an intuitive SaaS mental model.
+4. Navigation and workspace behavior still reflect implementation convenience more than user intent.
+
+Because of that, FlowHR now needs a UI/UX-led refactor plan, not only a finish pass.
+
+## 4. Active Epics
+
+### Epic A. UI/UX-Led Product Structure Reset
 
 Problem:
 
-- Internal IDs, raw enums, technical labels, and developer payloads are still exposed in production UI and external notifications.
+- The current product shell, route split, and workspace patterns do not reflect a clean SaaS mental model for customer admins and employees.
 
 Scope:
 
-- Approval queue titles and reasons
-- Employee profile metadata
-- People history/compare panels
-- Reports tables
-- Notification type labels
-- Audit logs
-- Approval escalation UI copy
-- Discord/Slack webhook message formatting
+- Clarify the top-level product shape
+- Reassess `/admin`, `/employee`, and hidden `/ops` boundaries
+- Standardize shared workspace patterns
+- Reduce UI behaviors that exist only because of current implementation constraints
 
 Exit criteria:
 
-1. No raw CUID, employeeId, organizationId, entityId, enum, or developer placeholder is shown in user/admin surfaces unless explicitly intended for operators.
-2. External notifications use human-readable subject, actor, state, and action links.
-3. Technical errors shown to users are replaced with localized product messages.
+1. The product has a clear shell and role-based experience model.
+2. Visible navigation maps to stable destinations and understandable product areas.
+3. Shared workspace states feel consistent across notices, benefits, recruitment, contracts, payroll, and approvals.
 
-### Epic B. Core Journey Reliability
+### Epic B. Role, Tenant, And Permission Model Realignment
 
 Problem:
 
-- Several core write and read/write journeys still fail or behave inconsistently in production.
+- Platform operator, customer admin, and employee concerns are not cleanly separated in the current domain and routing model.
 
 Scope:
 
-- Notice creation payload mismatch
-- Year-end and filing `409` conflict flows
-- Contracts initial session race
-- Admin/employee tenant mismatch
-- Any remaining broken admin/employee direct journeys found during production verification
+- Define platform operator vs customer admin vs employee responsibilities
+- Align tenant membership, acting role, and permission checks
+- Remove UI behaviors that imply the wrong ownership boundary
+- Resolve customer-admin to employee data flow mismatches
 
 Exit criteria:
 
-1. Admin-created entities are visible to the correct employee tenant and role journey.
-2. Notice creation works for immediate publish and scheduled publish.
-3. Year-end settlement, filing, and receipt journeys either complete successfully or show product-grade recoverable guidance.
-4. Contracts pages do not emit first-load unauthorized requests.
+1. The product makes it clear who is acting and for which company context.
+2. Admin-created entities appear in the correct customer-admin and employee journeys.
+3. Ops-only controls are not presented as customer-product affordances.
 
-### Epic C. Information Architecture And Navigation Hardening
+### Epic C. User-Facing Trust And Language Cleanup
 
 Problem:
 
-- Employee navigation depends too heavily on fragile `?focus=` and hash jumping. Some admin shortcuts and dead links have also been unreliable.
+- Internal IDs, raw enums, technical wording, and inconsistent formatting still break trust on visible surfaces.
 
 Scope:
 
-- Employee direct `?focus=` deep links
-- Employee client-side section jumps
-- Mobile hash anchors
-- Admin hash shortcuts
-- Removal or redesign of routes that are not meaningful in production
+- Developer trace removal
+- Human-readable labels and summaries
+- Localized date/time/status rendering
+- Product-grade recovery and error language
+- External notification wording
 
 Exit criteria:
 
-1. Every visible navigation entry lands on a stable destination.
-2. Employee dashboard sections either become robust deep links or are promoted to clearer dedicated routes.
-3. Production does not expose dead or policy-hidden routes as active product entry points.
+1. Korean user-facing surfaces read like a product, not a console.
+2. No raw internal identifiers or technical payload language remain on customer-facing surfaces unless intentionally operator-only.
+3. Confirmation, success, warning, and recovery language are consistent.
 
-### Epic D. Admin Operational Controls Productization
+### Epic D. Core Journey Reliability As UX Trust
 
 Problem:
 
-- Critical operating settings still live in env vars or API-only surfaces.
+- Reliability issues are not separate from UX; they directly break the credibility of the product experience.
+
+Scope:
+
+- Notice creation reliability
+- Year-end and filing conflict recovery
+- Contracts bootstrap/session race
+- Remaining broken direct journeys
+- Write-action feedback and recovery behavior
+
+Exit criteria:
+
+1. Core journeys complete without hidden manual fixes.
+2. Recoverable conflicts show product-grade guidance.
+3. First-load and first-action behavior is stable on production journeys.
+
+### Epic E. Admin Operational Controls Productization
+
+Problem:
+
+- Critical day-2 operating controls still depend on env vars or API-only surfaces.
 
 Scope:
 
 - Webhook configuration
-- Escalation policy thresholds
+- Escalation thresholds
 - Email notification settings
-- Feature flags with operator ownership
+- Feature management boundaries
 - Leave policy management UI
-- Attendance security settings such as GPS and geofence
+- Attendance security settings
 - Employee notification defaults and durable preferences
 
 Exit criteria:
 
-1. Required day-2 operational settings are manageable in admin UI or are explicitly classified as ops-only.
-2. Settings persist in durable storage and affect runtime behavior.
-3. Hidden ops-only controls are not leaked into user-facing navigation.
-
-### Epic E. UX And Localization Finish
-
-Problem:
-
-- Product polish is uneven across copy, feedback, confirmation, date formatting, and interaction response.
-
-Scope:
-
-- ISO timestamps in UI and notifications
-- English headings or enums in Korean surfaces
-- Missing toast or success feedback
-- Unsafe immediate actions without confirmation
-- JSON payload copy behaviors
-- Dev tool remnants in employee surfaces
-
-Exit criteria:
-
-1. Korean user-facing surfaces use Korean product language consistently.
-2. All meaningful write actions provide clear confirmation and success/failure feedback.
-3. Dates and times render in user-facing locale formats.
-
-Execution track:
-
-1. Remove trust-breaking UX first:
-   - missing confirmation before destructive or irreversible actions
-   - missing success/error feedback after write actions
-   - empty states that look broken
-2. Normalize user-facing wording:
-   - Korean headings
-   - localized date/time formatting
-   - human-readable status labels
-3. Simplify interaction flows:
-   - reduce fragile deep-link-only entry points
-   - prefer stable dedicated routes when a section behaves like a page
-4. Finish cross-device consistency:
-   - mobile anchor/section movement
-   - responsive navigation and sticky action behavior
+1. Required customer-admin controls exist in admin UI or are explicitly classified as ops-only.
+2. Settings persist durably and affect runtime behavior.
+3. Product navigation does not leak hidden ops-only controls.
 
 ### Epic F. CI Hardening
 
-Status: deferred until product surface and journey issues are under control.
+Status: deferred until the product model and top-priority user-facing contradictions are materially reduced.
 
 Reason:
 
-- CI is alive, but current gaps are more product-surface and operational-model issues than broken pipeline execution.
+- The biggest risks are still product-shape, journey, and trust problems rather than missing pipeline execution.
 
 When to start:
 
-- After Epics A to C are materially reduced and core production journeys stabilize.
+- After Epics A to D have reduced the current structural churn.
 
-## 4. Initial Work Bundles
+## 5. Execution Order
 
-### Bundle 1. Production Surface Sanitization
+### Wave 1. UI/UX-Critical Structure
 
-- Convert the 30-item developer-trace audit into WI bundles by surface.
-- Fix the highest-risk P0 exposures first:
-  - approval queue
-  - employee profile
-  - employee status labels
-  - notification types
-  - Discord/Slack escalation messages
+- Reframe the product around user-visible role boundaries first.
+- Identify where the current route split or section-jump model conflicts with actual user intent.
+- Stop treating IA and role confusion as polish issues.
 
-### Bundle 2. Reliability Recovery
+### Wave 2. Trust Recovery
 
-- Resolve notice creation payload mismatch.
-- Resolve tenant mismatch between admin-generated data and employee consumption.
-- Resolve contracts first-load session race.
-- Reassess year-end and filing `409` flows after tenant and state fixes.
+- Remove remaining developer trace and technical language.
+- Standardize confirmation, success, warning, and recovery feedback.
+- Normalize date/time/status language.
 
-### Bundle 3. Navigation Simplification
+### Wave 3. Journey And Model Alignment
 
-- Close remaining desktop focus deep-link failures.
-- Remove or redesign fragile deep-link-only IA.
-- Verify every visible admin and employee navigation target.
+- Resolve tenant/role mismatches that break admin-to-employee flow continuity.
+- Simplify deep-link and section-jump dependence where those flows behave like pages.
+- Align workspace interaction patterns across major surfaces.
 
-### Bundle 4. Admin Settings Productization
+### Wave 4. Operational Productization
 
-- Define which env-backed settings must move into `/admin/settings`.
-- Split true ops-only controls from customer-admin controls.
-- Implement durable settings and safe defaults.
+- Move required operator settings into admin UI.
+- Separate customer-admin controls from platform-ops controls.
+- Lock down any remaining policy-hidden routes or internal-only affordances.
 
-### Bundle 5. UI/UX Finish Track
+## 6. Current Work Bundles
 
-- Standardize confirmation, toast, and recovery feedback across employee/admin write actions.
-- Normalize Korean copy, date/time formatting, and status wording on remaining mixed-language surfaces.
-- Revisit employee self-service IA where sections still behave like hidden subpages.
-- Re-check mobile/desktop parity after each UX slice so navigation and feedback stay consistent across devices.
+### Bundle 1. UI/UX-First Roadmap Reset
 
-## 5.1 UI/UX Finish Plan
+- Reposition UI/UX from finish-track to top-level organizing principle.
+- Rewrite the operating documents so structural refactors become first-class work.
+- Reclassify existing gaps by whether they are structural, trust, reliability, or ops-productization problems.
+- Anchor future work to `docs/ui-ux-first-refactor-blueprint.md`.
 
-Treat Epic E as a rolling finish track, not a single cleanup ticket.
+### Bundle 2. Role And IA Refactor Seed
 
-Wave 1. Trust and recovery feedback
+- Define the intended product shell and role model.
+- Identify where `/admin`, `/employee`, and `/ops` do not match the intended experience.
+- Select the first refactor seam that can improve structure without a large unsafe rewrite.
+- Carry the visual design and density rules from `docs/ui-ux-first-refactor-blueprint.md` into the first shell-level refactor instead of treating design as a later pass.
 
-- Add confirmation before destructive or irreversible actions.
-- Standardize success, warning, and recovery feedback after write actions.
-- Replace broken-looking empty states with clear guidance and next actions.
+### Bundle 3. Trust Surface Cleanup
 
-Wave 2. Product language and localization
+- Continue targeted cleanup only when it clearly supports the new structure.
+- Prefer shared language/state primitives over one-off copy fixes.
+- Keep removing trust-breaking raw identifiers and technical wording.
 
-- Remove remaining mixed Korean/English headings and enum leakage.
-- Normalize date/time, status, and summary wording to user-facing Korean product language.
-- Replace technical fallback messages with recovery-oriented copy.
+### Bundle 6. Visual Design Systemization
 
-Wave 3. Flow and IA simplification
+- Define the shared admin/employee shell and layout rhythm.
+- Lock the product mood, density strategy, context-panel behavior, and mobile-first layout rules.
+- Use `HRWIRE` as reference input only where it supports the target product model.
 
-- Reduce fragile deep-link-only entry points.
-- Promote sections that behave like full pages into clearer dedicated routes when needed.
-- Revisit dashboards and hubs where hidden subpages still create navigation ambiguity.
+### Bundle 4. Journey Reliability Recovery
 
-Wave 4. Cross-device parity
+- Close reliability gaps that block credible user action.
+- Treat error handling and recovery UI as part of journey design.
+- Re-verify production flows after each merged slice.
 
-- Re-check mobile anchor and section movement after each UX slice.
-- Align sticky actions, navigation affordances, and feedback surfaces between desktop and mobile.
-- Close parity gaps only after the corresponding desktop product flow is already stable.
+### Bundle 5. Admin Controls Productization
 
-## 6. Delivery Rules
+- Keep productizing operator settings that must be customer-admin visible.
+- Explicitly classify anything that remains ops-only.
+
+## 7. Delivery Rules
 
 Implementation must follow the verified repo process:
 
@@ -238,12 +228,13 @@ Implementation must follow the verified repo process:
 4. Open a PR with the required template and traceability.
 5. Pass CI.
 6. Merge to `main`.
-7. Verify on the actual deployed production site.
-8. Update `docs/production-operating-progress.md`.
+7. Confirm `main` CI and `vercel-production-deploy` are green.
+8. Delete the remote feature branch and return local checkout to `main`.
+9. Update `docs/production-operating-progress.md`.
 
-## 7. Decision Rules
+## 8. Decision Rules
 
-1. Do not add new surface area while a higher-priority production defect remains in the same flow.
-2. Prefer deleting dead product entry points over preserving broken routes.
-3. Prefer UI productization for operator settings when customer operations depend on them.
+1. If a UI/UX issue reveals a product-model contradiction, treat it as a structural problem first.
+2. Prefer removing or redesigning misleading product entry points over preserving broken affordances.
+3. Prefer shared interaction and language primitives over repeated screen-level cleanup.
 4. Evidence belongs in `codex_test/results`; planning belongs in `docs/production-operating-*`.

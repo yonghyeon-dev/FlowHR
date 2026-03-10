@@ -5,7 +5,7 @@ Status: active
 
 ## 1. Current Phase
 
-Phase 1: keep the compact execution system accurate while remaining production-hardening and UX-finish slices close.
+Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution axis and structural refactors are planned beneath it.
 
 ## 2. Completed In This Wave
 
@@ -230,9 +230,9 @@ Phase 1: keep the compact execution system accurate while remaining production-h
 
 ## 4. Next Queue
 
-1. Expand the Wave 1 trust-and-recovery cleanup to adjacent admin/employee write surfaces after the admin notices slice lands.
-2. Start `work-items/WI-1100-ui-ux-wave2-date-time-and-status-localization.md` for date/time formatting and remaining mixed-language status labels.
-3. Revisit IA simplification after the first Wave 1 UX surfaces stabilize.
+1. Close `WI-1101` so the operating documents and execution order explicitly treat UI/UX as the organizing principle.
+2. Lock the visual design and interaction principles into `docs/ui-ux-first-refactor-blueprint.md` so structure and design move together.
+3. Re-scope `WI-1100` and the next structural WI from the blueprint, not from the old finish-track model.
 
 ## 5. Blockers Or Watch Items
 
@@ -254,3 +254,9 @@ Latest verification evidence:
 - `codex_test/results/prod-completed-items-reverify-2026-03-09T13-37-17-634Z/REPORT.md`
 - `codex_test/results/prod-completed-items-reverify-2026-03-09T14-59-52-362Z/REPORT.md`
 - `codex_test/results/prod-completed-items-reverify-2026-03-10T03-38-09-835Z/REPORT.md`
+
+Latest planning reset:
+
+- Started `WI-1101` to reposition UI/UX from a finish track to the central operating principle and to move role/tenant/IA refactoring into the active execution order.
+- Added `docs/ui-ux-first-refactor-blueprint.md` so contradictions, refactor categories, dependency rules, and next WI candidates are explicit before the next implementation wave starts.
+- Integrated the visual design system direction into the same blueprint so layout model, density, mobile behavior, and HRWIRE adoption rules are fixed before the next shell refactor.
