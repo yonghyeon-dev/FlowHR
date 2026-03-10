@@ -2,6 +2,7 @@ import type { OrganizationSummary } from "@/app/admin/page-types";
 import type { SupabaseSessionSnapshot } from "@/lib/client/useSupabaseSession";
 import {
   formatActorRoleLabel,
+  formatOrganizationDisplayName,
   formatUserFacingErrorMessage
 } from "@/lib/product-language";
 
@@ -49,6 +50,7 @@ export function AdminOnboardingAccountPanels({
   onAccessTokenChange
 }: AdminOnboardingAccountPanelsProps) {
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
+  const selectedOrganizationLabel = formatOrganizationDisplayName(organizationName, runtimeLocale);
 
   return (
     <>
@@ -61,7 +63,7 @@ export function AdminOnboardingAccountPanels({
         </p>
         {organizationId.trim() ? (
           <p className="small">
-            {isKoLocale ? "현재 선택 조직" : "Current organization"}: <strong>{organizationName.trim() || organizationId.trim()}</strong>
+            {isKoLocale ? "현재 선택 조직" : "Current organization"}: <strong>{selectedOrganizationLabel}</strong>
           </p>
         ) : null}
 
@@ -147,12 +149,12 @@ export function AdminOnboardingAccountPanels({
                 <input value={adminActorId} onChange={(event) => onAdminActorIdChange(event.target.value)} />
               </label>
               <label className="full">
-                {isKoLocale ? "Bearer 액세스 토큰(재정의)" : "Bearer access token (override)"}
+                {isKoLocale ? "Bearer 액세스 토큰(수정용)" : "Bearer access token (override)"}
                 <textarea
                   rows={3}
                   placeholder={
                     isKoLocale
-                      ? "비워두면 Dev Header(로컬) 또는 세션(Bearer)이 사용됩니다."
+                      ? "비워두면 Dev Header(로컬) 또는 세션(Bearer)을 사용합니다."
                       : "If empty, Dev Header (local) or session (Bearer) will be used."
                   }
                   value={accessToken}
@@ -161,7 +163,7 @@ export function AdminOnboardingAccountPanels({
               </label>
             </div>
             <p className="small muted" style={{ marginTop: 10 }}>
-              {isKoLocale ? "런타임 Supabase URL" : "Runtime Supabase URL"}: <code>{supabaseUrl}</code>
+              {isKoLocale ? "현재 Supabase URL" : "Runtime Supabase URL"}: <code>{supabaseUrl}</code>
             </p>
           </details>
         ) : null}

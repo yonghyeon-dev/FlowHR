@@ -41,6 +41,7 @@ Legend:
 | 42 | Admin attendance live surface | Attendance live table falls back to raw `employeeId` when employee name is missing | Employee name and public employee number only, never raw internal employee identifiers | New -> WI-1078 |
 | 43 | Admin payroll confirmation surface | Payroll confirmation panel exposes raw `Run ID` wording and free-text internal run selection | Human-readable preview selection by period, state, and public employee number only | New -> WI-1079 |
 | 44 | Admin invite workspace surface | Invite panel exposes raw target-organization input even though workspace selection already lives in onboarding | Invite panel uses the selected workspace context and product wording only, never raw organization editing | New -> WI-1080 |
+| 45 | Admin organization fallback surface | Onboarding and people views fall back to raw organization, department, and position IDs when catalog names are missing | User-facing fallback labels should stay human-readable and never expose raw IDs | New -> WI-1081 |
 
 ## B. External Notification Productization
 
@@ -113,3 +114,4 @@ Legend:
 21. WI-1078 admin attendance live surface humanization
 22. WI-1079 admin payroll confirmation surface humanization
 23. WI-1080 admin invite workspace productization
+24. WI-1081 admin organization fallback humanization
