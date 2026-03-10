@@ -13,7 +13,7 @@ function countLines(source: string) {
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "scheduling", "page.tsx");
   const employeePage = readUtf8("src", "app", "employee", "schedule", "page.tsx");
-  const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const employeeLayout = readUtf8("src", "app", "employee", "layout.tsx");
   const messages = readUtf8("src", "lib", "i18n", "messages.ts");
   const adminWorkspace = readUtf8("src", "components", "scheduling", "AdminSchedulingWorkspace.tsx");
@@ -33,8 +33,8 @@ async function run() {
   );
   assert.match(employeePage, /import EmployeeScheduleBoard from "@\/components\/scheduling\/EmployeeScheduleBoard";/);
 
-  assert.match(adminLayout, /href: "\/admin\/scheduling"/);
-  assert.match(adminLayout, /t\("admin\.nav\.scheduling"\)/);
+  assert.match(adminNavSource, /\/admin\/scheduling/);
+  assert.match(adminNavSource, /admin\.nav\.scheduling/);
   assert.match(employeeLayout, /href: "\/employee\/schedule"/);
   assert.match(employeeLayout, /t\("employee\.nav\.scheduleBoard"\)/);
 

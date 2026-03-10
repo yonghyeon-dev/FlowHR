@@ -10,7 +10,7 @@ function run() {
   const adminContractsPage = readUtf8("src", "app", "admin", "contracts", "page.tsx");
   const adminContractsWorkspace = readUtf8("src", "components", "contracts", "AdminContractsWorkspace.tsx");
   const contractsCopy = readUtf8("src", "components", "contracts", "copy.ts");
-  const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const globalCss = readUtf8("src", "app", "globals.css");
 
   assert.match(
@@ -66,7 +66,7 @@ function run() {
   );
 
   assert.match(
-    adminLayout,
+    adminNavSource,
     /\/admin\/contracts/,
     "admin nav should include contracts route"
   );

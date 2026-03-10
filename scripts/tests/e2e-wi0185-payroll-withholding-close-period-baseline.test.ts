@@ -49,7 +49,7 @@ async function run() {
   resetMemoryDataAccess();
   runtimeEnv.FLOWHR_PAYROLL_CLOSE_PERIOD_V1 = "true";
 
-  const adminLayoutSource = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const payrollClosePageSource = readUtf8("src", "app", "admin", "payroll-close", "page.tsx");
   const payrollCloseConsoleSource = readUtf8(
     "src",
@@ -61,7 +61,7 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
-  assert.match(adminLayoutSource, /\/admin\/payroll-close/, "admin nav should include payroll close route");
+  assert.match(adminNavSource, /\/admin\/payroll-close/, "admin nav should include payroll close route");
   assert.match(
     payrollClosePageSource,
     /PayrollClosePeriodConsole/,

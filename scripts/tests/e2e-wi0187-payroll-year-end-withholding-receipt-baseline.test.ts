@@ -50,7 +50,7 @@ async function run() {
   resetMemoryDataAccess();
   runtimeEnv.FLOWHR_PAYROLL_YEAR_END_V1 = "true";
 
-  const adminLayoutSource = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const employeeLayoutSource = readUtf8("src", "app", "employee", "layout.tsx");
   const adminPageSource = readUtf8("src", "app", "admin", "payroll-year-end", "page.tsx");
   const employeePageSource = readUtf8("src", "app", "employee", "withholding-receipt", "page.tsx");
@@ -71,7 +71,7 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
-  assert.match(adminLayoutSource, /\/admin\/payroll-year-end/, "admin nav should include payroll year-end route");
+  assert.match(adminNavSource, /\/admin\/payroll-year-end/, "admin nav should include payroll year-end route");
   assert.match(
     employeeLayoutSource,
     /\/employee\/withholding-receipt/,

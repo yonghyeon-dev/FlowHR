@@ -8,12 +8,13 @@ function readUtf8(...parts: string[]) {
 
 function run() {
   const adminLayoutSource = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavigationSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const mobileMenuSource = readUtf8("src", "components", "layout", "SaasMobileMenu.tsx");
 
   assert.match(
     adminLayoutSource,
-    /const navSections: SaasMobileMenuSection\[] = \[/,
-    "admin layout should define grouped navigation sections"
+    /buildAdminShellNavSections\(t\)/,
+    "admin layout should derive grouped navigation sections from the shared source"
   );
   assert.match(
     adminLayoutSource,
@@ -48,7 +49,7 @@ function run() {
   ];
 
   for (const route of requiredAdminRoutes) {
-    assert.equal(adminLayoutSource.includes(route), true, `admin shell should keep stable route ${route}`);
+    assert.equal(adminNavigationSource.includes(route), true, `admin shell should keep stable route ${route}`);
   }
 
   const requiredGroupKeys = [
@@ -60,7 +61,7 @@ function run() {
   ];
 
   for (const groupKey of requiredGroupKeys) {
-    assert.equal(adminLayoutSource.includes(groupKey), true, `admin layout should include group key ${groupKey}`);
+    assert.equal(adminNavigationSource.includes(groupKey), true, `admin shell source should include group key ${groupKey}`);
   }
 
   assert.match(

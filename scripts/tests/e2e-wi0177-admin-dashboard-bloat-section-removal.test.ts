@@ -9,6 +9,7 @@ function readUtf8(...parts: string[]) {
 function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
   const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const adminPageLineCount = adminPage.split(/\r?\n/).length;
 
   const removedSectionIds = [
@@ -52,7 +53,7 @@ function run() {
       `admin page should remove bloated section id="${sectionId}"`
     );
     assert.equal(
-      adminLayout.includes(`/admin#${sectionId}`),
+      adminLayout.includes(`/admin#${sectionId}`) || adminNavSource.includes(`/admin#${sectionId}`),
       false,
       `admin layout should remove bloated anchor /admin#${sectionId}`
     );
@@ -73,7 +74,7 @@ function run() {
 
   for (const anchor of removedAdminAnchors) {
     assert.equal(
-      adminLayout.includes(anchor),
+      adminLayout.includes(anchor) || adminNavSource.includes(anchor),
       false,
       `admin layout should remove non-core anchor ${anchor}`
     );
@@ -82,9 +83,9 @@ function run() {
   const requiredAdminAnchors = [
     "/admin",
     "/admin/approval-executions",
-    "/admin/scheduling",
+    "/admin/attendance-live",
     "/admin/leave-accrual",
-    "/admin/payroll-year-end",
+    "/admin/payroll-close",
     "/admin/people",
     "/admin/contracts",
     "/admin/approval-policy"
@@ -92,7 +93,7 @@ function run() {
 
   for (const anchor of requiredAdminAnchors) {
     assert.equal(
-      adminLayout.includes(anchor),
+      adminNavSource.includes(anchor),
       true,
       `admin layout should keep core anchor ${anchor}`
     );
@@ -101,7 +102,7 @@ function run() {
   const removedHashBasedCoreAnchors = ["/admin#approvals", "/admin#aggregates", "/admin#leave-policy", "/admin#payroll"];
   for (const anchor of removedHashBasedCoreAnchors) {
     assert.equal(
-      adminLayout.includes(anchor),
+      adminLayout.includes(anchor) || adminNavSource.includes(anchor),
       false,
       `admin layout should replace legacy hash anchor ${anchor} with dedicated route navigation`
     );

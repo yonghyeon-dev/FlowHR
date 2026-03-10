@@ -8,6 +8,7 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
 
   const adminChrome = readUtf8("src", "components", "admin-dashboard", "AdminDashboardChrome.tsx");
@@ -61,10 +62,12 @@ async function run() {
   assert.doesNotMatch(adminPage, /from "@\/app\/admin\/page-panels"/);
   assert.doesNotMatch(adminPage, /<AdminDashboardChrome/);
   assert.doesNotMatch(adminPage, /<AdminDashboardPanels/);
+  assert.match(adminPage, /buildAdminDashboardEntryLinks/);
+  assert.match(adminPage, /dashboardEntryLinks\.map/);
   assert.match(adminPage, /href="\/admin\/approval-executions"/);
-  assert.match(adminPage, /href="\/admin\/people"/);
-  assert.match(adminPage, /href="\/admin\/scheduling"/);
-  assert.match(adminPage, /href="\/admin\/payroll-year-end"/);
+  assert.match(adminNavSource, /\/admin\/people"/);
+  assert.match(adminNavSource, /\/admin\/attendance-live"/);
+  assert.match(adminNavSource, /\/admin\/payroll-close"/);
 
   assert.match(adminChrome, /export function AdminDashboardChrome/);
   assert.match(adminOnboardingAccountPanels, /id="onboarding"/);

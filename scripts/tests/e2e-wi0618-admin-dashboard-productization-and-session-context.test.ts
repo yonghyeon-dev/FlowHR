@@ -9,6 +9,7 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
   const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const peopleFiltersPanel = readUtf8(
     "src",
     "app",
@@ -24,15 +25,17 @@ async function run() {
 
   assert.doesNotMatch(adminPage, /AdminDashboardPanels/);
   assert.doesNotMatch(adminPage, /useAdminDashboardState/);
+  assert.match(adminPage, /buildAdminDashboardEntryLinks/);
+  assert.match(adminPage, /dashboardEntryLinks\.map/);
   assert.match(adminPage, /href="\/admin\/approval-executions"/);
-  assert.match(adminPage, /href="\/admin\/people"/);
-  assert.match(adminPage, /href="\/admin\/scheduling"/);
-  assert.match(adminPage, /href="\/admin\/payroll-year-end"/);
 
   assert.doesNotMatch(adminLayout, /\/admin#approvals/);
   assert.doesNotMatch(adminLayout, /\/admin#payroll/);
   assert.doesNotMatch(adminLayout, /\/admin\/payroll-year-end-filing\/ops\/alert/);
-  assert.match(adminLayout, /href: "\/admin\/approval-executions"/);
+  assert.match(adminNavSource, /\/admin\/approval-executions/);
+  assert.match(adminNavSource, /\/admin\/people/);
+  assert.match(adminNavSource, /\/admin\/attendance-live/);
+  assert.match(adminNavSource, /\/admin\/payroll-close/);
 
   assert.doesNotMatch(peopleFiltersPanel, /setOrganizationId/);
   assert.doesNotMatch(peopleFiltersPanel, /setAdminActorId/);

@@ -8,7 +8,7 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const analyticsPage = readUtf8("src", "app", "admin", "analytics", "page.tsx");
-  const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const messages = readUtf8("src", "lib", "i18n", "messages.ts");
   const kpiCopy = readUtf8("src", "components", "admin-kpi", "copy.ts");
   const kpiDashboard = readUtf8("src", "components", "admin-kpi", "AdminKpiDashboard.tsx");
@@ -18,8 +18,8 @@ async function run() {
   assert.match(analyticsPage, /AdminKpiDashboard/);
   assert.match(analyticsPage, /analyticsMode/);
 
-  assert.match(adminLayout, /href: "\/admin\/analytics"/);
-  assert.match(adminLayout, /t\("admin\.nav\.analytics"\)/);
+  assert.match(adminNavSource, /\/admin\/analytics/);
+  assert.match(adminNavSource, /admin\.nav\.analytics/);
 
   assert.match(messages, /"admin\.nav\.analytics": "분석\/리포트"/);
   assert.match(messages, /"admin\.nav\.analytics": "Analytics \/ Reports"/);

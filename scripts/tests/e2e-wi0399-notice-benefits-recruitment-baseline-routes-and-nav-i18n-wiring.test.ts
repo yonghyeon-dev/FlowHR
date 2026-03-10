@@ -7,7 +7,7 @@ function readUtf8(...parts: string[]) {
 }
 
 async function run() {
-  const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const employeeLayout = readUtf8("src", "app", "employee", "layout.tsx");
   const messages = readUtf8("src", "lib", "i18n", "messages.ts");
 
@@ -23,9 +23,12 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(adminLayout, /href: "\/admin\/notices", label: t\("admin\.nav\.notices"\)/);
-  assert.match(adminLayout, /href: "\/admin\/benefits", label: t\("admin\.nav\.benefits"\)/);
-  assert.match(adminLayout, /href: "\/admin\/recruitment", label: t\("admin\.nav\.recruitment"\)/);
+  assert.match(adminNavSource, /\/admin\/notices/);
+  assert.match(adminNavSource, /admin\.nav\.notices/);
+  assert.match(adminNavSource, /\/admin\/benefits/);
+  assert.match(adminNavSource, /admin\.nav\.benefits/);
+  assert.match(adminNavSource, /\/admin\/recruitment/);
+  assert.match(adminNavSource, /admin\.nav\.recruitment/);
 
   assert.match(employeeLayout, /href: "\/employee\/benefits", label: t\("employee\.nav\.benefits"\)/);
   assert.match(employeeLayout, /href: "\/employee\/recruitment", label: t\("employee\.nav\.recruitment"\)/);

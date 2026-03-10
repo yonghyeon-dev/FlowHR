@@ -59,7 +59,7 @@ async function run() {
   resetMemoryDataAccess();
   runtimeEnv.FLOWHR_PAYROLL_KR_INSURANCE_SETTLEMENT_V1 = "true";
 
-  const adminLayoutSource = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const payrollInsurancePageSource = readUtf8("src", "app", "admin", "payroll-insurance", "page.tsx");
   const payrollInsuranceConsoleSource = readUtf8(
     "src",
@@ -72,7 +72,7 @@ async function run() {
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
   assert.match(
-    adminLayoutSource,
+    adminNavSource,
     /\/admin\/payroll-insurance/,
     "admin navigation should include payroll insurance route"
   );

@@ -7,7 +7,7 @@ function readUtf8(...parts: string[]) {
 }
 
 async function run() {
-  const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavigation = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const workspaceHubs = readUtf8("src", "app", "admin", "page-workspace-hubs.ts");
   const page = readUtf8("src", "app", "admin", "attendance-security", "page.tsx");
   const route = readUtf8("src", "app", "api", "admin", "attendance-security", "route.ts");
@@ -26,7 +26,7 @@ async function run() {
   assert.ok(existsSync(migrationPath), "attendance security migration must exist");
 
   assert.match(
-    adminLayout,
+    adminNavigation,
     /href: "\/admin\/attendance-security"/,
     "admin nav should expose the attendance security page"
   );

@@ -15,7 +15,7 @@ async function run() {
   const workItem = readUtf8("work-items", "WI-0299-admin-locale-dynamic-ui-gap-fix-baseline.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(adminPage, /const \{ locale \} = useI18n\(\);/);
+  assert.match(adminPage, /const \{ locale(?:,\s*t)? \} = useI18n\(\);/);
   assert.doesNotMatch(adminPage, /from "@\/app\/admin\/page-locale-helpers"/);
   assert.match(adminPanels, /from "@\/app\/admin\/page-locale-helpers"/);
   assert.match(adminPanels, /localeLabelBundle: ReturnType<typeof resolveAdminLocaleLabelBundle>/);

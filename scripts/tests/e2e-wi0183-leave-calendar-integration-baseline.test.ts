@@ -58,14 +58,14 @@ async function run() {
 
   resetMemoryDataAccess();
 
-  const adminLayoutSource = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const leaveCalendarPageSource = readUtf8("src", "app", "admin", "leave-calendar", "page.tsx");
   const leaveCalendarConsoleSource = readUtf8("src", "components", "leave-calendar", "LeaveCalendarConsole.tsx");
   const leaveCalendarCopySource = readUtf8("src", "components", "leave-calendar", "copy.ts");
   const leaveApiSpec = readUtf8("specs", "leave", "api.yaml");
   const leaveContract = readUtf8("specs", "leave", "contract.yaml");
 
-  assert.match(adminLayoutSource, /\/admin\/leave-calendar/, "admin nav should include leave calendar route");
+  assert.match(adminNavSource, /\/admin\/leave-calendar/, "admin nav should include leave calendar route");
   assert.match(
     leaveCalendarPageSource,
     /LeaveCalendarConsole/,
