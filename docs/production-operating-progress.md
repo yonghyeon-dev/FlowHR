@@ -116,6 +116,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Closed `WI-1070` through the full GitHub flow and merged it to `main` as `89ac05c637a5b55d45915f412d1d55e21058af8c`, then deleted the feature branch.
 - Re-verified `WI-1070` at deploy time and confirmed Vercel production build still fails with the same OOM signature, though the failing run shortened after applying the memory worker flags.
 - Started `WI-1071` to throttle Next build worker concurrency with `cpus: 1` and memory-based worker counting.
+- Closed `WI-1071` through the full GitHub flow and merged it to `main` as `a65c3fbb`, then deleted the feature branch.
+- Re-verified `WI-1071` at deploy time and confirmed `vercel-production-deploy` still fails after `WI-1064` with the same `npm run build` `SIGKILL` / `OOM` signature.
+- Started `WI-1072` to isolate hidden `/ops` console routes behind thin server wrappers and move the heavy client implementations into `page-client.tsx` modules.
 - Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
@@ -158,8 +161,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close `WI-1071` through the full GitHub flow and confirm the next `vercel-production-deploy` run completes successfully.
-2. If deploy OOM persists, isolate production-hidden `/ops` surfaces from heavy client build paths.
+1. Close `WI-1072` through the full GitHub flow and confirm the next `vercel-production-deploy` run completes successfully.
+2. If deploy OOM persists, cut workflow noise in `vercel-production-deploy` and inspect the next build hotspot.
 3. Resume production-surface cleanup after the deploy loop is stable again.
 
 ## 5. Blockers Or Watch Items
