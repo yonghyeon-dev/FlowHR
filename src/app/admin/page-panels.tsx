@@ -249,6 +249,7 @@ export function AdminDashboardPanels({
         payrollHealthInsuranceCapKrw={pageState.payrollHealthInsuranceCapKrw}
         payrollEmploymentInsuranceCapKrw={pageState.payrollEmploymentInsuranceCapKrw}
         payrollPresetShareLinkFeedback={pageState.payrollPresetShareLinkFeedback}
+        previewedPayroll={pageState.previewedPayroll}
         lastPayrollRunId={pageState.lastPayrollRunId}
         logs={pageState.logs}
         logStatusLabels={logStatusLabels}
