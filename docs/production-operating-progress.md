@@ -1,11 +1,11 @@
 # FlowHR Production Operating Progress
 
-Last updated: 2026-03-10
+Last updated: 2026-03-11
 Status: active
 
 ## 1. Current Phase
 
-Phase 0: establish a compact execution system that stays referenced while production hardening work continues.
+Phase 1: keep the compact execution system accurate while remaining production-hardening and UX-finish slices close.
 
 ## 2. Completed In This Wave
 
@@ -183,8 +183,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Started `WI-1095` to replace the remaining raw organization, actor, and employee identifier context lines on admin and employee notices surfaces with session-status product wording.
 - Closed `WI-1095` through the full GitHub flow and merged it to `main` as `ce230023844d295abdd4badb5230bf6dd405bd24`, then deleted the feature branch.
 - Closed `WI-1096` through the full GitHub flow and merged it to `main` as `2715b8eff75f430ffe8cc0bf000c61919527b7ad`, then deleted the feature branch.
-- Started `WI-1097` to replace the remaining raw production/login session recovery wording and employee-number guidance across employee self-service with shared product-facing session notices.
-- Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
+- Closed `WI-1097` through the full GitHub flow and merged it to `main` as `bad592eff903c06a009a2858b5a782278a77cc39`, then deleted the feature branch.
+- Re-verified `WI-1097` on the delivery path and confirmed both `ci` (`22911661857`) and `vercel-production-deploy` (`22911661872`) stay green after the employee self-service session-guidance cleanup.
+- Restored `CURRENT-GOAL.md` as a readable Korean entry point and tightened the operating documents so the next UI/UX finish track is explicit.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI
@@ -226,9 +227,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close `WI-1097` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
-2. Re-scan adjacent employee self-service auth/session guidance surfaces after `WI-1097` lands.
-3. Continue the next production-surface cleanup slice from the updated inventory.
+1. Re-scan adjacent employee self-service auth/session guidance surfaces after `WI-1097`.
+2. Start `work-items/WI-1099-ui-ux-wave1-confirmation-feedback-and-empty-state-recovery.md` as the first explicit Epic E slice for confirmation, feedback, and empty-state recovery.
+3. Revisit remaining date/time and status-label localization gaps before the next IA simplification wave.
 
 ## 5. Blockers Or Watch Items
 

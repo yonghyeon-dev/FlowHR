@@ -1,6 +1,6 @@
 # FlowHR Production Gap Inventory
 
-Last updated: 2026-03-10
+Last updated: 2026-03-11
 Purpose: track the full production gap set in one place and map each gap to an existing WI or a new execution bundle.
 
 Legend:
@@ -8,6 +8,12 @@ Legend:
 - `Existing`: already tracked in a WI and needs execution or re-verification.
 - `New`: no suitable WI existed; a new bundle WI was created.
 - `Partial`: related WI exists, but current product gap is broader than the earlier implementation.
+
+Inventory note:
+
+- This file remains the master gap list even after some mapped WI are merged.
+- Real-time merge, deploy, and next-wave status lives in `docs/production-operating-progress.md`.
+- UI/UX finish work should be tracked against Epic E in `docs/production-operating-plan.md` and then mapped back here when a slice becomes a concrete WI.
 
 ## A. User-Facing Developer Trace And Technical Language
 
