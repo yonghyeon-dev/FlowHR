@@ -56,7 +56,7 @@ import { EmployeeAttendanceFormPanel } from "@/components/employee-dashboard/Emp
 import { EmployeeDashboardChrome } from "@/components/employee-dashboard/EmployeeDashboardChrome";
 import { EmployeeLeaveCalendarPanel } from "@/components/employee-dashboard/EmployeeLeaveCalendarPanel";
 import { EmployeeLeaveRequestPanel } from "@/components/employee-dashboard/EmployeeLeaveRequestPanel";
-import { EmployeeSchedulePanel } from "@/components/employee-dashboard/EmployeeSchedulePanel";
+import { EmployeeScheduleSummaryPanel } from "@/components/employee-dashboard/EmployeeScheduleSummaryPanel";
 import { useI18n } from "@/lib/i18n/provider";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -644,7 +644,13 @@ export function EmployeeSelfServicePage({
         {showsAttendanceWorkspace ? <EmployeeAttendanceFormPanel {...sharedPanelProps} /> : null}
         {showsLeaveWorkspace ? <EmployeeLeaveRequestPanel {...sharedPanelProps} /> : null}
         {showsLeaveWorkspace ? <EmployeeLeaveCalendarPanel {...sharedPanelProps} /> : null}
-        {showsHomeHub ? <EmployeeSchedulePanel {...sharedPanelProps} /> : null}
+        {showsHomeHub ? (
+          <EmployeeScheduleSummaryPanel
+            isKoLocale={isKoLocale}
+            schedules={schedules}
+            formatDateTime={formatDateTimeByLocale}
+          />
+        ) : null}
         {showsHomeHub && showDevTools ? <EmployeeApiLogsPanel {...sharedPanelProps} /> : null}
       </section>
     </main>

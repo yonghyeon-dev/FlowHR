@@ -33,6 +33,7 @@ const PROMOTED_ROUTE_SECTION_MAP: Record<string, string> = {
   attendance: "/employee/attendance#attendance",
   leave: "/employee/leave#leave",
   "leave-calendar": "/employee/leave#leave-calendar",
+  schedule: "/employee/schedule",
   "request-feedback": "/employee/requests#request-feedback",
   "request-search-sort": "/employee/requests#request-search-sort",
   "request-timeline": "/employee/requests#request-timeline",

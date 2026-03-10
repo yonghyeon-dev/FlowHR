@@ -40,13 +40,19 @@ async function run() {
     "employee-dashboard",
     "EmployeeLeaveCalendarPanel.tsx"
   );
+  const employeeScheduleSummaryPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeScheduleSummaryPanel.tsx"
+  );
   const employeeSchedulePanel = readUtf8(
     "src",
     "components",
     "employee-dashboard",
     "EmployeeSchedulePanel.tsx"
   );
-  const employeeSurfaceSources = `${employeePage}\n${employeeAttendanceLeavePanels}\n${employeeAttendanceLeaveFormsPanel}\n${employeeAttendanceFormPanel}\n${employeeLeaveRequestPanel}\n${employeeLeaveCalendarPanel}\n${employeeSchedulePanel}`;
+  const employeeSurfaceSources = `${employeePage}\n${employeeAttendanceLeavePanels}\n${employeeAttendanceLeaveFormsPanel}\n${employeeAttendanceFormPanel}\n${employeeLeaveRequestPanel}\n${employeeLeaveCalendarPanel}\n${employeeSchedulePanel}\n${employeeScheduleSummaryPanel}`;
   const employeeLocaleSources = `${employeePage}\n${employeeHelpers}`;
   const workItem = readUtf8(
     "work-items",
@@ -65,7 +71,7 @@ async function run() {
   );
   assert.match(
     employeePage,
-    /from "@\/components\/employee-dashboard\/EmployeeSchedulePanel"/
+    /from "@\/components\/employee-dashboard\/EmployeeScheduleSummaryPanel"/
   );
   assert.match(
     employeePage,
@@ -81,6 +87,7 @@ async function run() {
   assert.match(employeeSurfaceSources, /<h2>\{sectionTitles\.leave\}<\/h2>/);
   assert.match(employeeSurfaceSources, /<h2>\{sectionTitles\.leaveCalendar\}<\/h2>/);
   assert.match(employeeSurfaceSources, /<h2>\{sectionTitles\.schedule\}<\/h2>/);
+  assert.match(employeeScheduleSummaryPanel, /\/employee\/schedule\?source=employee-dashboard/);
 
   assert.doesNotMatch(employeePage, /const LEAVE_CALENDAR_WEEKDAYS =/);
   assert.doesNotMatch(employeePage, /const ATTENDANCE_NOTE_PRESETS =/);
