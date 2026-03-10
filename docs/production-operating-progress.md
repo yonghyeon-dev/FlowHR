@@ -95,6 +95,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Reworked employee direct-load focus handling so it no longer relies on a one-phase retry window alone; it now keeps hash synchronization aligned and observes later DOM insertion/replacement until the target section actually settles.
 - Re-verified `WI-1060` on deployed production and confirmed employee focus direct-load now closes at `desktop 12/12`, `mobile 12/12`.
 - Started `WI-1061` to clean up false positives in the production completed-items reverify script so `/admin#approvals` redirect behavior and the intended `/admin/leave-promotion` 404 policy no longer reopen closed issues.
+- Closed `WI-1061` through the full GitHub flow and merged it to `main` as `d9e6c66082ce63050e719cddc664ff1d82122e40`, then deleted the feature branch.
+- Re-verified the deployed `WI-1061` pass and confirmed `codex_test/results/prod-completed-items-reverify-2026-03-10T03-38-09-835Z` closes at `focus desktop 12/12`, `focus mobile 12/12`, `admin checks 8/8`, `failures 0`.
+- Started `WI-1062` to remove the remaining raw hash/ID/code traces from year-end and filing summaries, timelines, and success feedback.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI
@@ -136,8 +139,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close the current `WI-1061` production reverify false-positive cleanup through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
-2. Re-scan remaining core-journey reliability gaps and pick the next highest-value production blocker after `WI-1061`.
+1. Close the current `WI-1062` year-end and filing surface humanization slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
+2. Re-scan remaining year-end / filing operator inputs for any still-visible raw guard terminology after `WI-1062`.
 3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 
 ## 5. Blockers Or Watch Items
@@ -159,3 +162,4 @@ Latest verification evidence:
 - `codex_test/results/prod-year-end-conflict-reverify-2026-03-09T10-07-21-859Z/REPORT.md`
 - `codex_test/results/prod-completed-items-reverify-2026-03-09T13-37-17-634Z/REPORT.md`
 - `codex_test/results/prod-completed-items-reverify-2026-03-09T14-59-52-362Z/REPORT.md`
+- `codex_test/results/prod-completed-items-reverify-2026-03-10T03-38-09-835Z/REPORT.md`

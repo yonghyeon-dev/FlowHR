@@ -30,8 +30,6 @@ export default function FilingSettlementSummaryPanels(props: FilingSettlementSum
                 {finalization.settlement.finalized ? copy.yesLabel : copy.noLabel}
               </strong>
             </li>
-            <li><span>{copy.finalizationIdLabel}</span><strong>{finalization.settlement.finalizationId}</strong></li>
-            <li><span>{copy.settlementHashLabel}</span><strong>{finalization.settlement.settlementHash}</strong></li>
             <li>
               <span>{copy.taxLiabilityLabel}</span>
               <strong>{formatKrw(finalization.settlement.settlementKrw.annualTaxLiabilityKrw, runtimeLocale)}</strong>
@@ -55,8 +53,6 @@ export default function FilingSettlementSummaryPanels(props: FilingSettlementSum
           <p className="small">{copy.noExportYet}</p>
         ) : (
           <ul className="simple-list">
-            <li><span>{copy.finalizationIdLabel}</span><strong>{filingExport.filingData.finalizationId}</strong></li>
-            <li><span>{copy.settlementHashLabel}</span><strong>{filingExport.filingData.settlementHash}</strong></li>
             <li><span>{copy.formatLabel}</span><strong>{copy.exportFormatOptionLabels[filingExport.filingData.format] ?? filingExport.filingData.format}</strong></li>
             <li><span>{copy.validationModeDisplayLabel}</span><strong>{copy.validationModeOptionLabels[filingExport.filingData.validationMode] ?? filingExport.filingData.validationMode}</strong></li>
             <li><span>{copy.validationStatusLabel}</span><strong>{copy.validationStatusOptionLabels[filingExport.filingData.validation.status] ?? filingExport.filingData.validation.status}</strong></li>
@@ -71,7 +67,6 @@ export default function FilingSettlementSummaryPanels(props: FilingSettlementSum
             </li>
             <li><span>{copy.csvLabel}</span><strong>{filingExport.filingData.csv ? copy.readyLabel : copy.dashLabel}</strong></li>
             <li><span>{copy.artifactLabel}</span><strong>{filingExport.filingData.artifact.fileName}</strong></li>
-            <li><span>{copy.checksumLabel}</span><strong>{filingExport.filingData.artifact.checksumSha256.slice(0, 16)}...</strong></li>
             <li><span>{copy.validationIssuesLabel}</span><strong>{filingExport.filingData.validation.issues.join(" | ") || copy.dashLabel}</strong></li>
           </ul>
         )}

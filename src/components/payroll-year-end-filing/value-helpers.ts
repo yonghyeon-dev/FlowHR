@@ -15,6 +15,15 @@ type FilingTimelineCopy = {
   dashLabel: string;
 };
 
+function humanizeCode(value: string) {
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
 export function parseRequiredInt(value: string, fieldName: string, nonNegativeIntegerLabel: string) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) {
@@ -35,7 +44,6 @@ export function formatTimelineEntry(entry: PayrollYearEndFilingTimelineEntry, co
   if (entry.action === "submitted" || entry.action === "resubmitted") {
     const parts = [
       `${copy.timelineActionBadgeLabels[entry.action]} ${copy.timelineAttemptLabel} ${entry.attempt ?? copy.dashLabel}`,
-      entry.resubmissionOfSubmissionId ? `${copy.timelineFromLabel} ${entry.resubmissionOfSubmissionId}` : null,
       entry.resubmissionReason ? `${copy.timelineReasonLabel}: ${entry.resubmissionReason}` : null,
       entry.submissionNote ? `${copy.timelineNoteLabel}: ${entry.submissionNote}` : null
     ].filter(Boolean);
@@ -43,8 +51,8 @@ export function formatTimelineEntry(entry: PayrollYearEndFilingTimelineEntry, co
   }
   if (entry.action === "acknowledged") {
     return `${copy.timelineAckPrefix} ${entry.ackStatus ?? copy.dashLabel}${
-      entry.ackCode ? ` (${entry.ackCode})` : ""
-    }${entry.rejectionReasonCode ? ` / ${copy.timelineReasonCodeLabel} ${entry.rejectionReasonCode}` : ""}${
+      entry.rejectionReasonCode ? ` / ${copy.timelineReasonCodeLabel} ${humanizeCode(entry.rejectionReasonCode)}` : ""
+    }${
       entry.rejectionReasonDetail ? ` / ${copy.timelineDetailLabel} ${entry.rejectionReasonDetail}` : ""
     }${entry.ackNote ? ` / ${entry.ackNote}` : ""}`;
   }

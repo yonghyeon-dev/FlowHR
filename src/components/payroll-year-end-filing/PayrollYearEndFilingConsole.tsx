@@ -358,7 +358,7 @@ export default function PayrollYearEndFilingConsole() {
       setExpectedAckSettlementHash(body.settlement.settlementHash);
       setStatusMessage(
         body.settlement.finalized
-          ? `${copy.statusFinalizedPrefix} ${body.settlement.finalizationId}`
+          ? copy.statusFinalizedPrefix
           : copy.statusPreviewLoaded
       );
       setTimeout(() => setStatusMessage(""), 3000);
@@ -475,7 +475,7 @@ export default function PayrollYearEndFilingConsole() {
       setSubmissions((prev) => upsertSubmissionAtTop(prev, body.submission));
       setAckSubmissionId(body.submission.submissionId);
       setCancelSubmissionId(body.submission.submissionId);
-      setStatusMessage(`${copy.statusSubmittedPrefix} ${body.submission.submissionId}`);
+      setStatusMessage(copy.statusSubmittedPrefix);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
       recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput);
@@ -647,7 +647,7 @@ export default function PayrollYearEndFilingConsole() {
       if (body.submission.ack?.ackStatus === "rejected") {
         setResubmitSubmissionId(body.submission.submissionId);
       }
-      setStatusMessage(`${copy.statusAcknowledgedPrefix} ${body.submission.submissionId}`);
+      setStatusMessage(copy.statusAcknowledgedPrefix);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
       recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput, submissionId);
@@ -696,7 +696,7 @@ export default function PayrollYearEndFilingConsole() {
       setAckSubmissionId(body.submission.submissionId);
       setCancelSubmissionId(body.submission.submissionId);
       setResubmitSubmissionId(body.submission.submissionId);
-      setStatusMessage(`${copy.statusResubmittedPrefix} ${body.submission.submissionId}`);
+      setStatusMessage(copy.statusResubmittedPrefix);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
       recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput, submissionId);
@@ -737,7 +737,7 @@ export default function PayrollYearEndFilingConsole() {
       clearFailure();
       setSubmissions((prev) => replaceSubmissionById(prev, body.submission));
       setReopenSubmissionId(body.submission.submissionId);
-      setStatusMessage(`${copy.statusCanceledPrefix} ${body.submission.submissionId}`);
+      setStatusMessage(copy.statusCanceledPrefix);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
       recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput, submissionId);
@@ -779,7 +779,7 @@ export default function PayrollYearEndFilingConsole() {
       setSubmissions((prev) => replaceSubmissionById(prev, body.submission));
       setCancelSubmissionId(body.submission.submissionId);
       setAckSubmissionId(body.submission.submissionId);
-      setStatusMessage(`${copy.statusReopenedPrefix} ${body.submission.submissionId}`);
+      setStatusMessage(copy.statusReopenedPrefix);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
       recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput, submissionId);
@@ -858,7 +858,7 @@ export default function PayrollYearEndFilingConsole() {
         return;
       }
       clearFailure();
-      setStatusMessage(`${copy.statusAddedEvidencePrefix} ${body.evidenceNote.submissionId}`);
+      setStatusMessage(copy.statusAddedEvidencePrefix);
       await runLoadSubmissionTimeline(submissionId);
     } catch (error) {
       recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput, submissionId);
@@ -1239,12 +1239,11 @@ export default function PayrollYearEndFilingConsole() {
                   >
                     {copy.submissionStatusBadgeLabels[submission.status] ?? submission.status}
                   </span>{" "}
-                  {submission.submissionId} / {copy.timelineAttemptLabel} {submission.attempt} / {copy.submissionTransportOptionLabels[submission.transport] ?? submission.transport} / {copy.exportFormatOptionLabels[submission.format] ?? submission.format} / {copy.validationModeOptionLabels[submission.validationMode] ?? submission.validationMode}
-                  {submission.settlementHash ? ` / ${copy.hashPrefixLabel} ${submission.settlementHash.slice(0, 12)}...` : ""}
-                  {submission.resubmissionOfSubmissionId ? ` / ${copy.resubmissionOfLabel} ${submission.resubmissionOfSubmissionId}` : ""}
+                  {copy.timelineAttemptLabel} {submission.attempt} / {copy.submissionTransportOptionLabels[submission.transport] ?? submission.transport} / {copy.exportFormatOptionLabels[submission.format] ?? submission.format} / {copy.validationModeOptionLabels[submission.validationMode] ?? submission.validationMode}
+                  {submission.resubmissionReason ? ` / ${copy.timelineReasonLabel}: ${submission.resubmissionReason}` : ""}
                   {submission.ack
-                    ? ` / ${copy.timelineAckPrefix} ${copy.ackStatusOptionLabels[submission.ack.ackStatus] ?? submission.ack.ackStatus}${submission.ack.ackCode ? `:${submission.ack.ackCode}` : ""}${
-                        submission.ack.rejectionReasonCode ? `(${submission.ack.rejectionReasonCode})` : ""
+                    ? ` / ${copy.timelineAckPrefix} ${copy.ackStatusOptionLabels[submission.ack.ackStatus] ?? submission.ack.ackStatus}${
+                        submission.ack.rejectionReasonDetail ? ` / ${submission.ack.rejectionReasonDetail}` : ""
                       }`
                     : ""}
                   <div className="panel-actions">

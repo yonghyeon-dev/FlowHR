@@ -31,7 +31,7 @@ export default function FilingSubmissionTimelinePanel(props: FilingSubmissionTim
               >
                 {copy.timelineActionBadgeLabels[entry.action] ?? entry.action}
               </span>{" "}
-              {entry.submissionId} / {formatTimelineEntry(entry, copy)}
+              {formatTimelineEntry(entry, copy)}
               <time>{new Date(entry.occurredAt).toLocaleString(runtimeLocale)}</time>
             </li>
           ))}

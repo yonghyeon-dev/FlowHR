@@ -554,7 +554,6 @@ export default function PayrollYearEndConsole() {
           {!settlement ? <p className="small">{copy.noSettlementYet}</p> : (
             <ul className="simple-list">
               <li><span>{copy.grossNetLabel}</span><strong>{formatKrw(settlement.summary.annualTotalsKrw.grossPayKrw, runtimeLocale)} / {formatKrw(settlement.summary.annualTotalsKrw.netPayKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.inputVectorHashLabel}</span><strong>{settlement.summary.inputVectorHash.slice(0, 16)}...</strong></li>
               <li><span>{copy.taxCreditInputAppliedLabel}</span><strong>{formatKrw(settlement.summary.settlementKrw.totalTaxCreditInputKrw, runtimeLocale)}{" / "}{formatKrw(settlement.summary.settlementKrw.totalTaxCreditAppliedKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.cappedTaxCreditsLabel}</span><strong>{summarizeCappedTaxCreditItems(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw, copy.taxCreditItemLabels, runtimeLocale, copy.capLabel, locale)}</strong></li>
               <li><span>{copy.taxCreditReasonCodesLabel}</span><strong>{summarizeTaxCreditReasonCodes(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw, copy.taxCreditItemLabels, locale)}</strong></li>
@@ -572,7 +571,6 @@ export default function PayrollYearEndConsole() {
           {!recalculation ? <p className="small">{copy.noRecalculationYet}</p> : (
             <ul className="simple-list">
               <li><span>{copy.incomeDeductionInputLabel}</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.totalIncomeDeductionKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.inputVectorHashLabel}</span><strong>{recalculation.recalculation.inputVectorHash.slice(0, 16)}...</strong></li>
               <li><span>{copy.cappedDeductionLabel}</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.cappedIncomeDeductionKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.appliedDeductionLabel}</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.appliedIncomeDeductionKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.taxCreditInputAppliedLabel}</span><strong>{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.totalTaxCreditInputKrw, runtimeLocale)}{" / "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.totalTaxCreditAppliedKrw, runtimeLocale)}</strong></li>
@@ -599,7 +597,6 @@ export default function PayrollYearEndConsole() {
               <li><span>{copy.annualSocialInsuranceRunsLabel}</span><strong>{formatKrw(insuranceReconciliationReport.report.annualRunSocialInsuranceKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.comparedInsurancePremiumFinalizationLabel}</span><strong>{formatKrw(insuranceReconciliationReport.report.reconciliation.comparedKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.deltaLabel}</span><strong>{formatKrw(insuranceReconciliationReport.report.reconciliation.deltaKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.finalizationHashLabel}</span><strong>{insuranceReconciliationReport.report.finalization.finalizationId ?? "-"} / {insuranceReconciliationReport.report.finalization.settlementHash?.slice(0, 12) ?? "-"}</strong></li>
               <li><span>{copy.insuranceReasonCodeLabel}</span><strong>{resolvePayrollYearEndReasonCodeLabel(insuranceReconciliationReport.report.finalization.applicationReasonCode, locale)}</strong></li>
               <li><span>{copy.monthlyBreakdownLabel}</span><strong>{insuranceReconciliationReport.report.monthlyBreakdown.map((row) => `${row.month}:${formatKrw(row.socialInsuranceKrw, runtimeLocale)}`).join(" | ") || "-"}</strong></li>
             </ul>

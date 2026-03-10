@@ -27,6 +27,7 @@ Legend:
 | 12 | Audit log date filter | ISO timestamp shown | User locale date/time | New -> WI-1053 |
 | 13 | Escalation webhook timestamp | ISO timestamp shown | User locale date/time | New -> WI-1053 |
 | 30 | Service errors | Technical error text such as actor-context failure | Localized recovery guidance | New -> WI-1053 |
+| 31 | Year-end / filing summaries | Raw hashes, finalization IDs, submission IDs, and ack codes visible | Human-readable status summaries without internal trace values | New -> WI-1062 |
 
 ## B. External Notification Productization
 
@@ -82,3 +83,4 @@ Legend:
 4. WI-1054 external operator notification productization
 5. WI-1055 admin operational settings productization
 6. WI-1056 UX and dev-remnant cleanup
+7. WI-1062 year-end and filing surface humanization
