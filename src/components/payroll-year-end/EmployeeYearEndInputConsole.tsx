@@ -240,7 +240,7 @@ export default function EmployeeYearEndInputConsole() {
         return;
       }
       setFinalizedSettlement(body);
-      setStatusMessage(`${copy.loadedStatusPrefix} ${body.settlement.finalizationId}`);
+      setStatusMessage(copy.loadedStatusPrefix);
       setTimeout(() => setStatusMessage(null), 2500);
     } catch (error) {
       setStatusMessage(
@@ -402,7 +402,6 @@ export default function EmployeeYearEndInputConsole() {
           <h2>{copy.simulationTitle}</h2>
           {!simulation ? <p className="small">{copy.loadFirstGuide}</p> : (
             <ul className="simple-list">
-              <li><span>{copy.summaryFinalization}</span><strong>{finalizedSettlement?.settlement.finalizationId}</strong></li>
               <li><span>{copy.summaryGrossPay}</span><strong>{formatKrw(simulation.annualGrossPayKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.summaryAppliedDeduction}</span><strong>{formatKrw(simulation.totalAppliedDeductionKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.summaryTaxableAnnualIncome}</span><strong>{formatKrw(simulation.taxableAnnualIncomeKrw, runtimeLocale)}</strong></li>

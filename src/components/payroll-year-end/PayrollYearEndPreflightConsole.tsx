@@ -182,7 +182,6 @@ export default function PayrollYearEndPreflightConsole() {
               <li><span>{copy.runStatesLabel}</span><strong>{copy.totalLabel} {checklist.checklist.metrics.totalRuns} / {copy.confirmedLabel} {checklist.checklist.metrics.confirmedRuns} / {copy.previewedLabel} {checklist.checklist.metrics.previewedRuns}</strong></li>
               <li><span>{copy.distributionStatesLabel}</span><strong>{copy.undistributedLabel} {checklist.checklist.metrics.undistributedRuns} / {copy.pendingReceiptLabel} {checklist.checklist.metrics.pendingReceiptRuns}</strong></li>
               <li><span>{copy.submissionStatesLabel}</span><strong>{copy.pendingLabel} {checklist.checklist.metrics.pendingSubmissionCount} / {copy.rejectedLabel} {checklist.checklist.metrics.rejectedSubmissionCount}</strong></li>
-              <li><span>{copy.settlementHashLabel}</span><strong>{checklist.checklist.metrics.settlementHash ?? "-"}</strong></li>
             </ul>
           )}
         </article>
