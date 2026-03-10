@@ -37,6 +37,7 @@ Legend:
 | 38 | Department management surface | Missing manager or parent department lookups fall back to raw internal IDs in the admin table and select labels | Human-readable manager and parent labels with public employee number or pending-state copy, never raw IDs | New -> WI-1074 |
 | 39 | Admin people org chart surface | Employee pills fall back to raw internal employee IDs in the title and metadata line | Human-readable employee name, public employee number, and employment status only | New -> WI-1075 |
 | 40 | Admin scheduling surface | Schedule list exposes raw `employeeId` and `schedule.id` in the admin dashboard | Public employee number plus schedule timing only, never raw internal schedule or employee identifiers | New -> WI-1076 |
+| 41 | Admin attendance aggregate surface | Attendance aggregate rows expose raw `employeeId` in the admin dashboard | Public employee number only, never raw internal employee identifiers | New -> WI-1077 |
 
 ## B. External Notification Productization
 
@@ -105,3 +106,4 @@ Legend:
 17. WI-1074 department management surface humanization
 18. WI-1075 admin org chart surface humanization
 19. WI-1076 admin scheduling surface humanization
+20. WI-1077 admin aggregate leave surface humanization
