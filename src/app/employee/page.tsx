@@ -10,6 +10,8 @@ import {
 } from "@/app/employee/page-interaction-actions";
 import { useEmployeeInteractionOrchestratorInput } from "@/app/employee/page-interaction-orchestrator";
 import {
+  resolveEmployeeRequestsRouteForFocusSection,
+  resolveEmployeeResubmitDraftPrefill,
   resolveAttendanceCorrectionSchedulePrefill,
   resolveEmployeeFocusSectionId
 } from "@/app/employee/page-query-prefill-helpers";
@@ -51,10 +53,8 @@ import type {
 import { EmployeeAccountOverviewPanels } from "@/components/employee-dashboard/EmployeeAccountOverviewPanels";
 import { EmployeeAttendanceLeavePanels } from "@/components/employee-dashboard/EmployeeAttendanceLeavePanels";
 import { EmployeeDashboardChrome } from "@/components/employee-dashboard/EmployeeDashboardChrome";
-import { EmployeeRequestFeedbackPanels } from "@/components/employee-dashboard/EmployeeRequestFeedbackPanels";
-import { EmployeeResubmitPanel } from "@/components/employee-dashboard/EmployeeResubmitPanel";
 import { useI18n } from "@/lib/i18n/provider";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const FOCUS_SECTION_RETRY_TIMEOUT_MS = 3500;
 const FOCUS_SECTION_RETRY_INTERVAL_MS = 120;
@@ -62,14 +62,24 @@ const FOCUS_SECTION_OBSERVER_TIMEOUT_MS = 8000;
 
 export default function EmployeeSelfServicePage() {
   const { locale } = useI18n();
+  const router = useRouter();
   const isKoLocale = locale === "ko";
   const localeLabelBundle = useMemo(() => resolveEmployeeLocaleLabelBundle(isKoLocale), [isKoLocale]);
   const { attendanceNotePresets, callApiLabels, correctionRequestNote, defaultCancelReason, leaveCalendarWeekdays, leaveTypeLabels, listBadgeLabels, notConfiguredLabel, preSubmitStatusLabels, requestStatusLabels, runtimeLocale, surfaceCopy, validationCopy, summaryCopy } = localeLabelBundle;
   const searchParams = useSearchParams();
   const attendanceSchedulePrefill = useMemo(() => resolveAttendanceCorrectionSchedulePrefill({ searchParams, correctionRequestNote, isKoLocale }), [searchParams, correctionRequestNote, isKoLocale]);
   const focusSectionId = useMemo(() => resolveEmployeeFocusSectionId(searchParams), [searchParams]);
+  const requestsRouteForFocusSection = useMemo(
+    () => resolveEmployeeRequestsRouteForFocusSection(focusSectionId),
+    [focusSectionId]
+  );
+  const resubmitDraftPrefill = useMemo(
+    () => resolveEmployeeResubmitDraftPrefill(searchParams),
+    [searchParams]
+  );
   const appliedAttendanceSchedulePrefillRef = useRef<{ baseKey: string | null; selectedTargetKey: string | null }>({ baseKey: null, selectedTargetKey: null });
   const appliedFocusSectionRef = useRef<string | null>(null);
+  const appliedResubmitDraftPrefillRef = useRef<string | null>(null);
   const autoSnapshotLoadKeyRef = useRef<string | null>(null);
   const refreshEmployeeSnapshotRef = useRef<null | ((range?: { fromIso: string; toIso: string }) => Promise<void>)>(null);
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
@@ -346,7 +356,39 @@ export default function EmployeeSelfServicePage() {
   }, [employeeId, isProductionRuntime, supabaseSessionLoading, usesBearerToken]);
 
   useEffect(() => {
-    if (!focusSectionId) {
+    if (!requestsRouteForFocusSection) {
+      return;
+    }
+    router.replace(requestsRouteForFocusSection);
+  }, [requestsRouteForFocusSection, router]);
+
+  useEffect(() => {
+    if (!resubmitDraftPrefill) {
+      appliedResubmitDraftPrefillRef.current = null;
+      return;
+    }
+    if (appliedResubmitDraftPrefillRef.current === resubmitDraftPrefill.key) {
+      return;
+    }
+    const matchedCandidate = resubmitCandidates.find(
+      (candidate) =>
+        candidate.channel === resubmitDraftPrefill.channel &&
+        candidate.recordId === resubmitDraftPrefill.recordId
+    );
+    if (!matchedCandidate) {
+      return;
+    }
+    setSelectedResubmitCandidateKey(matchedCandidate.key);
+    applyResubmitCandidateToDraft(matchedCandidate);
+    appliedResubmitDraftPrefillRef.current = resubmitDraftPrefill.key;
+  }, [
+    applyResubmitCandidateToDraft,
+    resubmitCandidates,
+    resubmitDraftPrefill
+  ]);
+
+  useEffect(() => {
+    if (!focusSectionId || requestsRouteForFocusSection) {
       appliedFocusSectionRef.current = null;
       return;
     }
@@ -424,7 +466,7 @@ export default function EmployeeSelfServicePage() {
       cancelled = true;
       stopTracking();
     };
-  }, [focusSectionId, snapshotLoaded]);
+  }, [focusSectionId, requestsRouteForFocusSection, snapshotLoaded]);
   useApplyAttendanceSchedulePrefillEffect({ attendanceSchedulePrefill, attendance, appliedAttendanceSchedulePrefillRef, setCheckInAt, setCheckOutAt, setAttendanceNotes, applyAttendanceRecordToCorrectionForm });
 
   if (supabaseSessionLoading) return null;
@@ -460,48 +502,6 @@ export default function EmployeeSelfServicePage() {
           onPeriodEndChange={setPeriodEnd}
           onRefreshEmployeeSnapshot={() => void refreshEmployeeSnapshot()}
           onJumpToSection={jumpToSection}
-        />
-        <EmployeeRequestFeedbackPanels
-          isKoLocale={isKoLocale}
-          requestFeedbackStatusFilter={requestFeedbackStatusFilter}
-          filteredRequestFeedbackRows={filteredRequestFeedbackRows}
-          requestFailureCauses={requestFailureCauses}
-          latestFailureCauseMessage={latestFailureCauseMessage}
-          requestSearchScope={requestSearchScope}
-          requestSearchQuery={requestSearchQuery}
-          requestSortOption={requestSortOption}
-          filteredRequestSearchRows={filteredRequestSearchRows}
-          timelineChannelFilter={timelineChannelFilter}
-          timelineStatusFilter={timelineStatusFilter}
-          filteredMobileRequestTimeline={filteredMobileRequestTimeline}
-          toRequestStatusLabel={toRequestStatusLabel}
-          formatDateTime={formatDateTimeByLocale}
-          statusToTone={statusToTone}
-          onRequestFeedbackStatusFilterChange={setRequestFeedbackStatusFilter}
-          onCopyFailureCause={(message) => void copyFailureCause(message)}
-          onRequestSearchScopeChange={setRequestSearchScope}
-          onRequestSearchQueryChange={setRequestSearchQuery}
-          onRequestSortOptionChange={setRequestSortOption}
-          onResetRequestSearchFilters={() => resetEmployeeRequestSearchFilters({ setRequestSearchScope, setRequestSearchQuery, setRequestSortOption })}
-          onOpenPendingRequestSearch={openPendingRequestSearch}
-          onTimelineChannelFilterChange={setTimelineChannelFilter}
-          onTimelineStatusFilterChange={setTimelineStatusFilter}
-        />
-        <EmployeeResubmitPanel
-          isKoLocale={isKoLocale}
-          selectedResubmitCandidateKey={selectedResubmitCandidateKey}
-          resubmitCandidates={resubmitCandidates}
-          selectedResubmitCandidate={selectedResubmitCandidate}
-          lastAppliedResubmitCandidateKey={lastAppliedResubmitCandidateKey}
-          resubmitFlowChecks={resubmitFlowChecks}
-          listBadgeLabels={listBadgeLabels}
-          preSubmitStatusLabels={preSubmitStatusLabels}
-          toRequestStatusLabel={toRequestStatusLabel}
-          onSelectedResubmitCandidateKeyChange={setSelectedResubmitCandidateKey}
-          onApplySelectedResubmitCandidate={applySelectedResubmitCandidate}
-          onApplyLatestResubmitCandidate={applyLatestResubmitCandidate}
-          onClearResubmitSelection={clearResubmitSelection}
-          onApplyResubmitCandidateToDraft={applyResubmitCandidateToDraft}
         />
         <EmployeeAttendanceLeavePanels
           sectionTitles={sectionTitles}

@@ -34,6 +34,18 @@ type PriorityWorkspaceTarget = {
   label: string;
 };
 
+type ChecklistActionTarget =
+  | {
+      kind: "link";
+      href: string;
+      label: string;
+    }
+  | {
+      kind: "jump";
+      sectionId: string;
+      label: string;
+    };
+
 type ActionPriorityBadge = {
   key: string;
   label: string;
@@ -123,6 +135,30 @@ function resolvePriorityWorkspaceTarget(
   }
 }
 
+function resolveChecklistActionTarget(
+  sectionId: string,
+  isKoLocale: boolean
+): ChecklistActionTarget {
+  const workspaceTarget = resolvePriorityWorkspaceTarget(sectionId, isKoLocale);
+  if (
+    sectionId === "request-feedback" ||
+    sectionId === "request-search-sort" ||
+    sectionId === "request-timeline" ||
+    sectionId === "request-resubmit"
+  ) {
+    return {
+      kind: "link",
+      href: workspaceTarget.href,
+      label: workspaceTarget.label
+    };
+  }
+  return {
+    kind: "jump",
+    sectionId,
+    label: isKoLocale ? "관련 섹션 이동" : "Go to section"
+  };
+}
+
 export function EmployeeAccountOverviewPanels({
   isKoLocale,
   showDevTools,
@@ -160,6 +196,9 @@ export function EmployeeAccountOverviewPanels({
         priorityChecklistCard.targetSectionId,
         isKoLocale
       )
+    : null;
+  const priorityChecklistAction = priorityChecklistCard
+    ? resolveChecklistActionTarget(priorityChecklistCard.targetSectionId, isKoLocale)
     : null;
 
   return (
@@ -234,19 +273,34 @@ export function EmployeeAccountOverviewPanels({
             </p>
             <p className="small muted">{priorityChecklistCard.detail}</p>
             <div className="actions">
-              <button
-                type="button"
-                className={hasBlockingChecklist ? "btn btn-primary" : "btn btn-secondary"}
-                onClick={() => onJumpToSection(priorityChecklistCard.targetSectionId)}
-              >
-                {hasBlockingChecklist
-                  ? isKoLocale
-                    ? "우선 작업 열기"
-                    : "Open priority task"
-                  : isKoLocale
-                    ? "체크리스트 다시 확인"
-                    : "Review checklist"}
-              </button>
+              {priorityChecklistAction?.kind === "link" ? (
+                <Link
+                  className={hasBlockingChecklist ? "btn btn-primary" : "btn btn-secondary"}
+                  href={priorityChecklistAction.href}
+                >
+                  {hasBlockingChecklist
+                    ? isKoLocale
+                      ? "우선 작업 열기"
+                      : "Open priority task"
+                    : isKoLocale
+                      ? "체크리스트 다시 확인"
+                      : "Review checklist"}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className={hasBlockingChecklist ? "btn btn-primary" : "btn btn-secondary"}
+                  onClick={() => onJumpToSection(priorityChecklistCard.targetSectionId)}
+                >
+                  {hasBlockingChecklist
+                    ? isKoLocale
+                      ? "우선 작업 열기"
+                      : "Open priority task"
+                    : isKoLocale
+                      ? "체크리스트 다시 확인"
+                      : "Review checklist"}
+                </button>
+              )}
               {priorityWorkspaceTarget ? (
                 <Link
                   className="btn btn-secondary"
@@ -359,18 +413,37 @@ export function EmployeeAccountOverviewPanels({
             : "Check submit readiness for attendance correction, leave requests, and resubmission in one view."}
         </p>
         <div className="submit-checklist-grid" aria-label={isKoLocale ? "통합 제출 체크리스트" : "Integrated submit checklist"}>
-          {integratedSubmitChecklistCards.map((card) => (
-            <article key={card.key} className={`submit-checklist-card ${card.ready ? "is-ready" : "is-blocked"}`}>
-              <p>{card.label}</p>
-              <strong>
-                {card.passCount}/{card.totalCount}
-              </strong>
-              <span>{card.detail}</span>
-              <button type="button" className="btn btn-secondary btn-small" onClick={() => onJumpToSection(card.targetSectionId)}>
-                {isKoLocale ? "관련 섹션 이동" : "Go to Section"}
-              </button>
-            </article>
-          ))}
+          {integratedSubmitChecklistCards.map((card) => {
+              const actionTarget = resolveChecklistActionTarget(
+                card.targetSectionId,
+                isKoLocale
+              );
+              return (
+                <article
+                  key={card.key}
+                  className={`submit-checklist-card ${card.ready ? "is-ready" : "is-blocked"}`}
+                >
+                  <p>{card.label}</p>
+                  <strong>
+                    {card.passCount}/{card.totalCount}
+                  </strong>
+                  <span>{card.detail}</span>
+                  {actionTarget.kind === "link" ? (
+                    <Link className="btn btn-secondary btn-small" href={actionTarget.href}>
+                      {actionTarget.label}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => onJumpToSection(actionTarget.sectionId)}
+                    >
+                      {actionTarget.label}
+                    </button>
+                  )}
+                </article>
+              );
+            })}
         </div>
       </article>
     </>

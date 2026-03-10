@@ -12,25 +12,26 @@ type EmployeeShortcut = {
   key: string;
   label: string;
   detail: string;
-  sectionId: string;
+  sectionId?: string;
+  href?: string;
 };
 
 const COPY = {
   ko: {
     title: "직원 여정 바로가기",
-    description: "복잡한 스크롤 없이 주요 업무 섹션으로 즉시 이동합니다.",
-    ariaLabel: "직원 셀프서비스 여정 바로가기",
-    jumpButton: "섹션으로 이동",
+    description: "전체 화면을 스크롤하지 않고 주요 셀프서비스 영역으로 바로 이동합니다.",
+    ariaLabel: "직원 셀프서비스 바로가기",
+    jumpButton: "바로 열기",
     payslipCta: "급여 명세서 보기",
-    adminApprovalCta: "관리자 승인 큐 열기"
+    adminApprovalCta: "관리자 승인함 열기"
   },
   en: {
-    title: "Employee Journey Shortcuts",
-    description: "Jump to core self-service sections without scrolling through the full page.",
-    ariaLabel: "employee self-service journey shortcuts",
-    jumpButton: "Jump to section",
+    title: "Employee journey shortcuts",
+    description: "Jump into the core self-service areas without scrolling through the full page.",
+    ariaLabel: "employee self-service shortcuts",
+    jumpButton: "Open now",
     payslipCta: "View payslips",
-    adminApprovalCta: "Open admin approval queue"
+    adminApprovalCta: "Open admin approvals"
   }
 } as const;
 
@@ -39,31 +40,31 @@ const SHORTCUTS = {
     {
       key: "attendance",
       label: "출퇴근 정정",
-      detail: "오늘 근태 기록을 확인하고 정정 요청으로 바로 이동합니다.",
+      detail: "오늘 근태 기록을 확인하고 정정 요청 폼으로 바로 이동합니다.",
       sectionId: "attendance"
     },
     {
       key: "leave",
-      label: "휴가 신청",
-      detail: "휴가 유형과 단위를 선택해 즉시 요청합니다.",
+      label: "휴가 요청",
+      detail: "휴가 유형과 기간을 입력하는 신청 폼으로 이동합니다.",
       sectionId: "leave"
     },
     {
       key: "leave-calendar",
       label: "휴가 캘린더",
-      detail: "팀 일정 밀도를 확인하고 잔여 일수를 점검합니다.",
+      detail: "팀 휴가 밀도를 확인하고 날짜별 일정을 살펴봅니다.",
       sectionId: "leave-calendar"
     },
     {
       key: "request-feedback",
-      label: "요청 피드백",
-      detail: "반려/실패 사유와 상태 변경 내역을 한 번에 확인합니다.",
-      sectionId: "request-feedback"
+      label: "요청 상태 센터",
+      detail: "요청 피드백, 검색, 재제출 후속 조치를 전용 워크스페이스에서 이어갑니다.",
+      href: "/employee/requests#request-feedback"
     },
     {
       key: "schedule",
       label: "이번 주 일정",
-      detail: "이번 주 근무 일정 섹션으로 이동합니다.",
+      detail: "이번 주 근무 일정을 확인하는 섹션으로 이동합니다.",
       sectionId: "schedule"
     }
   ],
@@ -71,37 +72,39 @@ const SHORTCUTS = {
     {
       key: "attendance",
       label: "Attendance correction",
-      detail: "Review today's attendance and jump to a correction request.",
+      detail: "Review today's attendance and move into the correction form.",
       sectionId: "attendance"
     },
     {
       key: "leave",
       label: "Leave request",
-      detail: "Select leave type and unit, then submit right away.",
+      detail: "Jump into the leave request form with the main input fields ready.",
       sectionId: "leave"
     },
     {
       key: "leave-calendar",
       label: "Leave calendar",
-      detail: "Check team density and review your remaining leave.",
+      detail: "Check team leave density and open the date-based calendar view.",
       sectionId: "leave-calendar"
     },
     {
       key: "request-feedback",
-      label: "Request feedback",
-      detail: "Track rejection/failure reasons and status changes in one place.",
-      sectionId: "request-feedback"
+      label: "Request status center",
+      detail: "Continue feedback, search, and resubmit follow-up in the dedicated workspace.",
+      href: "/employee/requests#request-feedback"
     },
     {
       key: "schedule",
       label: "This week schedule",
-      detail: "Jump directly to this week's work schedule section.",
+      detail: "Move directly to the current work schedule section.",
       sectionId: "schedule"
     }
   ]
 } satisfies Record<"ko" | "en", EmployeeShortcut[]>;
 
-export function EmployeeJourneyShortcutPanel({ onJumpToSection }: EmployeeJourneyShortcutPanelProps) {
+export function EmployeeJourneyShortcutPanel({
+  onJumpToSection
+}: EmployeeJourneyShortcutPanelProps) {
   const { locale } = useI18n();
   const copy = locale === "ko" ? COPY.ko : COPY.en;
   const shortcuts = locale === "ko" ? SHORTCUTS.ko : SHORTCUTS.en;
@@ -115,13 +118,19 @@ export function EmployeeJourneyShortcutPanel({ onJumpToSection }: EmployeeJourne
           <article key={shortcut.key} className="submit-checklist-card is-ready">
             <p>{shortcut.label}</p>
             <span>{shortcut.detail}</span>
-            <button
-              type="button"
-              className="btn btn-secondary btn-small"
-              onClick={() => onJumpToSection(shortcut.sectionId)}
-            >
-              {copy.jumpButton}
-            </button>
+            {shortcut.href ? (
+              <Link className="btn btn-secondary btn-small" href={shortcut.href}>
+                {copy.jumpButton}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={() => onJumpToSection(shortcut.sectionId ?? "")}
+              >
+                {copy.jumpButton}
+              </button>
+            )}
           </article>
         ))}
       </div>
