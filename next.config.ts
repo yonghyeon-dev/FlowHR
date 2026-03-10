@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
   },
   typescript: {
     tsconfigPath: "./tsconfig.next.json"
+  },
+  experimental: {
+    webpackBuildWorker: true,
+    webpackMemoryOptimizations: true,
+    parallelServerCompiles: false,
+    parallelServerBuildTraces: false
   }
 };
 
