@@ -33,6 +33,12 @@ async function run() {
     "employee-dashboard",
     "EmployeeLeaveRequestPanel.tsx"
   );
+  const employeeScheduleSummaryPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeScheduleSummaryPanel.tsx"
+  );
   const employeeSchedulePanel = readUtf8(
     "src",
     "components",
@@ -64,12 +70,13 @@ async function run() {
   assert.match(employeePage, /const toLeaveTypeLabel = useCallback\(/);
   assert.match(employeePage, /EmployeeAttendanceFormPanel/);
   assert.match(employeePage, /EmployeeLeaveRequestPanel/);
-  assert.match(employeePage, /EmployeeSchedulePanel/);
+  assert.match(employeePage, /EmployeeScheduleSummaryPanel/);
 
   assert.match(employeeRequestFeedbackPanels, /\{toRequestStatusLabel\(row\.status\)\}/);
   assert.match(employeeRequestFeedbackPanels, /\{toRequestStatusLabel\(item\.status\)\}/);
   assert.match(employeeAttendanceFormPanel, /\{toRequestStatusLabel\(record\.state\)\}/);
   assert.match(employeeLeaveRequestPanel, /\{toRequestStatusLabel\(request\.state\)\}/);
+  assert.match(employeeScheduleSummaryPanel, /\/employee\/schedule\?source=employee-dashboard/);
   assert.match(employeeSchedulePanel, /\{listBadgeLabels\.empty\}/);
   assert.match(employeeResubmitPanel, /\{listBadgeLabels\.applied\}/);
   assert.match(

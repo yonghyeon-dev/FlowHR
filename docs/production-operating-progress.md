@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Start `WI-1119` so attendance and leave task-heavy work leaves Today home and settles under dedicated employee workspaces.
-2. Begin the first shared workspace implementation slice once employee request and attendance/leave seams are explicit.
-3. Align mobile employee entry points with the new route-first Today / Requests / Attendance structure.
+1. Close `WI-1120` so schedule-heavy work also leaves Today home and settles under the dedicated employee schedule route.
+2. Begin the first shared workspace implementation slice once employee request / attendance / leave / schedule seams are explicit.
+3. Align employee mobile entry points with the route-first Today / Requests / Attendance / Leave / Schedule model.
 
 ## 5. Blockers Or Watch Items
 
@@ -278,3 +278,6 @@ Latest planning reset:
 - Closed `WI-1118` through the full GitHub flow and merged it to `main` as `5a86b081718d1435c4a73b2b1b996c221a033af8`, then deleted the feature branch.
 - Re-verified `WI-1118` on the delivery path and confirmed both `ci` (`22927102521`) and `vercel-production-deploy` (`22927102517`) stay green after the employee requests workspace extraction.
 - Started `WI-1119` to promote attendance correction, leave request, and leave calendar work from the Today home into dedicated employee routes while preserving schedule-based draft handoff.
+- Closed `WI-1119` through the full GitHub flow and merged it to `main` as `747986123be689035e9d8de87703789cf6f1b1ce`, then deleted the feature branch.
+- Re-verified `WI-1119` on the delivery path and confirmed both `ci` (`22928605264`) and `vercel-production-deploy` (`22928605256`) stay green after the employee attendance and leave route promotion.
+- Started `WI-1120` to remove the remaining schedule-heavy panel from Today home, promote `schedule` focus entry to `/employee/schedule`, and keep only schedule summary plus next actions on the home surface.

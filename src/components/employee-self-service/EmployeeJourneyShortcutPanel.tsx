@@ -65,7 +65,7 @@ const SHORTCUTS = {
       key: "schedule",
       label: "이번 주 일정",
       detail: "이번 주 근무 일정을 확인하는 섹션으로 이동합니다.",
-      sectionId: "schedule"
+      href: "/employee/schedule"
     }
   ],
   en: [
@@ -97,7 +97,7 @@ const SHORTCUTS = {
       key: "schedule",
       label: "This week schedule",
       detail: "Move directly to the current work schedule section.",
-      sectionId: "schedule"
+      href: "/employee/schedule"
     }
   ]
 } satisfies Record<"ko" | "en", EmployeeShortcut[]>;
@@ -126,7 +126,13 @@ export function EmployeeJourneyShortcutPanel({
               <button
                 type="button"
                 className="btn btn-secondary btn-small"
-                onClick={() => onJumpToSection(shortcut.sectionId ?? "")}
+                onClick={() => {
+                  const sectionId =
+                    "sectionId" in shortcut && typeof shortcut.sectionId === "string"
+                      ? shortcut.sectionId
+                      : "";
+                  onJumpToSection(sectionId);
+                }}
               >
                 {copy.jumpButton}
               </button>
