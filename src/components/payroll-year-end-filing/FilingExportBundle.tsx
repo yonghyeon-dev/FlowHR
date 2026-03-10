@@ -1,5 +1,6 @@
 import styles from "@/components/payroll-year-end-filing/FilingWorkflow.module.css";
 import type { FilingWorkflowMetadata } from "@/components/payroll-year-end-filing/filing-types";
+import { useI18n } from "@/lib/i18n/provider";
 
 type FilingExportBundleProps = {
   metadata: FilingWorkflowMetadata;
@@ -7,19 +8,45 @@ type FilingExportBundleProps = {
 };
 
 export default function FilingExportBundle({ metadata, onMetadataChange }: FilingExportBundleProps) {
+  const { locale } = useI18n();
+  const copy =
+    locale === "ko"
+      ? {
+        title: "워크플로 요약",
+        metricLabel: "관리 항목",
+        severityLabel: "주의 수준",
+        ownerRoleLabel: "담당 역할",
+        ownerLabel: "담당자",
+        valueLabel: "기준값",
+        watchLabel: "관찰",
+        criticalLabel: "긴급",
+        description: "이 요약은 신고 워크플로 전 단계에서 공통으로 사용됩니다."
+      }
+      : {
+        title: "Workflow Overview",
+        metricLabel: "Tracking Item",
+        severityLabel: "Alert Severity",
+        ownerRoleLabel: "Owner Role",
+        ownerLabel: "Owner",
+        valueLabel: "Threshold Value",
+        watchLabel: "Watch",
+        criticalLabel: "Critical",
+        description: "This summary is reused across every filing workflow step."
+      };
+
   return (
     <article className="panel" id="filing-workflow-export-bundle">
-      <h3>Workflow overview</h3>
+      <h3>{copy.title}</h3>
       <div className={styles.controlGrid}>
         <label>
-          Tracking item
+          {copy.metricLabel}
           <input
             value={metadata.metric}
             onChange={(event) => onMetadataChange({ metric: event.target.value })}
           />
         </label>
         <label>
-          Alert severity
+          {copy.severityLabel}
           <select
             value={metadata.level}
             onChange={(event) =>
@@ -28,26 +55,26 @@ export default function FilingExportBundle({ metadata, onMetadataChange }: Filin
               })
             }
           >
-            <option value="watch">Watch</option>
-            <option value="critical">Critical</option>
+            <option value="watch">{copy.watchLabel}</option>
+            <option value="critical">{copy.criticalLabel}</option>
           </select>
         </label>
         <label>
-          Owner role
+          {copy.ownerRoleLabel}
           <input
             value={metadata.ownerRole}
             onChange={(event) => onMetadataChange({ ownerRole: event.target.value })}
           />
         </label>
         <label>
-          Owner
+          {copy.ownerLabel}
           <input
             value={metadata.ownerActorId}
             onChange={(event) => onMetadataChange({ ownerActorId: event.target.value })}
           />
         </label>
         <label>
-          Value
+          {copy.valueLabel}
           <input
             value={metadata.value ?? ""}
             onChange={(event) => {
@@ -62,9 +89,7 @@ export default function FilingExportBundle({ metadata, onMetadataChange }: Filin
           />
         </label>
       </div>
-      <p className="small">
-        This summary is reused across the filing workflow steps.
-      </p>
+      <p className="small">{copy.description}</p>
     </article>
   );
 }
