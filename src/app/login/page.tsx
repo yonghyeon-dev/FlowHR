@@ -11,6 +11,14 @@ import {
   syncAccessTokenCookie
 } from "@/lib/auth/session-cookie";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatActorRoleLabel,
+  formatAdminSessionConnectionState,
+  formatEmployeeSessionConnectionState,
+  formatSignedInAccountLabel,
+  formatUserFacingErrorMessage,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 const metadataRoles = ["admin", "manager", "employee", "payroll_operator"] as const;
@@ -130,6 +138,18 @@ export default function LoginPage() {
   }, [snapshot]);
 
   const loginSuccessTarget = redirectTarget ?? workspaceTarget;
+  const hasWorkspaceConnection = Boolean((snapshot?.organizationId ?? "").trim());
+  const hasSignedInSession = Boolean((snapshot?.actorId ?? snapshot?.userId ?? "").trim());
+  const roleLabel =
+    snapshot?.role?.trim()
+      ? formatActorRoleLabel(snapshot.role, locale)
+      : isKoLocale
+        ? "역할 확인 중"
+        : "Role pending";
+  const sessionStatusLabel =
+    snapshot?.role === "admin" || snapshot?.role === "manager" || snapshot?.role === "payroll_operator"
+      ? formatAdminSessionConnectionState(hasSignedInSession, locale)
+      : formatEmployeeSessionConnectionState(hasSignedInSession, locale);
 
   useEffect(() => {
     let active = true;
@@ -148,7 +168,7 @@ export default function LoginPage() {
         if (!active) {
           return;
         }
-        setErrorMessage(error instanceof Error ? error.message : String(error));
+        setErrorMessage(formatUserFacingErrorMessage(error instanceof Error ? error.message : String(error), locale));
       }
     }
 
@@ -165,7 +185,7 @@ export default function LoginPage() {
       active = false;
       listener.data.subscription.unsubscribe();
     };
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     if (!snapshot) {
@@ -214,7 +234,7 @@ export default function LoginPage() {
         throw new Error(error.message);
       }
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : String(error));
+      setErrorMessage(formatUserFacingErrorMessage(error instanceof Error ? error.message : String(error), locale));
     } finally {
       setPending(false);
     }
@@ -239,7 +259,7 @@ export default function LoginPage() {
       }
       clearAccessTokenCookie();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : String(error));
+      setErrorMessage(formatUserFacingErrorMessage(error instanceof Error ? error.message : String(error), locale));
     } finally {
       setPending(false);
     }
@@ -274,23 +294,19 @@ export default function LoginPage() {
               <ul className="simple-list" aria-label={t("login.sessionAria")}>
                 <li>
                   <span className="muted">{t("login.userId")}</span>
-                  <strong>{snapshot.userId}</strong>
-                </li>
-                <li>
-                  <span className="muted">{t("login.email")}</span>
-                  <strong>{snapshot.email ?? "-"}</strong>
+                  <strong>{formatSignedInAccountLabel(snapshot.email, locale)}</strong>
                 </li>
                 <li>
                   <span className="muted">{t("login.role")}</span>
-                  <strong>{snapshot.role ?? "-"}</strong>
+                  <strong>{roleLabel}</strong>
                 </li>
                 <li>
                   <span className="muted">{t("login.organization")}</span>
-                  <strong>{snapshot.organizationId ?? "-"}</strong>
+                  <strong>{formatWorkspaceConnectionState(hasWorkspaceConnection, locale)}</strong>
                 </li>
                 <li>
                   <span className="muted">{t("login.actorIdOptional")}</span>
-                  <strong>{snapshot.actorId ?? "-"}</strong>
+                  <strong>{sessionStatusLabel}</strong>
                 </li>
               </ul>
             </>

@@ -304,6 +304,14 @@ export function formatUserFacingErrorMessage(message: string, locale: string) {
   const key = toLocaleKey(locale);
   const normalized = message.trim().toLowerCase();
 
+  if (normalized.includes("invalid login credentials") || normalized.includes("invalid_credentials")) {
+    return key === "ko" ? "이메일 또는 비밀번호가 올바르지 않습니다." : "The email or password is incorrect.";
+  }
+
+  if (normalized.includes("email not confirmed")) {
+    return key === "ko" ? "이메일 인증을 완료한 뒤 다시 로그인해 주세요." : "Confirm your email and sign in again.";
+  }
+
   if (
     normalized.includes("missing or invalid actor context") ||
     normalized.includes("unauthorized") ||
