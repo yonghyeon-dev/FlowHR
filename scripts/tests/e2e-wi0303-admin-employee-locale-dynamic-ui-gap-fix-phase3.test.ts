@@ -56,11 +56,11 @@ async function run() {
   assert.match(employeeResubmitPanel, /aria-label=\{isKoLocale \? "재제출 후보 목록" : "resubmit candidate list"\}/);
   assert.match(
     employeeAccountOverviewPanels,
-    /\{isKoLocale \? "세션 조직" : "Session organization"\}: <code>\{organizationId \|\| "-"\}<\/code>/
+    /formatWorkspaceConnectionState\(Boolean\(organizationId\.trim\(\)\), isKoLocale \? "ko" : "en"\)/
   );
   assert.match(
     employeeAccountOverviewPanels,
-    /\{isKoLocale \? "세션 직원" : "Session employee"\}: <code>\{employeeId \|\| "-"\}<\/code>/
+    /formatEmployeeSessionConnectionState\(Boolean\(employeeId\.trim\(\)\), isKoLocale \? "ko" : "en"\)/
   );
   assert.match(
     employeeAttendanceLeaveFormsPanel,

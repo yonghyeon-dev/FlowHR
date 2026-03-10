@@ -45,6 +45,7 @@ Legend:
 | 46 | Admin dashboard session context surface | Onboarding, KPI, people filters, and approval-executions work conditions still show raw session organization or actor identifiers in devtools context lines | Devtools context should keep session visibility but show connection-state product wording instead of raw IDs | New -> WI-1082 |
 | 47 | Admin approval session context surface | Approval policy, approval history, and approval templates still show raw session organization or actor identifiers in devtools context lines | Devtools context should keep session visibility but show connection-state product wording instead of raw IDs | New -> WI-1083 |
 | 48 | Admin payroll session context surface | Payroll insurance, leave calendar, year-end, preflight, and filing consoles still show raw session organization or admin actor identifiers in devtools context lines | Devtools context should keep session visibility but show connection-state product wording instead of raw IDs | New -> WI-1084 |
+| 49 | Employee session context surface | Employee dashboard account overview and employee year-end input console still show raw session organization or employee identifiers in devtools context lines | Devtools context should keep session visibility but show connection-state product wording instead of raw IDs | New -> WI-1085 |
 
 ## B. External Notification Productization
 
@@ -121,3 +122,4 @@ Legend:
 25. WI-1082 admin dashboard session context humanization
 26. WI-1083 admin approval session context humanization
 27. WI-1084 admin payroll session context humanization
+28. WI-1085 employee session context humanization

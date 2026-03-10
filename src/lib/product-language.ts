@@ -274,6 +274,13 @@ export function formatAdminSessionConnectionState(hasAdminSession: boolean, loca
   return toLocaleKey(locale) === "ko" ? "관리자 세션 미연결" : "Admin session unavailable";
 }
 
+export function formatEmployeeSessionConnectionState(hasEmployeeSession: boolean, locale: string) {
+  if (hasEmployeeSession) {
+    return toLocaleKey(locale) === "ko" ? "직원 세션 연결됨" : "Employee session connected";
+  }
+  return toLocaleKey(locale) === "ko" ? "직원 세션 미연결" : "Employee session unavailable";
+}
+
 export function formatPublicEmployeeNumber(id: string | null | undefined) {
   const normalized = id?.trim() ?? "";
   if (!normalized) {
