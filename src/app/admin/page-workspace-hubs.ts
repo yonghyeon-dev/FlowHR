@@ -1,5 +1,13 @@
-﻿export type AdminDashboardWorkspaceHub = {
-  key: string;
+import {
+  ADMIN_SHELL_SECTION_DEFINITIONS,
+  type AdminShellSectionKey,
+} from "@/app/admin/admin-shell-navigation";
+import type { MessageKey } from "@/lib/i18n/messages";
+
+type Translator = (key: MessageKey) => string;
+
+export type AdminDashboardWorkspaceHub = {
+  key: AdminShellSectionKey;
   title: string;
   description: string;
   links: {
@@ -8,144 +16,129 @@
   }[];
 };
 
-export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWorkspaceHub[] {
-  if (isKoLocale) {
-    return [
-      {
-        key: "approvals",
-        title: "결재/확인",
-        description: "결재 대기 건 처리와 실행 현황을 확인합니다.",
-        links: [
-          { href: "/admin/approval-executions", label: "결재 실행" },
-          { href: "/admin/approval-escalation-settings", label: "에스컬레이션 설정" },
-          { href: "/admin/approval-templates", label: "결재 템플릿" }
-        ]
-      },
-      {
-        key: "people",
-        title: "인사/온보딩",
-        description: "직원, 조직, 온보딩 상태를 관리합니다.",
-        links: [
-          { href: "/admin/people", label: "인사 관리" },
-          { href: "/admin/onboarding", label: "온보딩" }
-        ]
-      },
-      {
-        key: "worktime",
-        title: "근무/휴가",
-        description: "근무 일정과 휴가 정책, 휴가 캘린더를 운영합니다.",
-        links: [
-          { href: "/admin/scheduling", label: "근무 일정" },
-          { href: "/admin/leave-policies", label: "휴가 정책" },
-          { href: "/admin/leave-promotion-email", label: "연차 촉진 이메일" },
-          { href: "/admin/attendance-security", label: "출퇴근 보안" },
-          { href: "/admin/leave-calendar", label: "휴가 캘린더" }
-        ]
-      },
-      {
-        key: "payroll",
-        title: "급여/연말정산",
-        description: "급여 정산, 명세서 배포, 연말정산 신고를 처리합니다.",
-        links: [
-          { href: "/admin/feature-management", label: "기능 관리" },
-          { href: "/admin/payroll-year-end", label: "연말정산" },
-          { href: "/admin/payroll-year-end-filing", label: "신고" }
-        ]
-      },
-      {
-        key: "communication",
-        title: "공지/복리후생/채용/계약",
-        description: "직원 커뮤니케이션과 지원 워크플로, 계약 위험 큐를 운영합니다.",
-        links: [
-          { href: "/admin/operator-alerts", label: "운영 알림 연동" },
-          { href: "/admin/notification-defaults", label: "알림 기본값" },
-          {
-            href: "/admin/notices?status=PUBLISHED&risk=no-read&source=admin-dashboard",
-            label: "공지 미확인 위험"
-          },
-          {
-            href: "/admin/benefits?status=SUBMITTED&risk=pending_3d&source=admin-dashboard",
-            label: "복리후생 장기 대기"
-          },
-          {
-            href: "/admin/recruitment?risk=stalled_7d&source=admin-dashboard",
-            label: "채용 정체 위험"
-          },
-          { href: "/admin/contracts?decisionQueueOnly=true", label: "계약 의사결정 큐" },
-          { href: "/admin/contracts?slaRisk=OVERDUE", label: "계약 SLA 초과" },
-          { href: "/admin/contracts?status=SENT", label: "계약 응답 대기" },
-          { href: "/admin/contracts?renewalCandidateOnly=true", label: "계약 갱신 후보" }
-        ]
-      }
-    ];
-  }
+type AdminWorkspaceHubDefinition = {
+  description: {
+    ko: string;
+    en: string;
+  };
+  links: Array<{
+    href: string;
+    label: {
+      ko: string;
+      en: string;
+    };
+  }>;
+};
 
-  return [
-    {
-      key: "approvals",
-      title: "Approvals",
-      description: "Handle pending approvals and execution backlog.",
-      links: [
-        { href: "/admin/approval-executions", label: "Approval executions" },
-        { href: "/admin/approval-escalation-settings", label: "Escalation settings" },
-        { href: "/admin/approval-templates", label: "Approval templates" }
-      ]
+const ADMIN_WORKSPACE_HUB_DEFINITIONS: Record<AdminShellSectionKey, AdminWorkspaceHubDefinition> = {
+  controlTower: {
+    description: {
+      ko: "결재, KPI, 분석 화면에서 우선순위와 정체 위험을 확인합니다.",
+      en: "Track approval backlog, KPI signals, and analysis priorities.",
     },
-    {
-      key: "people",
-      title: "People and onboarding",
-      description: "Manage employees, org structure, and onboarding status.",
-      links: [
-        { href: "/admin/people", label: "People workspace" },
-        { href: "/admin/onboarding", label: "Onboarding" }
-      ]
+    links: [
+      { href: "/admin/approval-executions", label: { ko: "결재 실행", en: "Approval executions" } },
+      { href: "/admin/kpi", label: { ko: "KPI 대시보드", en: "KPI dashboard" } },
+      { href: "/admin/analytics", label: { ko: "분석 리포트", en: "Analytics reports" } },
+    ],
+  },
+  peopleAndPolicy: {
+    description: {
+      ko: "직원, 조직, 온보딩, 정책 기준을 한 흐름에서 관리합니다.",
+      en: "Manage people, org structure, onboarding, and policy baselines in one flow.",
     },
-    {
-      key: "worktime",
-      title: "Scheduling and leave",
-        description: "Operate schedules and leave policy/calendar flows.",
-        links: [
-          { href: "/admin/scheduling", label: "Scheduling" },
-          { href: "/admin/leave-policies", label: "Leave policies" },
-          { href: "/admin/leave-promotion-email", label: "Leave promotion email" },
-          { href: "/admin/attendance-security", label: "Attendance security" },
-          { href: "/admin/leave-calendar", label: "Leave calendar" }
-        ]
+    links: [
+      { href: "/admin/people", label: { ko: "인사 관리", en: "People workspace" } },
+      { href: "/admin/onboarding", label: { ko: "온보딩", en: "Onboarding" } },
+      { href: "/admin/approval-policy", label: { ko: "결재 정책", en: "Approval policy" } },
+      { href: "/admin/leave-policies", label: { ko: "휴가 정책", en: "Leave policies" } },
+    ],
+  },
+  operations: {
+    description: {
+      ko: "근태, 휴가, 일정과 직원 대상 운영 흐름을 한 번에 처리합니다.",
+      en: "Handle attendance, leave, scheduling, and employee-facing operating workflows.",
     },
-    {
-      key: "payroll",
-      title: "Payroll and year-end",
-      description: "Run payroll settlement, delivery, and filing.",
-      links: [
-        { href: "/admin/feature-management", label: "Feature management" },
-        { href: "/admin/payroll-year-end", label: "Year-end" },
-        { href: "/admin/payroll-year-end-filing", label: "Filing" }
-      ]
+    links: [
+      { href: "/admin/attendance-live", label: { ko: "실시간 근태", en: "Attendance live" } },
+      { href: "/admin/leave-calendar", label: { ko: "휴가 캘린더", en: "Leave calendar" } },
+      { href: "/admin/scheduling", label: { ko: "근무 일정", en: "Scheduling" } },
+      {
+        href: "/admin/notices?status=PUBLISHED&risk=no-read&source=admin-dashboard",
+        label: { ko: "공지 읽음 위험", en: "Notice read risk" },
+      },
+      {
+        href: "/admin/benefits?status=SUBMITTED&risk=pending_3d&source=admin-dashboard",
+        label: { ko: "복리후생 요청 지연", en: "Benefit backlog" },
+      },
+      {
+        href: "/admin/recruitment?risk=stalled_7d&source=admin-dashboard",
+        label: { ko: "채용 진행 지연", en: "Recruitment stalled" },
+      },
+      {
+        href: "/admin/contracts?decisionQueueOnly=true",
+        label: { ko: "계약 의사결정 큐", en: "Contract decision queue" },
+      },
+      {
+        href: "/admin/contracts?slaRisk=OVERDUE",
+        label: { ko: "계약 SLA 초과", en: "Contract SLA overdue" },
+      },
+      {
+        href: "/admin/contracts?status=SENT",
+        label: { ko: "계약 응답 대기", en: "Contract pending responses" },
+      },
+    ],
+  },
+  payrollAndFiling: {
+    description: {
+      ko: "급여 마감, 명세서 배포, 연말정산과 신고 상태를 이어서 처리합니다.",
+      en: "Operate payroll close, payslip delivery, year-end, and filing status in one lane.",
     },
-    {
-      key: "communication",
-      title: "Notices, benefits, recruitment, contracts",
-      description: "Operate employee communication, support workflows, and contract risk queues.",
-      links: [
-        { href: "/admin/operator-alerts", label: "Operator alert integrations" },
-        { href: "/admin/notification-defaults", label: "Notification defaults" },
-        {
-          href: "/admin/notices?status=PUBLISHED&risk=no-read&source=admin-dashboard",
-          label: "Unread notice risk"
-        },
-        {
-          href: "/admin/benefits?status=SUBMITTED&risk=pending_3d&source=admin-dashboard",
-          label: "Aging benefits queue"
-        },
-        {
-          href: "/admin/recruitment?risk=stalled_7d&source=admin-dashboard",
-          label: "Stalled recruitment queue"
-        },
-        { href: "/admin/contracts?decisionQueueOnly=true", label: "Contract decision queue" },
-        { href: "/admin/contracts?slaRisk=OVERDUE", label: "Contract SLA overdue" },
-        { href: "/admin/contracts?status=SENT", label: "Contract pending responses" },
-        { href: "/admin/contracts?renewalCandidateOnly=true", label: "Contract renewal candidates" }
-      ]
-    }
-  ];
+    links: [
+      { href: "/admin/payroll-close", label: { ko: "급여 마감", en: "Payroll close" } },
+      { href: "/admin/payroll-payslip-delivery", label: { ko: "명세서 배포", en: "Payslip delivery" } },
+      { href: "/admin/payroll-year-end", label: { ko: "연말정산", en: "Year-end" } },
+      { href: "/admin/payroll-year-end-filing", label: { ko: "신고", en: "Filing" } },
+    ],
+  },
+  settingsAndReporting: {
+    description: {
+      ko: "알림, 보안, 기능 관리와 보고 기준을 운영 설정으로 묶습니다.",
+      en: "Maintain alerts, security, feature controls, and reporting defaults.",
+    },
+    links: [
+      {
+        href: "/admin/approval-escalation-settings",
+        label: { ko: "결재 에스컬레이션 설정", en: "Approval escalation settings" },
+      },
+      {
+        href: "/admin/leave-promotion-email",
+        label: { ko: "휴가 촉진 메일 설정", en: "Leave promotion email" },
+      },
+      {
+        href: "/admin/attendance-security",
+        label: { ko: "출퇴근 보안 설정", en: "Attendance security" },
+      },
+      { href: "/admin/settings", label: { ko: "설정", en: "Settings" } },
+      { href: "/admin/operator-alerts", label: { ko: "운영 알림 연동", en: "Operator alerts" } },
+      { href: "/admin/notification-defaults", label: { ko: "알림 기본값", en: "Notification defaults" } },
+      { href: "/admin/feature-management", label: { ko: "기능 관리", en: "Feature management" } },
+      { href: "/admin/reports", label: { ko: "보고서", en: "Reports" } },
+    ],
+  },
+};
+
+export function buildAdminWorkspaceHubs(locale: "ko" | "en", t: Translator): AdminDashboardWorkspaceHub[] {
+  return ADMIN_SHELL_SECTION_DEFINITIONS.map((section) => {
+    const hub = ADMIN_WORKSPACE_HUB_DEFINITIONS[section.key];
+    return {
+      key: section.key,
+      title: t(section.titleKey),
+      description: hub.description[locale],
+      links: hub.links.map((link) => ({
+        href: link.href,
+        label: link.label[locale],
+      })),
+    };
+  });
 }

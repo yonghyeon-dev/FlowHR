@@ -8,14 +8,10 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const hubsSource = readUtf8("src", "app", "admin", "page-workspace-hubs.ts");
-  const workItem = readUtf8(
-    "work-items",
-    "WI-0836-admin-dashboard-contract-risk-links.md"
-  );
+  const workItem = readUtf8("work-items", "WI-0836-admin-dashboard-contract-risk-links.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(hubsSource, /공지\/복리후생\/채용\/계약/);
-  assert.match(hubsSource, /Notices, benefits, recruitment, contracts/);
+  assert.match(hubsSource, /\/admin\/contracts\?decisionQueueOnly=true/);
   assert.match(hubsSource, /\/admin\/contracts\?slaRisk=OVERDUE/);
   assert.match(hubsSource, /\/admin\/contracts\?status=SENT/);
   assert.match(hubsSource, /계약 SLA 초과/);
@@ -23,35 +19,23 @@ async function run() {
   assert.match(hubsSource, /Contract SLA overdue/);
   assert.match(hubsSource, /Contract pending responses/);
 
-  const { buildAdminWorkspaceHubs } = await import(
-    "../../src/app/admin/page-workspace-hubs.ts"
+  const { buildAdminWorkspaceHubs } = await import("../../src/app/admin/page-workspace-hubs.ts");
+  const t = (key: string) => key;
+  const koHubs = buildAdminWorkspaceHubs("ko", t);
+  const enHubs = buildAdminWorkspaceHubs("en", t);
+  const koContractsHub = koHubs.find((hub) =>
+    hub.links.some((link) => link.href.includes("/admin/contracts?decisionQueueOnly=true"))
   );
-  const koHubs = buildAdminWorkspaceHubs(true);
-  const enHubs = buildAdminWorkspaceHubs(false);
-  const koCommunicationHub = koHubs.find((hub) => hub.key === "communication");
-  const enCommunicationHub = enHubs.find((hub) => hub.key === "communication");
-  assert.ok(koCommunicationHub, "Korean communication hub should exist");
-  assert.ok(enCommunicationHub, "English communication hub should exist");
-  assert.ok(
-    koCommunicationHub?.links.some((link) =>
-      link.href.includes("/admin/contracts?slaRisk=OVERDUE")
-    )
+  const enContractsHub = enHubs.find((hub) =>
+    hub.links.some((link) => link.href.includes("/admin/contracts?decisionQueueOnly=true"))
   );
-  assert.ok(
-    koCommunicationHub?.links.some((link) =>
-      link.href.includes("/admin/contracts?status=SENT")
-    )
-  );
-  assert.ok(
-    enCommunicationHub?.links.some((link) =>
-      link.href.includes("/admin/contracts?slaRisk=OVERDUE")
-    )
-  );
-  assert.ok(
-    enCommunicationHub?.links.some((link) =>
-      link.href.includes("/admin/contracts?status=SENT")
-    )
-  );
+
+  assert.ok(koContractsHub, "Korean admin hub should keep contract risk links");
+  assert.ok(enContractsHub, "English admin hub should keep contract risk links");
+  assert.ok(koContractsHub?.links.some((link) => link.href.includes("/admin/contracts?slaRisk=OVERDUE")));
+  assert.ok(koContractsHub?.links.some((link) => link.href.includes("/admin/contracts?status=SENT")));
+  assert.ok(enContractsHub?.links.some((link) => link.href.includes("/admin/contracts?slaRisk=OVERDUE")));
+  assert.ok(enContractsHub?.links.some((link) => link.href.includes("/admin/contracts?status=SENT")));
 
   assert.match(workItem, /WI-0836/i);
   assert.match(workItem, /admin|dashboard|contract|risk|link/i);

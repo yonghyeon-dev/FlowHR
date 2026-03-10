@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1106` so shared language, status, and date/time rules are fixed before shell migration starts.
-2. Start `WI-1107` as the first employee self-service IA refactor implementation slice.
-3. Keep the next admin/employee shell component-system planning linked behind the `WI-1107` seam instead of reopening ad-hoc surface cleanup.
+1. Close `WI-1116` so admin dashboard workspace hubs and grouped shell stop drifting.
+2. Start the first employee self-service IA implementation slice on top of the grouped shell baseline.
+3. Begin the first shared workspace implementation slice after shell and IA seams are both fixed.
 
 ## 5. Blockers Or Watch Items
 
@@ -267,3 +267,8 @@ Latest planning reset:
 - Started `WI-1105` to define shared feedback, confirmation, recovery, and empty-state primitives before shell regrouping begins.
 - Closed `WI-1105` and added `docs/shared-feedback-and-confirmation-primitives.md` as the shared feedback/confirmation primitive baseline.
 - Started `WI-1106` to define shared product language, status mapping, and date/time rules before the first employee shell implementation slice.
+- Closed `WI-1106` and added `docs/shared-product-language-and-date-time-standardization.md` as the shared language, status, and date/time baseline.
+- Closed `WI-1107` and regrouped employee self-service navigation into role-based shell sections.
+- Closed `WI-1108` and regrouped admin navigation into the same grouped-shell model.
+- Closed `WI-1109` and aligned the admin control-tower dashboard entries with the grouped shell baseline.
+- Started `WI-1116` to align admin workspace hubs with grouped shell sections while preserving operational settings and source-context risk entry links.
