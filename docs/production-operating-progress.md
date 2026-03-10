@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1101` so the operating documents and execution order explicitly treat UI/UX as the organizing principle.
-2. Lock the visual design and interaction principles into `docs/ui-ux-first-refactor-blueprint.md` so structure and design move together.
-3. Re-scope `WI-1100` and the next structural WI from the blueprint, not from the old finish-track model.
+1. Close `WI-1104` so the shared workspace interaction contract becomes the baseline for the next shell and workspace refactors.
+2. Start `WI-1105` so confirmation, feedback, and empty-state primitives stop being re-implemented per surface.
+3. Begin the first implementation slice under `WI-1107` using the employee shell regrouping plan instead of the legacy `?focus=` model.
 
 ## 5. Blockers Or Watch Items
 
@@ -260,3 +260,6 @@ Latest planning reset:
 - Started `WI-1101` to reposition UI/UX from a finish track to the central operating principle and to move role/tenant/IA refactoring into the active execution order.
 - Added `docs/ui-ux-first-refactor-blueprint.md` so contradictions, refactor categories, dependency rules, and next WI candidates are explicit before the next implementation wave starts.
 - Integrated the visual design system direction into the same blueprint so layout model, density, mobile behavior, and HRWIRE adoption rules are fixed before the next shell refactor.
+- Closed `WI-1102` and froze `docs/role-tenant-product-shell-blueprint.md` as the role/tenant/product-shell operating model.
+- Closed `WI-1103` and froze `docs/first-ia-refactor-seam-migration-plan.md` so the first safe IA seam is explicit before implementation starts.
+- Started `WI-1104` to define the shared workspace interaction contract that future UI implementation WIs must follow.
