@@ -30,6 +30,7 @@ Legend:
 | 31 | Year-end / filing summaries | Raw hashes, finalization IDs, submission IDs, ack codes, and operator-facing technical labels visible | Human-readable status summaries and operator copy without internal trace values or technical filter keys | Partial -> WI-1062, WI-1063 |
 | 32 | Year-end / filing recovery and workflow copy | Failure guidance still uses ACK terminology and workflow summary panel stays English-only | Operator-facing recovery guidance and workflow labels in product language | New -> WI-1064 |
 | 33 | Year-end / filing control copy | Preflight action and response fallback still expose `정산 해시` / `ACK-OK` style control wording | Operator-facing actions and fallback labels use product language | New -> WI-1065 |
+| 34 | Year-end explanation labels | Year-end and withholding cards still expose `벡터 해시`, `사유 코드`, `정산 해시` style explanation labels | Summary cards use operator-facing explanation and 기준 wording | New -> WI-1066 |
 
 ## B. External Notification Productization
 
@@ -89,3 +90,4 @@ Legend:
 8. WI-1063 year-end and filing operator copy
 9. WI-1064 year-end and filing guidance copy
 10. WI-1065 year-end and filing control copy
+11. WI-1066 year-end explanation copy
