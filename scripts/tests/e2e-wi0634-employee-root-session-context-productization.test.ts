@@ -25,14 +25,17 @@ async function run() {
   assert.doesNotMatch(sessionHelper, /setOrganizationId/);
   assert.doesNotMatch(sessionHelper, /setEmployeeId/);
   assert.match(sessionHelper, /const organizationId = \(supabaseSession\?\.organizationId \?\? ""\)\.trim\(\)/);
-  assert.match(sessionHelper, /const employeeId = \(supabaseSession\?\.actorId \?\? supabaseSession\?\.userId \?\? "EMP-1001"\)\.trim\(\) \|\| "EMP-1001"/);
+  assert.match(sessionHelper, /const sessionEmployeeId = \(supabaseSession\?\.actorId \?\? ""\)\.trim\(\)/);
+  assert.match(sessionHelper, /const employeeId = sessionEmployeeId/);
 
   assert.doesNotMatch(accountPanel, /onOrganizationIdChange/);
   assert.doesNotMatch(accountPanel, /onEmployeeIdChange/);
   assert.doesNotMatch(accountPanel, /onAccessTokenChange/);
   assert.doesNotMatch(accountPanel, /Bearer access token \(override\)/);
-  assert.match(accountPanel, /Session organization/);
-  assert.match(accountPanel, /Session employee/);
+  assert.match(accountPanel, /formatSignedInAccountLabel\(/);
+  assert.match(accountPanel, /formatWorkspaceConnectionState\(/);
+  assert.match(accountPanel, /formatEmployeeSessionConnectionState\(/);
+  assert.doesNotMatch(accountPanel, /supabaseSession\.email \?\? supabaseSession\.userId/);
 
   assert.match(workItem, /WI-0634/i);
   assert.match(roadmap, /WI-0634/i);

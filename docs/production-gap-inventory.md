@@ -47,6 +47,7 @@ Legend:
 | 48 | Admin payroll session context surface | Payroll insurance, leave calendar, year-end, preflight, and filing consoles still show raw session organization or admin actor identifiers in devtools context lines | Devtools context should keep session visibility but show connection-state product wording instead of raw IDs | New -> WI-1084 |
 | 49 | Employee session context surface | Employee dashboard account overview and employee year-end input console still show raw session organization or employee identifiers in devtools context lines | Devtools context should keep session visibility but show connection-state product wording instead of raw IDs | New -> WI-1085 |
 | 50 | Employee payroll self-service session copy surface | Withholding receipt, payslip receipt, and payslip filter devtools still expose raw session organization or employee identifiers and userId-based session fallback text | Employee payroll self-service devtools should show signed-in account, localized role, workspace status, and employee session status without raw internal identifiers | New -> WI-1086 |
+| 51 | Employee account and guide session copy surface | Employee account card still falls back to raw userId text and employee guide still labels public employee number as a session artifact | Employee home surfaces should show signed-in account and signed-in employee number with product wording only | New -> WI-1087 |
 
 ## B. External Notification Productization
 
@@ -125,3 +126,4 @@ Legend:
 27. WI-1084 admin payroll session context humanization
 28. WI-1085 employee session context humanization
 29. WI-1086 employee session copy productization
+30. WI-1087 employee account and guide session copy productization

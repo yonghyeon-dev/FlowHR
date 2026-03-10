@@ -5,6 +5,7 @@ import { buildEmployeeWorkspaceHubs } from "@/components/employee-dashboard/work
 import { EmployeeJourneyShortcutPanel } from "@/components/employee-self-service/EmployeeJourneyShortcutPanel";
 import type { SupabaseSessionSnapshot } from "@/lib/client/useSupabaseSession";
 import {
+  formatSignedInAccountLabel,
   formatEmployeeSessionConnectionState,
   formatWorkspaceConnectionState
 } from "@/lib/product-language";
@@ -17,8 +18,6 @@ type EmployeeAccountOverviewPanelsProps = {
   requiresLoginSession: boolean;
   supabaseSession: SupabaseSessionSnapshot | null;
   supabaseSessionError: string | null;
-  organizationId: string;
-  employeeId: string;
   periodStart: string;
   periodEnd: string;
   supabaseUrl: string;
@@ -125,8 +124,6 @@ export function EmployeeAccountOverviewPanels({
   requiresLoginSession,
   supabaseSession,
   supabaseSessionError,
-  organizationId,
-  employeeId,
   periodStart,
   periodEnd,
   supabaseUrl,
@@ -137,6 +134,9 @@ export function EmployeeAccountOverviewPanels({
   onRefreshEmployeeSnapshot,
   onJumpToSection
 }: EmployeeAccountOverviewPanelsProps) {
+  const locale = isKoLocale ? "ko" : "en";
+  const hasWorkspaceSession = Boolean((supabaseSession?.organizationId ?? "").trim());
+  const hasEmployeeSession = Boolean((supabaseSession?.actorId ?? supabaseSession?.userId ?? "").trim());
   const workspaceHubs = buildEmployeeWorkspaceHubs(isKoLocale);
   const priorityChecklistCard =
     integratedSubmitChecklistCards.find((card) => !card.ready) ??
@@ -265,8 +265,8 @@ export function EmployeeAccountOverviewPanels({
           <p className="small">
             {supabaseSession
               ? isKoLocale
-                ? `로그인 계정: ${supabaseSession.email ?? supabaseSession.userId}`
-                : `Signed in as ${supabaseSession.email ?? supabaseSession.userId}`
+                ? `로그인 계정: ${formatSignedInAccountLabel(supabaseSession.email, locale)}`
+                : `Signed in as ${formatSignedInAccountLabel(supabaseSession.email, locale)}`
               : isKoLocale
                 ? "현재 로그인되어 있지 않습니다. "
                 : "You are not signed in. "}
@@ -296,8 +296,8 @@ export function EmployeeAccountOverviewPanels({
             </summary>
             <div className="input-grid" style={{ marginTop: 12 }}>
               <p className="small full">
-                <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), isKoLocale ? "ko" : "en")}</strong> /{" "}
-                <strong>{formatEmployeeSessionConnectionState(Boolean(employeeId.trim()), isKoLocale ? "ko" : "en")}</strong>
+                <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, locale)}</strong> /{" "}
+                <strong>{formatEmployeeSessionConnectionState(hasEmployeeSession, locale)}</strong>
               </p>
               <label>
                 {isKoLocale ? "조회 기간 시작" : "Period Start"}

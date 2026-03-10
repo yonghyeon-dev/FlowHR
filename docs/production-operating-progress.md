@@ -158,6 +158,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Re-verified `WI-1084` at deploy time and confirmed both `ci` and `vercel-production-deploy` stay green after the admin payroll session-context cleanup.
 - Started `WI-1085` to replace raw session organization and employee ID devtools context lines on employee dashboard account overview and employee year-end input surfaces with connection-state product wording.
 - Started `WI-1086` to replace raw session organization, employee session, and userId fallback wording on employee payslip and withholding self-service devtools surfaces with signed-in account and connection-state product wording.
+- Closed `WI-1086` through the full GitHub flow and merged it to `main` as `497c4a7a8566773ec7d99851f8bf93b4a3331bdf`, then deleted the feature branch.
+- Re-verified `WI-1086` at deploy time and confirmed both `ci` and `vercel-production-deploy` stay green after the employee payroll self-service session-copy cleanup.
+- Started `WI-1087` to replace the remaining userId fallback and session-number wording on employee account and guide entry surfaces with product-facing account copy.
 - Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
@@ -200,8 +203,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close `WI-1086` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
-2. Re-scan remaining employee self-service account and guide session-copy surfaces for the next compact WI.
+1. Close `WI-1087` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
+2. Re-scan remaining shared session/account copy surfaces such as `SessionMenu` for the next compact WI.
 3. Continue the next production-surface cleanup slice from the updated inventory.
 
 ## 5. Blockers Or Watch Items
