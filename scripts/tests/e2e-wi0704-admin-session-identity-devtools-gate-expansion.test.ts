@@ -21,7 +21,13 @@ async function run() {
     "approval-executions",
     "page-sections-work-conditions.tsx"
   );
-  const adminPeopleView = readUtf8("src", "app", "admin", "people", "page-view.tsx");
+  const adminPeopleViewLayout = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "people",
+    "page-view-layout.tsx"
+  );
   const adminPeopleFiltersPanel = readUtf8(
     "src",
     "app",
@@ -48,16 +54,16 @@ async function run() {
     /\{showDevTools \? \([\s\S]*Session actor[\s\S]*\) : null\}/
   );
 
-  assert.match(adminPeopleView, /showDevTools=\{showDevTools\}/);
+  assert.match(adminPeopleViewLayout, /showDevTools=\{showDevTools\}/);
   assert.match(adminPeopleFiltersPanel, /showDevTools: boolean;/);
   assert.match(
     adminPeopleFiltersPanel,
-    /\{showDevTools \? \([\s\S]*Session organization[\s\S]*Session actor[\s\S]*\) : null\}/
+    /\{showDevTools \? \([\s\S]*workspaceStatusLabel[\s\S]*adminSessionStatusLabel[\s\S]*\) : null\}/
   );
 
   assert.match(
     leaveCalendarConsole,
-    /\{showDevTools \? \([\s\S]*Session organization[\s\S]*Session admin[\s\S]*\) : null\}/
+    /\{showDevTools \? \([\s\S]*formatWorkspaceConnectionState[\s\S]*formatAdminSessionConnectionState[\s\S]*\) : null\}/
   );
 
   assert.match(workItem, /WI-0704/i);

@@ -62,15 +62,17 @@ export function AdminPeopleDirectoryFiltersPanel({
   supabaseSessionError
 }: AdminPeopleDirectoryFiltersPanelProps) {
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
+  const workspaceStatusLabel = isKoLocale ? "작업 공간 상태" : "Workspace status";
+  const adminSessionStatusLabel = isKoLocale ? "관리자 세션 상태" : "Admin session status";
 
   return (
     <article className="panel panel-directory-filters">
       <h2>{isKoLocale ? "필터" : "Filters"}</h2>
       {showDevTools ? (
         <p className="small muted">
-          {isKoLocale ? "세션 조직" : "Session organization"}:{" "}
+          {workspaceStatusLabel}:{" "}
           <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong> /{" "}
-          {isKoLocale ? "세션 액터" : "Session actor"}:{" "}
+          {adminSessionStatusLabel}:{" "}
           <strong>{formatAdminSessionConnectionState(Boolean(adminActorId.trim()), runtimeLocale)}</strong>
         </p>
       ) : null}
