@@ -24,8 +24,8 @@ async function run() {
   assert.doesNotMatch(dashboardSource, /onSetEmployeeId=/);
   assert.doesNotMatch(dashboardSource, /onSetAccessToken=/);
 
-  assert.match(sectionsSource, /Session organization/);
-  assert.match(sectionsSource, /Session employee/);
+  assert.match(sectionsSource, /로그인 직원 번호|Signed-in employee number/);
+  assert.doesNotMatch(sectionsSource, /세션 직원 번호|Session employee number/);
   assert.doesNotMatch(sectionsSource, /onSetOrganizationId/);
   assert.doesNotMatch(sectionsSource, /onSetEmployeeId/);
   assert.doesNotMatch(sectionsSource, /onSetAccessToken/);

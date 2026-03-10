@@ -109,7 +109,7 @@ export default function EmployeeSelfServicePage() {
   const toRequestStatusLabel = useCallback((status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED") => requestStatusLabels[status], [requestStatusLabels]);
   const toLeaveTypeLabel = useCallback((leaveType: string) => leaveTypeLabels[leaveType as keyof typeof leaveTypeLabels] ?? leaveType, [leaveTypeLabels]);
   const formatDateTimeByLocale = useCallback((value: string | null) => formatDateTime(value, runtimeLocale), [runtimeLocale]);
-  const { showDevTools, isProductionRuntime, supabaseSession, supabaseSessionError, supabaseSessionLoading, organizationId, employeeId, hasBoundEmployeeId, usesBearerToken } = useEmployeeRuntimeSession({ notConfiguredLabel });
+  const { showDevTools, isProductionRuntime, supabaseSession, supabaseSessionError, supabaseSessionLoading, employeeId, hasBoundEmployeeId, usesBearerToken } = useEmployeeRuntimeSession({ notConfiguredLabel });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
   const { loginSessionRequiredNotice, productionEmployeeIdRequiredNotice } = useMemo(() => resolveEmployeeProductionSessionNotices(isKoLocale), [isKoLocale]);
   const requiresLoginSession = !supabaseSessionLoading && isProductionRuntime && !usesBearerToken && !showDevTools;
@@ -451,8 +451,6 @@ export default function EmployeeSelfServicePage() {
           requiresLoginSession={blocksEmployeeApiActions}
           supabaseSession={supabaseSession}
           supabaseSessionError={supabaseSessionError}
-          organizationId={organizationId}
-          employeeId={employeeId}
           periodStart={periodStart}
           periodEnd={periodEnd}
           supabaseUrl={supabaseUrl}

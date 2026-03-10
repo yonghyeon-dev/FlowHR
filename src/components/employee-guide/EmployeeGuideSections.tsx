@@ -34,7 +34,8 @@ export function EmployeeGuideContextPanel(props: ContextPanelProps) {
         <h2>{copy.contextTitle}</h2>
         {showDevTools ? (
           <p className="small">
-            {isKoLocale ? "세션 직원 번호" : "Session employee number"}: <code>{formatPublicEmployeeNumber(employeeId)}</code>
+            {isKoLocale ? "로그인 직원 번호" : "Signed-in employee number"}:{" "}
+            <code>{formatPublicEmployeeNumber(employeeId)}</code>
           </p>
         ) : null}
         <div className="actions">

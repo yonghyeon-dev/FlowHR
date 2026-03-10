@@ -111,8 +111,8 @@ async function run() {
   assert.match(employeeGuideData, /Boolean\(pendingLabel\) \|\| requiresLoginSession/);
   assert.match(employeeGuideDashboard, /data\.requiresLoginSession \? \(/);
   assert.match(employeeGuideDashboard, /data\.productionSessionRequiredNotice\} <Link href="\/login">\/login<\/Link>/);
-  assert.match(employeeGuideSections, /세션 조직/);
-  assert.match(employeeGuideSections, /세션 직원/);
+  assert.match(employeeGuideSections, /로그인 직원 번호/);
+  assert.doesNotMatch(employeeGuideSections, /세션 직원/);
 
   assert.match(workItem, /WI-0891/i);
   assert.match(

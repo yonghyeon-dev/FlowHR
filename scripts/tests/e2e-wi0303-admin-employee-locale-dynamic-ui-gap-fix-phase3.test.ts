@@ -54,14 +54,9 @@ async function run() {
   assert.doesNotMatch(adminPage, /Organization ID가 필요합니다\./);
 
   assert.match(employeeResubmitPanel, /aria-label=\{isKoLocale \? "재제출 후보 목록" : "resubmit candidate list"\}/);
-  assert.match(
-    employeeAccountOverviewPanels,
-    /formatWorkspaceConnectionState\(Boolean\(organizationId\.trim\(\)\), isKoLocale \? "ko" : "en"\)/
-  );
-  assert.match(
-    employeeAccountOverviewPanels,
-    /formatEmployeeSessionConnectionState\(Boolean\(employeeId\.trim\(\)\), isKoLocale \? "ko" : "en"\)/
-  );
+  assert.match(employeeAccountOverviewPanels, /formatSignedInAccountLabel\(/);
+  assert.match(employeeAccountOverviewPanels, /formatWorkspaceConnectionState\(hasWorkspaceSession, locale\)/);
+  assert.match(employeeAccountOverviewPanels, /formatEmployeeSessionConnectionState\(hasEmployeeSession, locale\)/);
   assert.match(
     employeeAttendanceLeaveFormsPanel,
     /<option value="ANNUAL">\{toLeaveTypeLabel\("ANNUAL"\)\}<\/option>/

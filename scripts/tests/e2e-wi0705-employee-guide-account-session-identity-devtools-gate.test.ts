@@ -33,15 +33,11 @@ async function run() {
 
   assert.match(employeeGuideDashboard, /showDevTools=\{data\.showDevTools\}/);
   assert.match(employeeGuideSections, /showDevTools: boolean;/);
-  assert.match(
-    employeeGuideSections,
-    /\{showDevTools \? \([\s\S]*Session organization[\s\S]*Session employee[\s\S]*\) : null\}/
-  );
+  assert.match(employeeGuideSections, /로그인 직원 번호|Signed-in employee number/);
 
-  assert.match(
-    employeeAccountOverviewPanels,
-    /\{showDevTools \? \([\s\S]*Session organization[\s\S]*Session employee[\s\S]*\) : null\}/
-  );
+  assert.match(employeeAccountOverviewPanels, /formatSignedInAccountLabel\(/);
+  assert.match(employeeAccountOverviewPanels, /formatWorkspaceConnectionState\(/);
+  assert.match(employeeAccountOverviewPanels, /formatEmployeeSessionConnectionState\(/);
   assert.ok(!employeeAccountOverviewPanels.includes("showDevTools || !isProductionRuntime"));
 
   assert.match(workItem, /WI-0705/i);
