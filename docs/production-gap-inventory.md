@@ -64,7 +64,7 @@ Legend:
 | Ref | Surface | Current | Desired | Status |
 | --- | --- | --- | --- | --- |
 | J1 | Employee focus deep links | Desktop direct-load gaps remained across focus targets | Stable direct-load and client-side section navigation | Partial -> WI-1033, WI-1034, WI-1035, WI-1036, WI-1043, WI-1048, follow-up WI-1059, WI-1060 |
-| J2 | Admin approvals hash | `/admin#approvals` was unreliable | Stable redirect or stable target section | Existing -> WI-1038, WI-1044, WI-1049 |
+| J2 | Admin approvals hash | `/admin#approvals` was unreliable | Stable redirect or stable target section | Existing -> WI-1038, WI-1044, WI-1049, verification cleanup WI-1061 |
 | J3 | Notice create | `publishAt` mismatch caused 400 | Immediate and scheduled create both succeed | Existing -> WI-1042, WI-1050 |
 | J4 | Admin org/tenant context | Org lookup failures and claim mismatch | Stable tenant context in production | Existing -> WI-1025, WI-1026, WI-1051 |
 | J5 | Notifications auth | Missing auth header caused 401 | Stable authenticated notification reads | Existing -> WI-1016, WI-1023 |
