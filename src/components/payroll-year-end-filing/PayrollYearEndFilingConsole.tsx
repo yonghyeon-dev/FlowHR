@@ -29,6 +29,10 @@ import { isTruthyFlag } from "@/app/admin/page-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import {
+  formatAdminSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
+import {
   currentYear,
   type PayrollYearEndPreflightChecklistResponse
 } from "@/components/payroll-year-end/types";
@@ -907,8 +911,8 @@ export default function PayrollYearEndFilingConsole() {
             <h2>{copy.inputTitle}</h2>
             {showDevTools ? (
               <p className="small muted">
-                {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
-                {locale === "ko" ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
+                <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong> /{" "}
+                <strong>{formatAdminSessionConnectionState(Boolean(adminActorId.trim()), runtimeLocale)}</strong>
               </p>
             ) : null}
             <div className="input-grid">

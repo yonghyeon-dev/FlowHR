@@ -1,5 +1,10 @@
 ﻿import { type PayrollInsuranceCopy } from "@/components/payroll-insurance/copy";
 
+import {
+  formatAdminSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
+
 type InputPanelProps = {
   copy: PayrollInsuranceCopy;
   employeeId: string;
@@ -106,8 +111,8 @@ export function PayrollInsuranceInputPanel({
       <h2>{copy.inputTitle}</h2>
       {showDevTools ? (
         <p className="small">
-          {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{sessionOrganizationId || "-"}</code> /{" "}
-          {locale === "ko" ? "세션 관리자" : "Session admin"}: <code>{sessionAdminActorId || "-"}</code>
+          <strong>{formatWorkspaceConnectionState(Boolean(sessionOrganizationId.trim()), locale)}</strong> /{" "}
+          <strong>{formatAdminSessionConnectionState(Boolean(sessionAdminActorId.trim()), locale)}</strong>
         </p>
       ) : null}
       <label>
