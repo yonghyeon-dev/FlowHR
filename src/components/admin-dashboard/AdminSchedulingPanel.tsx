@@ -1,4 +1,5 @@
 ﻿import type { WorkScheduleDto } from "@/app/admin/page-types";
+import { formatPublicEmployeeNumber } from "@/lib/product-language";
 
 type WorkTypeLabels = {
   holiday: string;
@@ -115,12 +116,11 @@ export function AdminSchedulingPanel({
             <li key={schedule.id}>
               <span>
                 <span className="ok">{schedule.isHoliday ? workTypeLabels.holiday : workTypeLabels.work}</span>{" "}
-                <strong>{schedule.employeeId}</strong>{" "}
+                <strong>{formatPublicEmployeeNumber(schedule.employeeId)}</strong>{" "}
                 <span className="muted">
                   {formatDateTime(schedule.startAt)} ~ {formatDateTime(schedule.endAt)} (휴게 {schedule.breakMinutes}분)
                   {schedule.notes ? ` / ${schedule.notes}` : ""}
-                </span>{" "}
-                <time className="muted">{schedule.id}</time>
+                </span>
               </span>
               <div className="queue-actions">
                 <button type="button" className="btn btn-danger btn-small" onClick={() => onDeleteSchedule(schedule.id)}>
