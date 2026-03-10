@@ -4,6 +4,10 @@ import type { IntegratedSubmitChecklistCard, IntegratedSummaryCard } from "@/app
 import { buildEmployeeWorkspaceHubs } from "@/components/employee-dashboard/workspace-hubs";
 import { EmployeeJourneyShortcutPanel } from "@/components/employee-self-service/EmployeeJourneyShortcutPanel";
 import type { SupabaseSessionSnapshot } from "@/lib/client/useSupabaseSession";
+import {
+  formatEmployeeSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 
 type EmployeeAccountOverviewPanelsProps = {
   isKoLocale: boolean;
@@ -292,8 +296,8 @@ export function EmployeeAccountOverviewPanels({
             </summary>
             <div className="input-grid" style={{ marginTop: 12 }}>
               <p className="small full">
-                {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
-                {isKoLocale ? "세션 직원" : "Session employee"}: <code>{employeeId || "-"}</code>
+                <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), isKoLocale ? "ko" : "en")}</strong> /{" "}
+                <strong>{formatEmployeeSessionConnectionState(Boolean(employeeId.trim()), isKoLocale ? "ko" : "en")}</strong>
               </p>
               <label>
                 {isKoLocale ? "조회 기간 시작" : "Period Start"}

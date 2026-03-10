@@ -10,6 +10,10 @@ import { useI18n } from "@/lib/i18n/provider";
 import { isTruthyFlag } from "@/app/admin/page-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import {
+  formatEmployeeSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
+import {
   buildEmployeeYearEndAccuracyGuidance,
   buildEmployeeYearEndSimulation,
   isNonNegativeIntegerText,
@@ -341,8 +345,8 @@ export default function EmployeeYearEndInputConsole() {
           <h2>{copy.inputTitle}</h2>
           {showDevTools ? (
             <p className="small muted">
-              {locale === "ko" ? "\uc138\uc158 \uc870\uc9c1" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
-              {locale === "ko" ? "\uc138\uc158 \uc9c1\uc6d0" : "Session employee"}: <code>{employeeId || "-"}</code>
+              <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong> /{" "}
+              <strong>{formatEmployeeSessionConnectionState(Boolean(employeeId.trim()), runtimeLocale)}</strong>
             </p>
           ) : null}
           <div className="input-grid">
