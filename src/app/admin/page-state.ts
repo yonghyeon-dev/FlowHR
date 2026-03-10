@@ -160,6 +160,19 @@ export function useAdminDashboardState({
   const [payrollEmploymentInsuranceCapKrw, setPayrollEmploymentInsuranceCapKrw] = useState("");
   const [lastPayrollRunId, setLastPayrollRunId] = useState("");
 
+  useEffect(() => {
+    if (previewedPayroll.length === 0) {
+      if (lastPayrollRunId !== "") {
+        setLastPayrollRunId("");
+      }
+      return;
+    }
+    if (previewedPayroll.some((run) => run.id === lastPayrollRunId)) {
+      return;
+    }
+    setLastPayrollRunId(previewedPayroll[0]?.id ?? "");
+  }, [lastPayrollRunId, previewedPayroll]);
+
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [approvalActivities, setApprovalActivities] = useState<ApprovalActivity[]>([]);
   const [, setMobileApprovalFeedback] = useState<QueueMobileApprovalFeedback | null>(null);

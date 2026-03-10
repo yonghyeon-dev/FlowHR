@@ -11,6 +11,8 @@ import {
 } from "@/components/payroll/PayrollKrIncomeSplitItemsTable";
 import { PayrollKrIncomeSplitItemPresetField } from "@/components/payroll/PayrollKrIncomeSplitItemPresetField";
 import { PayrollKrPresetGuidePanel } from "@/components/payroll/PayrollKrPresetGuidePanel";
+import type { PayrollRunDto } from "@/app/admin/page-types";
+import { formatPublicEmployeeNumber } from "@/lib/product-language";
 
 type PayrollPreviewMode = "gross" | "statutory_kr_baseline";
 
@@ -36,7 +38,9 @@ type AdminPayrollPanelProps = {
   payrollHealthInsuranceCapKrw: string;
   payrollEmploymentInsuranceCapKrw: string;
   payrollPresetShareLinkFeedback: PayrollKrPresetShareLinkFeedback | null;
+  previewedPayroll: PayrollRunDto[];
   lastPayrollRunId: string;
+  formatDateTime: (value: string | null) => string;
   onPayrollPreviewModeChange: (mode: PayrollPreviewMode) => void;
   onEmployeeIdChange: (employeeId: string) => void;
   onPayrollHourlyRateKrwChange: (value: string) => void;
@@ -86,7 +90,9 @@ export function AdminPayrollPanel({
   payrollHealthInsuranceCapKrw,
   payrollEmploymentInsuranceCapKrw,
   payrollPresetShareLinkFeedback,
+  previewedPayroll,
   lastPayrollRunId,
+  formatDateTime,
   onPayrollPreviewModeChange,
   onEmployeeIdChange,
   onPayrollHourlyRateKrwChange,
@@ -130,8 +136,11 @@ export function AdminPayrollPanel({
         nationalPensionCap: "국민연금 상한(KRW, 선택)",
         healthInsuranceCap: "건강보험 상한(KRW, 선택)",
         employmentInsuranceCap: "고용보험 상한(KRW, 선택)",
-        lastRunId: "최근 Run ID",
-        lastRunIdPlaceholder: "확정 버튼용",
+        confirmTarget: "확정 대상 프리뷰",
+        confirmTargetPlaceholder: "프리뷰를 먼저 생성해 주세요",
+        confirmTargetHint: "최근 프리뷰를 기간과 직원 기준으로 선택한 뒤 확정합니다.",
+        previewedState: "미확정 프리뷰",
+        confirmedState: "확정 완료",
         createPreview: "프리뷰 생성",
         confirmRun: "Run 확정"
       }
@@ -151,11 +160,21 @@ export function AdminPayrollPanel({
         nationalPensionCap: "National pension cap (KRW, optional)",
         healthInsuranceCap: "Health insurance cap (KRW, optional)",
         employmentInsuranceCap: "Employment insurance cap (KRW, optional)",
-        lastRunId: "Recent run ID",
-        lastRunIdPlaceholder: "for confirm button",
+        confirmTarget: "Preview to confirm",
+        confirmTargetPlaceholder: "Create a preview first",
+        confirmTargetHint: "Choose a recent preview by period and employee before confirmation.",
+        previewedState: "Preview pending confirmation",
+        confirmedState: "Already confirmed",
         createPreview: "Create preview",
         confirmRun: "Confirm run"
       };
+
+  const describePreviewedRun = (run: PayrollRunDto) => {
+    const periodLabel = `${formatDateTime(run.periodStart)} ~ ${formatDateTime(run.periodEnd)}`;
+    const employeeLabel = run.employeeId ? ` · ${formatPublicEmployeeNumber(run.employeeId)}` : "";
+    const stateLabel = run.state === "CONFIRMED" ? fieldCopy.confirmedState : fieldCopy.previewedState;
+    return `${periodLabel} · ${stateLabel}${employeeLabel}`;
+  };
 
   const headingTitle = isKoLocale ? "급여 프리뷰/확정" : "Payroll Preview/Confirm";
   const headingDescription = isKoLocale
@@ -344,14 +363,25 @@ export function AdminPayrollPanel({
           </>
         ) : null}
         <label className="full">
-          {fieldCopy.lastRunId}
-          <input
+          {fieldCopy.confirmTarget}
+          <select
             value={lastPayrollRunId}
             onChange={(event) => onLastPayrollRunIdChange(event.target.value)}
-            placeholder={fieldCopy.lastRunIdPlaceholder}
-          />
+            disabled={previewedPayroll.length === 0}
+          >
+            {previewedPayroll.length === 0 ? (
+              <option value="">{fieldCopy.confirmTargetPlaceholder}</option>
+            ) : (
+              previewedPayroll.map((run) => (
+                <option key={run.id} value={run.id}>
+                  {describePreviewedRun(run)}
+                </option>
+              ))
+            )}
+          </select>
         </label>
       </div>
+      <p className="small muted">{fieldCopy.confirmTargetHint}</p>
       <div className="actions">
         <button className="btn btn-primary" onClick={onPreviewPayroll}>
           {fieldCopy.createPreview}

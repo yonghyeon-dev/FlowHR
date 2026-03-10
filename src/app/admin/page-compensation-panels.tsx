@@ -6,7 +6,8 @@ import { type PayrollKrIncomeSplitItemDraft } from "@/components/payroll/Payroll
 import type {
   ApiLog,
   AttendanceAggregateDto,
-  LeaveBalanceDto
+  LeaveBalanceDto,
+  PayrollRunDto
 } from "@/app/admin/page-types";
 
 type AdminCompensationPanelsProps = {
@@ -67,6 +68,7 @@ type AdminCompensationPanelsProps = {
   payrollHealthInsuranceCapKrw: string;
   payrollEmploymentInsuranceCapKrw: string;
   payrollPresetShareLinkFeedback: PayrollKrPresetShareLinkFeedback | null;
+  previewedPayroll: PayrollRunDto[];
   lastPayrollRunId: string;
   logs: ApiLog[];
   logStatusLabels: {
@@ -164,7 +166,9 @@ export function AdminCompensationPanels(props: AdminCompensationPanelsProps) {
         payrollHealthInsuranceCapKrw={props.payrollHealthInsuranceCapKrw}
         payrollEmploymentInsuranceCapKrw={props.payrollEmploymentInsuranceCapKrw}
         payrollPresetShareLinkFeedback={props.payrollPresetShareLinkFeedback}
+        previewedPayroll={props.previewedPayroll}
         lastPayrollRunId={props.lastPayrollRunId}
+        formatDateTime={props.formatDateTimeByLocale}
         onPayrollPreviewModeChange={props.onPayrollPreviewModeChange}
         onEmployeeIdChange={props.onEmployeeIdChange}
         onPayrollHourlyRateKrwChange={props.onPayrollHourlyRateKrwChange}

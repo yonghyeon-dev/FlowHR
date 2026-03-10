@@ -16,7 +16,10 @@ async function run() {
   assert.match(adminPayrollPanel, /previewMode: "Preview mode"/);
   assert.match(adminPayrollPanel, /nonTaxableIncome: "비과세 소득\(KRW\)"/);
   assert.match(adminPayrollPanel, /nonTaxableIncome: "Non-taxable income \(KRW\)"/);
-  assert.match(adminPayrollPanel, /placeholder=\{fieldCopy\.lastRunIdPlaceholder\}/);
+  assert.match(adminPayrollPanel, /confirmTarget: "확정 대상 프리뷰"/);
+  assert.match(adminPayrollPanel, /confirmTarget: "Preview to confirm"/);
+  assert.match(adminPayrollPanel, /previewedPayroll\.map\(\(run\) => \(/);
+  assert.doesNotMatch(adminPayrollPanel, /lastRunIdPlaceholder/);
   assert.match(adminPayrollPanel, /\{fieldCopy\.createPreview\}/);
   assert.match(adminPayrollPanel, /\{fieldCopy\.confirmRun\}/);
 
