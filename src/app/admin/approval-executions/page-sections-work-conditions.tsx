@@ -86,15 +86,17 @@ export function ApprovalExecutionWorkConditionsPanel(props: WorkConditionsPanelP
   } = props;
 
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
+  const workspaceStatusLabel = isKoLocale ? "작업 공간 상태" : "Workspace status";
+  const adminSessionStatusLabel = isKoLocale ? "관리자 세션 상태" : "Admin session status";
 
   return (
     <article className="panel">
       <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
       {showDevTools ? (
         <p className="small muted">
-          {isKoLocale ? "조직" : "Organization"}:{" "}
+          {workspaceStatusLabel}:{" "}
           <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong> /{" "}
-          {isKoLocale ? "세션 액터" : "Session actor"}:{" "}
+          {adminSessionStatusLabel}:{" "}
           <strong>{formatAdminSessionConnectionState(Boolean(adminActorId.trim()), runtimeLocale)}</strong>
         </p>
       ) : null}
