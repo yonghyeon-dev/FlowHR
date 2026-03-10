@@ -186,6 +186,9 @@ Phase 1: keep the compact execution system accurate while remaining production-h
 - Closed `WI-1097` through the full GitHub flow and merged it to `main` as `bad592eff903c06a009a2858b5a782278a77cc39`, then deleted the feature branch.
 - Re-verified `WI-1097` on the delivery path and confirmed both `ci` (`22911661857`) and `vercel-production-deploy` (`22911661872`) stay green after the employee self-service session-guidance cleanup.
 - Restored `CURRENT-GOAL.md` as a readable Korean entry point and tightened the operating documents so the next UI/UX finish track is explicit.
+- Closed `WI-1098` through the full GitHub flow and merged it to `main` as `e1103d5ea8ab2efd6b3f0039cbb12235cf3ef0d9`, then deleted the feature branch.
+- Re-verified `WI-1098` on the delivery path and confirmed both `ci` (`22912777200`) and `vercel-production-deploy` (`22912777224`) stay green after the operating-document accuracy pass.
+- Started `WI-1099` as the first explicit Epic E implementation slice for admin notice confirmation, feedback, and empty-state recovery.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI
@@ -227,9 +230,9 @@ Phase 1: keep the compact execution system accurate while remaining production-h
 
 ## 4. Next Queue
 
-1. Re-scan adjacent employee self-service auth/session guidance surfaces after `WI-1097`.
-2. Start `work-items/WI-1099-ui-ux-wave1-confirmation-feedback-and-empty-state-recovery.md` as the first explicit Epic E slice for confirmation, feedback, and empty-state recovery.
-3. Revisit remaining date/time and status-label localization gaps before the next IA simplification wave.
+1. Expand the Wave 1 trust-and-recovery cleanup to adjacent admin/employee write surfaces after the admin notices slice lands.
+2. Start `work-items/WI-1100-ui-ux-wave2-date-time-and-status-localization.md` for date/time formatting and remaining mixed-language status labels.
+3. Revisit IA simplification after the first Wave 1 UX surfaces stabilize.
 
 ## 5. Blockers Or Watch Items
 

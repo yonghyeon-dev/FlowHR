@@ -60,6 +60,7 @@ type AdminNoticeWorkspaceViewProps = {
     success: number;
   };
   pendingLabel: string | null;
+  statusTone: "info" | "success" | "error" | null;
   statusMessage: string;
   onStatusFilterChange: (value: NoticeStatus | "all") => void;
   onAudienceFilterChange: (value: "all" | "employees" | "admins") => void;
@@ -116,6 +117,7 @@ export default function AdminNoticeWorkspaceView({
   logs,
   stats,
   pendingLabel,
+  statusTone,
   statusMessage,
   onStatusFilterChange,
   onAudienceFilterChange,
@@ -143,6 +145,8 @@ export default function AdminNoticeWorkspaceView({
   const runtimeLocale = copy.pageTitle === "공지사항 워크스페이스" ? "ko-KR" : "en-US";
   const workspaceStatusLabel = runtimeLocale === "ko-KR" ? "작업 공간 상태" : "Workspace status";
   const adminSessionStatusLabel = runtimeLocale === "ko-KR" ? "관리자 세션 상태" : "Admin session status";
+  const statusMessageClassName =
+    statusTone === "success" ? "small ok" : statusTone === "error" ? "small fail" : "small";
 
   return (
     <main className="saas-content">
@@ -237,7 +241,7 @@ export default function AdminNoticeWorkspaceView({
             {copy.logsTitle}: {stats.total} / OK {stats.success} / FAIL {stats.total - stats.success}
             {pendingLabel ? ` / ${copy.pendingLabelPrefix}: ${pendingLabel}` : ""}
           </p>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
+          {statusMessage ? <p className={statusMessageClassName}>{statusMessage}</p> : null}
         </article>
 
         <article className="panel">
@@ -315,11 +319,11 @@ export default function AdminNoticeWorkspaceView({
           </div>
           <p className="small muted">{copy.scheduleHelp}</p>
           <div className="actions">
-            <button className="btn btn-primary" type="button" onClick={onCreateNotice}>
+            <button className="btn btn-primary" type="button" onClick={onCreateNotice} disabled={Boolean(pendingLabel)}>
               {editingNoticeId ? copy.updateAction ?? copy.createAction : copy.createAction}
             </button>
             {editingNoticeId ? (
-              <button className="btn btn-secondary" type="button" onClick={onCancelEditNotice}>
+              <button className="btn btn-secondary" type="button" onClick={onCancelEditNotice} disabled={Boolean(pendingLabel)}>
                 {copy.cancelEditAction ?? copy.clearListSearchAction}
               </button>
             ) : null}
@@ -337,7 +341,7 @@ export default function AdminNoticeWorkspaceView({
             />
           </label>
           <div className="actions">
-            <button className="btn btn-secondary btn-small" type="button" onClick={onClearListSearch}>
+            <button className="btn btn-secondary btn-small" type="button" onClick={onClearListSearch} disabled={Boolean(pendingLabel)}>
               {copy.clearListSearchAction}
             </button>
           </div>
@@ -345,9 +349,15 @@ export default function AdminNoticeWorkspaceView({
             {copy.filteredListSummaryLabel}: {filteredNotices.length} / {notices.length}
           </p>
           {notices.length === 0 ? (
-            <p className="small muted">{copy.listEmpty}</p>
+            <div>
+              <p className="small"><strong>{copy.listEmpty}</strong></p>
+              <p className="small muted">{copy.listEmptyHelp}</p>
+            </div>
           ) : filteredNotices.length === 0 ? (
-            <p className="small muted">{copy.filteredListEmpty}</p>
+            <div>
+              <p className="small"><strong>{copy.filteredListEmpty}</strong></p>
+              <p className="small muted">{copy.filteredListEmptyHelp}</p>
+            </div>
           ) : (
             <ul className="simple-list">
               {filteredNotices.map((notice) => {
@@ -391,7 +401,7 @@ export default function AdminNoticeWorkspaceView({
                         type="button"
                         className="btn btn-secondary btn-small"
                         onClick={() => onStartEditNotice(notice.id)}
-                        disabled={actionLocked}
+                        disabled={actionLocked || Boolean(pendingLabel)}
                         title={actionLockReason}
                       >
                         {copy.editAction ?? "Edit"}
@@ -400,7 +410,7 @@ export default function AdminNoticeWorkspaceView({
                         type="button"
                         className="btn btn-secondary btn-small"
                         onClick={() => onPublishNow(notice.id)}
-                        disabled={actionLocked}
+                        disabled={actionLocked || Boolean(pendingLabel)}
                         title={actionLockReason}
                       >
                         {copy.publishAction}
@@ -409,7 +419,7 @@ export default function AdminNoticeWorkspaceView({
                         type="button"
                         className="btn btn-secondary btn-small"
                         onClick={() => onDeleteNotice(notice.id)}
-                        disabled={actionLocked}
+                        disabled={actionLocked || Boolean(pendingLabel)}
                         title={actionLockReason}
                       >
                         {copy.deleteAction ?? "Delete"}

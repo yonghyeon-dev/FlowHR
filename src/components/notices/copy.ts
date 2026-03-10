@@ -33,11 +33,13 @@ export type NoticeWorkspaceCopy = {
   deleteAction?: string;
   listTitle: string;
   listEmpty: string;
+  listEmptyHelp: string;
   listSearchLabel: string;
   listSearchPlaceholder: string;
   clearListSearchAction: string;
   filteredListSummaryLabel: string;
   filteredListEmpty: string;
+  filteredListEmptyHelp: string;
   statsLabel: string;
   readRiskSummaryLabel: string;
   readRiskBadgeLabel: string;
@@ -72,14 +74,17 @@ export type NoticeWorkspaceCopy = {
     needOrganization: string;
     needTitle: string;
     needBody: string;
-    editing?: string;
-    created: string;
-    updated?: string;
-    published: string;
-    deleted?: string;
-    deleteFailed?: string;
-    deletePublishedLocked?: string;
-    loadFailed: string;
+      editing?: string;
+      refreshed?: string;
+      created: string;
+      updated?: string;
+      published: string;
+      publishConfirm: (title: string) => string;
+      deleted?: string;
+      deleteConfirm: (title: string) => string;
+      deleteFailed?: string;
+      deletePublishedLocked?: string;
+      loadFailed: string;
   };
 };
 
@@ -182,11 +187,13 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     deleteAction: "삭제",
     listTitle: "공지 목록",
     listEmpty: "조건에 맞는 공지가 없습니다.",
+    listEmptyHelp: "첫 공지를 작성하거나 상태 필터를 바꿔 다른 공지를 확인해 보세요.",
     listSearchLabel: "공지 검색",
     listSearchPlaceholder: "제목/본문 검색",
     clearListSearchAction: "검색 초기화",
     filteredListSummaryLabel: "표시 공지 수",
     filteredListEmpty: "현재 검색 조건에 맞는 공지가 없습니다.",
+    filteredListEmptyHelp: "검색어를 지우거나 전달 위험 필터를 해제하면 다른 공지를 확인할 수 있습니다.",
     statsLabel: "요약",
     readRiskSummaryLabel: "전달 위험 공지(읽음 0건)",
     readRiskBadgeLabel: "전달 확인 필요",
@@ -222,10 +229,13 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
       needTitle: "제목을 입력하세요.",
       needBody: "본문을 입력하세요.",
       editing: "공지 수정 모드입니다.",
+      refreshed: "공지 목록을 새로고침했습니다.",
       created: "공지를 저장했습니다.",
       updated: "공지를 수정했습니다.",
       published: "공지를 게시했습니다.",
+      publishConfirm: (title) => `공지 '${title}' 을(를) 즉시 게시할까요?`,
       deleted: "공지를 삭제했습니다.",
+      deleteConfirm: (title) => `공지 '${title}' 을(를) 삭제할까요?`,
       deleteFailed: "공지 삭제에 실패했습니다.",
       deletePublishedLocked: "게시된 공지는 삭제할 수 없습니다.",
       loadFailed: "공지 목록 조회에 실패했습니다."
@@ -263,11 +273,13 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     deleteAction: "Delete",
     listTitle: "Notice list",
     listEmpty: "No notice found for current filters.",
+    listEmptyHelp: "Create the first notice or adjust the status filter to review a different queue.",
     listSearchLabel: "Notice search",
     listSearchPlaceholder: "Search in title/body",
     clearListSearchAction: "Clear search",
     filteredListSummaryLabel: "Visible notices",
     filteredListEmpty: "No notice matches current search.",
+    filteredListEmptyHelp: "Clear the search query or turn off delivery-risk filtering to see more notices.",
     statsLabel: "Summary",
     readRiskSummaryLabel: "Delivery risk notices (0 reads)",
     readRiskBadgeLabel: "Needs delivery check",
@@ -303,10 +315,13 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
       needTitle: "Title is required.",
       needBody: "Body is required.",
       editing: "Editing selected notice.",
+      refreshed: "Notice list refreshed.",
       created: "Notice saved.",
       updated: "Notice updated.",
       published: "Notice published.",
+      publishConfirm: (title) => `Publish notice '${title}' now?`,
       deleted: "Notice deleted.",
+      deleteConfirm: (title) => `Delete notice '${title}'?`,
       deleteFailed: "Failed to delete notice.",
       deletePublishedLocked: "Published notice cannot be deleted.",
       loadFailed: "Failed to load notices."
