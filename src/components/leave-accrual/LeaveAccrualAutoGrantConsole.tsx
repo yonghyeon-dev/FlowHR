@@ -3,22 +3,23 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import type { ApiLog, AutoGrantResponse, AutoGrantResultItem } from "@/components/leave-accrual/types";
+import { formatDays, isTruthyFlag } from "@/components/leave-accrual/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import {
   formatAdminSessionConnectionState,
+  formatEmployeeDisplayName,
+  formatPublicEmployeeNumber,
+  formatUserFacingErrorMessage,
   formatWorkspaceConnectionState
 } from "@/lib/product-language";
-import type { ApiLog, AutoGrantResponse } from "@/components/leave-accrual/types";
-import { formatDays, isTruthyFlag } from "@/components/leave-accrual/types";
 
 type LeaveAccrualCopy = {
   heroEyebrow: string;
   title: string;
   description: string;
   conditionsTitle: string;
-  sessionOrganizationLabel: string;
-  sessionAdminLabel: string;
   yearLabel: string;
   includeAlreadySettledLabel: string;
   includeAlreadySettledYes: string;
@@ -28,13 +29,15 @@ type LeaveAccrualCopy = {
   sessionErrorPrefix: string;
   summaryTitle: string;
   noResultYet: string;
-  resultOrganizationLabel: string;
-  resultYearDryRunLabel: string;
+  resultWorkspaceLabel: string;
+  resultWorkspaceValue: string;
+  resultYearModeLabel: string;
   resultPolicyLabel: string;
   resultEligibleAppliedFailedLabel: string;
   detailsTitle: string;
   noRowsYet: string;
   detailsStatusLabel: string;
+  detailsEmployeeNumberLabel: string;
   detailsJoinedLabel: string;
   detailsProjectedLabel: string;
   workspaceShortcutsTitle: string;
@@ -48,81 +51,109 @@ type LeaveAccrualCopy = {
   noLogsYet: string;
   pendingDryRun: string;
   pendingRun: string;
-  statusMissingSessionOrganization: string;
+  statusMissingWorkspace: string;
   statusInvalidYear: string;
   statusRequestFailed: string;
   statusDryRunDone: string;
   statusRunDone: string;
+  dryRunModeLabel: string;
+  applyModeLabel: string;
+  policyConfiguredLabel: string;
+  policyDefaultLabel: string;
+  eligibleLabel: string;
+  appliedLabel: string;
+  failedLabel: string;
+  alreadySettledLabel: string;
+  noReasonFallback: string;
+  detailStatusEligible: string;
+  detailStatusAlreadySettled: string;
+  detailStatusNotEligible: string;
+  detailStatusApplied: string;
+  detailStatusFailed: string;
 };
 
 const leaveAccrualCopyByLocale: Record<"ko" | "en", LeaveAccrualCopy> = {
   ko: {
     heroEyebrow: "FlowHR 관리자",
     title: "연차 자동 부여 엔진",
-    description: "조직의 연차 정책을 기준으로 대상 연도의 자동 부여량을 계산하고 드라이런/실행으로 반영합니다.",
+    description: "연차 정책을 기준으로 대상 연도의 자동 부여 결과를 미리 확인하거나 바로 실행합니다.",
     conditionsTitle: "실행 조건",
-    sessionOrganizationLabel: "세션 조직",
-    sessionAdminLabel: "세션 관리자",
     yearLabel: "정산 연도",
-    includeAlreadySettledLabel: "이미 정산된 대상 포함",
+    includeAlreadySettledLabel: "이미 정산된 직원 포함",
     includeAlreadySettledYes: "예",
     includeAlreadySettledNo: "아니오",
-    dryRunAction: "드라이런",
+    dryRunAction: "미리보기",
     runAction: "자동 부여 실행",
     sessionErrorPrefix: "세션 오류",
-    summaryTitle: "정책/요약",
+    summaryTitle: "정책 / 요약",
     noResultYet: "아직 실행 결과가 없습니다.",
-    resultOrganizationLabel: "조직",
-    resultYearDryRunLabel: "연도 / 드라이런",
-    resultPolicyLabel: "정책",
+    resultWorkspaceLabel: "적용 작업 공간",
+    resultWorkspaceValue: "현재 작업 공간",
+    resultYearModeLabel: "연도 / 실행 방식",
+    resultPolicyLabel: "적용 정책",
     resultEligibleAppliedFailedLabel: "대상 / 반영 / 실패",
     detailsTitle: "대상 상세",
     noRowsYet: "표시할 대상 결과가 없습니다.",
     detailsStatusLabel: "상태",
+    detailsEmployeeNumberLabel: "직원 번호",
     detailsJoinedLabel: "입사일",
     detailsProjectedLabel: "예상 부여",
-    workspaceShortcutsTitle: "워크스페이스 이동",
-    backToAdminAction: "관리자 대시보드",
-    leavePromotionDevAction: "(dev) 연차촉진 공지",
+    workspaceShortcutsTitle: "작업 공간 이동",
+    backToAdminAction: "관리자 홈으로",
+    leavePromotionDevAction: "(dev) 연차 촉진",
     logsTitle: "요청 로그",
     logsTotalLabel: "총",
     logsSuccessLabel: "성공",
     logsFailLabel: "실패",
-    logsRunningLabel: "진행중",
+    logsRunningLabel: "진행 중",
     noLogsYet: "아직 API 호출 이력이 없습니다.",
-    pendingDryRun: "연차 자동 부여 드라이런",
+    pendingDryRun: "연차 자동 부여 미리보기",
     pendingRun: "연차 자동 부여 실행",
-    statusMissingSessionOrganization: "세션 조직 정보가 없어 자동 부여를 실행할 수 없습니다.",
-    statusInvalidYear: "정산 연도는 2000~9999 사이 정수여야 합니다.",
-    statusRequestFailed: "요청이 실패했습니다. 로그를 확인해 주세요.",
-    statusDryRunDone: "드라이런 완료",
-    statusRunDone: "실행 완료"
+    statusMissingWorkspace: "작업 공간 연결 상태를 확인한 뒤 다시 시도해 주세요.",
+    statusInvalidYear: "정산 연도는 2000~9999 사이의 정수여야 합니다.",
+    statusRequestFailed: "요청을 완료하지 못했습니다. 현재 상태를 확인한 뒤 다시 시도해 주세요.",
+    statusDryRunDone: "미리보기를 불러왔습니다",
+    statusRunDone: "자동 부여 실행을 완료했습니다",
+    dryRunModeLabel: "미리보기",
+    applyModeLabel: "실행",
+    policyConfiguredLabel: "설정된 정책",
+    policyDefaultLabel: "기본 정책",
+    eligibleLabel: "대상",
+    appliedLabel: "반영",
+    failedLabel: "실패",
+    alreadySettledLabel: "기정산",
+    noReasonFallback: "추가 안내 없음",
+    detailStatusEligible: "대상",
+    detailStatusAlreadySettled: "기정산",
+    detailStatusNotEligible: "비대상",
+    detailStatusApplied: "반영 완료",
+    detailStatusFailed: "반영 실패"
   },
   en: {
     heroEyebrow: "FlowHR Admin",
     title: "Leave Auto Grant Engine",
-    description: "Calculate annual leave grants for the target year and apply via dry-run or execution.",
+    description: "Review or run automatic annual leave grants for the selected year using the active policy.",
     conditionsTitle: "Run Conditions",
-    sessionOrganizationLabel: "Session organization",
-    sessionAdminLabel: "Session admin",
     yearLabel: "Settlement year",
-    includeAlreadySettledLabel: "Include already settled in result",
+    includeAlreadySettledLabel: "Include already settled employees",
     includeAlreadySettledYes: "yes",
     includeAlreadySettledNo: "no",
-    dryRunAction: "Dry Run",
+    dryRunAction: "Preview",
     runAction: "Run Auto Grant",
     sessionErrorPrefix: "Session error",
     summaryTitle: "Policy / Summary",
     noResultYet: "No execution result yet.",
-    resultOrganizationLabel: "organizationId",
-    resultYearDryRunLabel: "year / dryRun",
-    resultPolicyLabel: "policy",
-    resultEligibleAppliedFailedLabel: "eligible / applied / failed",
-    detailsTitle: "Result Details",
+    resultWorkspaceLabel: "Applied workspace",
+    resultWorkspaceValue: "Current workspace",
+    resultYearModeLabel: "Year / Mode",
+    resultPolicyLabel: "Applied policy",
+    resultEligibleAppliedFailedLabel: "Eligible / Applied / Failed",
+    detailsTitle: "Target Details",
     noRowsYet: "No target rows to display.",
-    detailsStatusLabel: "status",
-    detailsJoinedLabel: "join",
-    detailsProjectedLabel: "projected",
+    detailsStatusLabel: "Status",
+    detailsEmployeeNumberLabel: "Employee number",
+    detailsJoinedLabel: "Joined",
+    detailsProjectedLabel: "Projected grant",
     workspaceShortcutsTitle: "Workspace shortcuts",
     backToAdminAction: "Back to Admin",
     leavePromotionDevAction: "(dev) Leave Promotion",
@@ -132,13 +163,27 @@ const leaveAccrualCopyByLocale: Record<"ko" | "en", LeaveAccrualCopy> = {
     logsFailLabel: "fail",
     logsRunningLabel: "running",
     noLogsYet: "No API calls yet.",
-    pendingDryRun: "leave auto grant dry-run",
+    pendingDryRun: "leave auto grant preview",
     pendingRun: "leave auto grant run",
-    statusMissingSessionOrganization: "Missing session organization context; cannot run auto grant.",
+    statusMissingWorkspace: "Check the workspace connection and try again.",
     statusInvalidYear: "Settlement year must be an integer between 2000 and 9999.",
-    statusRequestFailed: "Request failed. Check logs.",
-    statusDryRunDone: "Dry-run completed",
-    statusRunDone: "Execution completed"
+    statusRequestFailed: "We couldn't complete the request. Review the current state and try again.",
+    statusDryRunDone: "Preview loaded",
+    statusRunDone: "Auto grant completed",
+    dryRunModeLabel: "Preview",
+    applyModeLabel: "Run",
+    policyConfiguredLabel: "Configured policy",
+    policyDefaultLabel: "Default policy",
+    eligibleLabel: "Eligible",
+    appliedLabel: "Applied",
+    failedLabel: "Failed",
+    alreadySettledLabel: "Already settled",
+    noReasonFallback: "No additional guidance",
+    detailStatusEligible: "Eligible",
+    detailStatusAlreadySettled: "Already settled",
+    detailStatusNotEligible: "Not eligible",
+    detailStatusApplied: "Applied",
+    detailStatusFailed: "Failed"
   }
 };
 
@@ -151,6 +196,40 @@ function formatDateTimeByLocale(value: string | null, runtimeLocale: string) {
     return value;
   }
   return parsed.toLocaleString(runtimeLocale);
+}
+
+function formatAutoGrantPolicyLabel(
+  copy: LeaveAccrualCopy,
+  policy: AutoGrantResponse["policy"],
+  locale: "ko" | "en"
+) {
+  const sourceLabel =
+    policy.source === "configured" ? copy.policyConfiguredLabel : copy.policyDefaultLabel;
+  if (locale === "ko") {
+    return `${sourceLabel} · 연차 ${formatDays(policy.annualGrantDays)} / 이월 한도 ${formatDays(policy.carryOverCapDays)}`;
+  }
+  return `${sourceLabel} · annual ${formatDays(policy.annualGrantDays)} / carry cap ${formatDays(policy.carryOverCapDays)}`;
+}
+
+function formatAutoGrantStatusLabel(copy: LeaveAccrualCopy, status: AutoGrantResultItem["status"]) {
+  switch (status) {
+    case "ELIGIBLE":
+      return copy.detailStatusEligible;
+    case "ALREADY_SETTLED":
+      return copy.detailStatusAlreadySettled;
+    case "NOT_ELIGIBLE":
+      return copy.detailStatusNotEligible;
+    case "APPLIED":
+      return copy.detailStatusApplied;
+    case "FAILED":
+      return copy.detailStatusFailed;
+    default:
+      return status;
+  }
+}
+
+function formatAutoGrantPrimaryPersonLabel(row: AutoGrantResultItem, locale: "ko" | "en") {
+  return formatEmployeeDisplayName(row.name ?? row.email, locale);
 }
 
 export default function LeaveAccrualAutoGrantConsole() {
@@ -172,10 +251,17 @@ export default function LeaveAccrualAutoGrantConsole() {
   const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
   const hasWorkspaceSession = organizationId.length > 0;
   const hasAdminSession = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "").trim().length > 0;
-  const sessionWorkspaceLabel = locale === "ko" ? "작업 공간 상태" : "Workspace status";
-  const sessionAdminLabel = locale === "ko" ? "관리자 세션 상태" : "Admin session status";
+  const workspaceStatusLabel = locale === "ko" ? "작업 공간 상태" : "Workspace status";
+  const adminSessionStatusLabel = locale === "ko" ? "관리자 세션 상태" : "Admin session status";
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+
+  const normalizedSupabaseSessionError = useMemo(() => {
+    if (!supabaseSessionError) {
+      return null;
+    }
+    return formatUserFacingErrorMessage(supabaseSessionError, locale);
+  }, [locale, supabaseSessionError]);
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -233,7 +319,7 @@ export default function LeaveAccrualAutoGrantConsole() {
 
   async function runAutoGrant(dryRun: boolean) {
     if (!organizationId.trim()) {
-      setStatusMessage(copy.statusMissingSessionOrganization);
+      setStatusMessage(copy.statusMissingWorkspace);
       return;
     }
 
@@ -259,11 +345,11 @@ export default function LeaveAccrualAutoGrantConsole() {
     setResult(parsed);
     if (parsed.dryRun) {
       setStatusMessage(
-        `${copy.statusDryRunDone}: eligible ${parsed.summary.eligibleCount}, alreadySettled ${parsed.summary.alreadySettledCount}`
+        `${copy.statusDryRunDone}: ${copy.eligibleLabel} ${parsed.summary.eligibleCount}, ${copy.alreadySettledLabel} ${parsed.summary.alreadySettledCount}`
       );
     } else {
       setStatusMessage(
-        `${copy.statusRunDone}: applied ${parsed.summary.appliedCount}, failed ${parsed.summary.failedCount}`
+        `${copy.statusRunDone}: ${copy.appliedLabel} ${parsed.summary.appliedCount}, ${copy.failedLabel} ${parsed.summary.failedCount}`
       );
     }
     setTimeout(() => setStatusMessage(""), 3000);
@@ -282,9 +368,9 @@ export default function LeaveAccrualAutoGrantConsole() {
           <h2>{copy.conditionsTitle}</h2>
           {showDevTools ? (
             <p className="small">
-              {sessionWorkspaceLabel}:{" "}
+              {workspaceStatusLabel}:{" "}
               <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, runtimeLocale)}</strong> /{" "}
-              {sessionAdminLabel}:{" "}
+              {adminSessionStatusLabel}:{" "}
               <strong>{formatAdminSessionConnectionState(hasAdminSession, runtimeLocale)}</strong>
             </p>
           ) : null}
@@ -327,7 +413,11 @@ export default function LeaveAccrualAutoGrantConsole() {
             </button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
+          {normalizedSupabaseSessionError ? (
+            <p className="small fail">
+              {copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}
+            </p>
+          ) : null}
         </article>
 
         <article className="panel">
@@ -337,20 +427,18 @@ export default function LeaveAccrualAutoGrantConsole() {
           ) : (
             <ul className="simple-list">
               <li>
-                <span>{copy.resultOrganizationLabel}</span>
-                <strong>{result.organizationId}</strong>
+                <span>{copy.resultWorkspaceLabel}</span>
+                <strong>{copy.resultWorkspaceValue}</strong>
               </li>
               <li>
-                <span>{copy.resultYearDryRunLabel}</span>
+                <span>{copy.resultYearModeLabel}</span>
                 <strong>
-                  {result.year} / {result.dryRun ? "yes" : "no"}
+                  {result.year} / {result.dryRun ? copy.dryRunModeLabel : copy.applyModeLabel}
                 </strong>
               </li>
               <li>
                 <span>{copy.resultPolicyLabel}</span>
-                <strong>
-                  grant {result.policy.annualGrantDays}, carry cap {result.policy.carryOverCapDays} ({result.policy.source})
-                </strong>
+                <strong>{formatAutoGrantPolicyLabel(copy, result.policy, locale)}</strong>
               </li>
               <li>
                 <span>{copy.resultEligibleAppliedFailedLabel}</span>
@@ -368,26 +456,33 @@ export default function LeaveAccrualAutoGrantConsole() {
             <p className="small">{copy.noRowsYet}</p>
           ) : (
             <ul className="simple-list">
-              {result.results.map((row) => (
-                <li key={row.employeeId}>
-                  <span>
-                    <strong>{row.employeeId}</strong>
-                    {row.name ? ` / ${row.name}` : ""}
-                    <br />
-                    <span className="small">
-                      {copy.detailsStatusLabel} {row.status}
-                      {row.reason ? ` / ${row.reason}` : ""}
-                      {" / "}
-                      {copy.detailsJoinedLabel} {formatDateTimeByLocale(row.joinedAt, runtimeLocale)}
+              {result.results.map((row) => {
+                const employeeNumber = formatPublicEmployeeNumber(row.employeeId);
+                const reasonLabel = row.reason
+                  ? formatUserFacingErrorMessage(row.reason, locale)
+                  : copy.noReasonFallback;
+                return (
+                  <li key={row.employeeId}>
+                    <span>
+                      <strong>{formatAutoGrantPrimaryPersonLabel(row, locale)}</strong>
+                      <br />
+                      <span className="small">
+                        {copy.detailsEmployeeNumberLabel} {employeeNumber}
+                      </span>
+                      <br />
+                      <span className="small">
+                        {copy.detailsStatusLabel} {formatAutoGrantStatusLabel(copy, row.status)} / {reasonLabel} /{" "}
+                        {copy.detailsJoinedLabel} {formatDateTimeByLocale(row.joinedAt, runtimeLocale)}
+                      </span>
+                      <br />
+                      <span className="small">
+                        {copy.detailsProjectedLabel} {formatDays(row.suggestedAnnualGrantDays)} + carry{" "}
+                        {formatDays(row.carryOverAppliedDays)} = {formatDays(row.projectedGrantedDays)}
+                      </span>
                     </span>
-                    <br />
-                    <span className="small">
-                      {copy.detailsProjectedLabel} {formatDays(row.suggestedAnnualGrantDays)} + carry{" "}
-                      {formatDays(row.carryOverAppliedDays)} = {formatDays(row.projectedGrantedDays)}
-                    </span>
-                  </span>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </article>

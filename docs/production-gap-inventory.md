@@ -53,6 +53,7 @@ Legend:
 | 54 | Scheduling session copy surface | Admin and employee scheduling devtools still use raw session organization / actor / employee wording instead of connection-state product labels | Scheduling devtools should show workspace, admin session, and employee session status wording only | New -> WI-1090 |
 | 55 | Admin people filter session copy surface | Admin people directory filters still label devtools context as session organization / session actor | Admin people filters should use workspace status and admin session status wording only | New -> WI-1091 |
 | 56 | Admin approval residual session copy surface | Approval policy, approval history, approval templates, and approval executions still keep raw session wording on session-state surfaces | Approval surfaces should use workspace status and admin session status wording only | New -> WI-1092 |
+| 57 | Admin leave accrual residual surface | Leave accrual still exposes raw workspace/session wording, organization summary IDs, raw employee IDs, and enum-like status copy on the operator surface | Leave accrual should use workspace/admin session status copy, current-workspace product wording, employee-facing labels, and user-facing status/reason text only | New -> WI-1093 |
 
 ## B. External Notification Productization
 
@@ -137,3 +138,4 @@ Legend:
 33. WI-1090 scheduling session copy follow-up
 34. WI-1091 admin people session copy follow-up
 35. WI-1092 admin approval residual session copy follow-up
+36. WI-1093 admin leave accrual surface follow-up
