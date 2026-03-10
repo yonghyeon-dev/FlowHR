@@ -93,6 +93,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Narrowed `WI-1059` to a settled-state retry guard so direct-load focus only closes after hash sync plus in-viewport visibility are both satisfied.
 - Started `WI-1060` as the direct follow-up after `WI-1059` left target-specific desktop direct-load gaps on sections that mount late or reflow after snapshot bootstrap.
 - Reworked employee direct-load focus handling so it no longer relies on a one-phase retry window alone; it now keeps hash synchronization aligned and observes later DOM insertion/replacement until the target section actually settles.
+- Re-verified `WI-1060` on deployed production and confirmed employee focus direct-load now closes at `desktop 12/12`, `mobile 12/12`.
+- Started `WI-1061` to clean up false positives in the production completed-items reverify script so `/admin#approvals` redirect behavior and the intended `/admin/leave-promotion` 404 policy no longer reopen closed issues.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
   - WI
@@ -134,8 +136,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close the current `WI-1060` employee desktop focus direct-load follow-up through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
-2. Re-scan remaining core-journey reliability gaps and pick the next highest-value production blocker after `WI-1060`.
+1. Close the current `WI-1061` production reverify false-positive cleanup through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
+2. Re-scan remaining core-journey reliability gaps and pick the next highest-value production blocker after `WI-1061`.
 3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 
 ## 5. Blockers Or Watch Items
@@ -156,3 +158,4 @@ Latest verification evidence:
 - `codex_test/results/prod-contracts-reverify-2026-03-09T09-53-21-595Z/REPORT.md`
 - `codex_test/results/prod-year-end-conflict-reverify-2026-03-09T10-07-21-859Z/REPORT.md`
 - `codex_test/results/prod-completed-items-reverify-2026-03-09T13-37-17-634Z/REPORT.md`
+- `codex_test/results/prod-completed-items-reverify-2026-03-09T14-59-52-362Z/REPORT.md`
