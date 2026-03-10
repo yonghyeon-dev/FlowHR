@@ -1,4 +1,8 @@
 import { type ActiveFilter, type Department, type Position, type UpdatedWindow } from "@/app/admin/people/page-types";
+import {
+  formatAdminSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 
 type AdminPeopleDirectoryFiltersPanelProps = {
   isKoLocale: boolean;
@@ -57,12 +61,17 @@ export function AdminPeopleDirectoryFiltersPanel({
   positions,
   supabaseSessionError
 }: AdminPeopleDirectoryFiltersPanelProps) {
+  const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
+
   return (
     <article className="panel panel-directory-filters">
       <h2>{isKoLocale ? "필터" : "Filters"}</h2>
       {showDevTools ? (
         <p className="small muted">
-          {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> / {isKoLocale ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
+          {isKoLocale ? "세션 조직" : "Session organization"}:{" "}
+          <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong> /{" "}
+          {isKoLocale ? "세션 액터" : "Session actor"}:{" "}
+          <strong>{formatAdminSessionConnectionState(Boolean(adminActorId.trim()), runtimeLocale)}</strong>
         </p>
       ) : null}
       {requiresLoginSession ? (

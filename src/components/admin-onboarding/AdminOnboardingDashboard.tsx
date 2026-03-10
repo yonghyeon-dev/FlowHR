@@ -94,6 +94,7 @@ export function AdminOnboardingDashboard() {
       <AdminOnboardingContextPanel
         copy={copy}
         showDevTools={data.showDevTools}
+        runtimeLocale={runtimeLocale}
         sessionOrganizationId={data.organizationId}
         sessionActorId={data.adminActorId}
         pendingLabel={data.pendingLabel}
@@ -106,6 +107,7 @@ export function AdminOnboardingDashboard() {
       <AdminOnboardingSetupPanels
         copy={copy}
         showDevTools={data.showDevTools}
+        runtimeLocale={runtimeLocale}
         organizationId={data.organizationId}
         organizations={data.organizations}
         departments={data.departments}

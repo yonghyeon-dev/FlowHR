@@ -42,6 +42,7 @@ Legend:
 | 43 | Admin payroll confirmation surface | Payroll confirmation panel exposes raw `Run ID` wording and free-text internal run selection | Human-readable preview selection by period, state, and public employee number only | New -> WI-1079 |
 | 44 | Admin invite workspace surface | Invite panel exposes raw target-organization input even though workspace selection already lives in onboarding | Invite panel uses the selected workspace context and product wording only, never raw organization editing | New -> WI-1080 |
 | 45 | Admin organization fallback surface | Onboarding and people views fall back to raw organization, department, and position IDs when catalog names are missing | User-facing fallback labels should stay human-readable and never expose raw IDs | New -> WI-1081 |
+| 46 | Admin dashboard session context surface | Onboarding, KPI, people filters, and approval-executions work conditions still show raw session organization or actor identifiers in devtools context lines | Devtools context should keep session visibility but show connection-state product wording instead of raw IDs | New -> WI-1082 |
 
 ## B. External Notification Productization
 
@@ -115,3 +116,4 @@ Legend:
 22. WI-1079 admin payroll confirmation surface humanization
 23. WI-1080 admin invite workspace productization
 24. WI-1081 admin organization fallback humanization
+25. WI-1082 admin dashboard session context humanization

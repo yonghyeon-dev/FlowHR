@@ -145,7 +145,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Started `WI-1080` to remove the remaining raw target-organization editing from the admin invite surface and keep invite creation on the selected workspace only.
 - Closed `WI-1080` through the full GitHub flow and merged it to `main` as `0b9290b443f0328800427fcc94ebbc393ba42d32`, then deleted the feature branch.
 - Re-verified `WI-1080` at deploy time and confirmed `vercel-production-deploy` stays green after the admin invite workspace cleanup.
-- Started `WI-1081` to remove the remaining raw organization, department, and position ID fallback from onboarding and admin people summary surfaces.
+- Closed `WI-1081` through the full GitHub flow and merged it to `main` as `840e8fe5f7caaed61a3c6322acf643a6fe2ff027`, then deleted the feature branch.
+- Re-verified `WI-1081` at deploy time and confirmed both `ci` and `vercel-production-deploy` stay green after the admin organization fallback cleanup.
+- Started `WI-1082` to replace raw session organization and session actor ID devtools context lines on admin dashboard core surfaces with connection-state product wording.
 - Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
@@ -188,8 +190,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close `WI-1081` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
-2. Rescan remaining production admin surfaces for raw workspace/actor fallback after organization fallback cleanup.
+1. Close `WI-1082` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
+2. Continue the remaining admin approval/session context cleanup slice after dashboard surfaces are humanized.
 3. Resume the next production-surface cleanup slice from the updated inventory.
 
 ## 5. Blockers Or Watch Items

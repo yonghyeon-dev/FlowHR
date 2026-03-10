@@ -32,7 +32,8 @@ async function run() {
     onboardingSections,
     /\{showDevTools \? \(\s*<p className="small muted">[\s\S]*\{copy\.organizationIdLabel\}:/
   );
-  assert.match(onboardingSections, /\{showDevTools \? ` \(\$\{organization\.id\}\)` : ""\}/);
+  assert.doesNotMatch(onboardingSections, /organization\.id\}\)`/);
+  assert.doesNotMatch(onboardingSections, /\(\$\{organization\.id\}\)/);
 
   assert.match(workItem, /WI-0700/i);
   assert.match(workItem, /onboarding|organization id|devtools|gate/i);

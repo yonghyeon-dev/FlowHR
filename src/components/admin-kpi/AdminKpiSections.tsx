@@ -2,6 +2,10 @@ import Link from "next/link";
 import { type KpiCopy } from "@/components/admin-kpi/copy";
 import { formatDelta, formatPercent } from "@/components/admin-kpi/helpers";
 import { type AdminKpiSummary } from "@/features/admin-kpi/summary";
+import {
+  formatAdminSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 
 export type ApiLog = {
   id: number;
@@ -57,6 +61,7 @@ export type AdminKpiCardQuickLinkMap = Partial<
 type ContextPanelProps = {
   copy: KpiCopy;
   showDevTools: boolean;
+  runtimeLocale: string;
   sessionOrganizationId: string;
   sessionActorId: string;
   periodStart: string;
@@ -131,6 +136,7 @@ export function AdminKpiContextPanel(props: ContextPanelProps) {
   const {
     copy,
     showDevTools,
+    runtimeLocale,
     sessionOrganizationId,
     sessionActorId,
     periodStart,
@@ -150,8 +156,10 @@ export function AdminKpiContextPanel(props: ContextPanelProps) {
         <h2>{copy.contextTitle}</h2>
         {showDevTools ? (
           <p className="small muted">
-            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.adminActorIdLabel}:{" "}
-            <code>{sessionActorId || "-"}</code>
+            {copy.organizationIdLabel}:{" "}
+            <strong>{formatWorkspaceConnectionState(Boolean(sessionOrganizationId.trim()), runtimeLocale)}</strong> /{" "}
+            {copy.adminActorIdLabel}:{" "}
+            <strong>{formatAdminSessionConnectionState(Boolean(sessionActorId.trim()), runtimeLocale)}</strong>
           </p>
         ) : null}
         <div className="input-grid">

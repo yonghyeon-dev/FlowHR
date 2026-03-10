@@ -1,11 +1,16 @@
 ﻿import type { OnboardingChecklistItem } from "@/features/admin-onboarding/checklist";
 import type { AdminOnboardingCopy } from "@/components/admin-onboarding/copy";
+import {
+  formatAdminSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 export type AdminOnboardingOrganizationOption = { id: string; name: string };
 export type AdminOnboardingDepartmentOption = { id: string; code: string; name: string };
 export type AdminOnboardingActionLog = { id: number; label: string; ok: boolean; status: number; at: string; durationMs: number };
 type ContextPanelProps = {
   copy: AdminOnboardingCopy;
   showDevTools: boolean;
+  runtimeLocale: string;
   sessionOrganizationId: string;
   sessionActorId: string;
   pendingLabel: string | null;
@@ -16,6 +21,7 @@ export function AdminOnboardingContextPanel(props: ContextPanelProps) {
   const {
     copy,
     showDevTools,
+    runtimeLocale,
     sessionOrganizationId,
     sessionActorId,
     pendingLabel,
@@ -28,8 +34,10 @@ export function AdminOnboardingContextPanel(props: ContextPanelProps) {
         <h2>{copy.contextTitle}</h2>
         {showDevTools ? (
           <p className="small muted">
-            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.adminActorIdLabel}:{" "}
-            <code>{sessionActorId || "-"}</code>
+            {copy.organizationIdLabel}:{" "}
+            <strong>{formatWorkspaceConnectionState(Boolean(sessionOrganizationId.trim()), runtimeLocale)}</strong> /{" "}
+            {copy.adminActorIdLabel}:{" "}
+            <strong>{formatAdminSessionConnectionState(Boolean(sessionActorId.trim()), runtimeLocale)}</strong>
           </p>
         ) : null}
         <div className="actions">
@@ -43,6 +51,7 @@ export function AdminOnboardingContextPanel(props: ContextPanelProps) {
 type SetupPanelsProps = {
   copy: AdminOnboardingCopy;
   showDevTools: boolean;
+  runtimeLocale: string;
   organizationId: string;
   organizations: AdminOnboardingOrganizationOption[];
   departments: AdminOnboardingDepartmentOption[];
@@ -91,6 +100,7 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
   const {
     copy,
     showDevTools,
+    runtimeLocale,
     organizationId,
     organizations,
     departments,
@@ -143,7 +153,8 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
         <h2>{copy.organizationSelectTitle}</h2>
         {showDevTools ? (
           <p className="small muted">
-            {copy.organizationIdLabel}: <code>{organizationId || "-"}</code>
+            {copy.organizationIdLabel}:{" "}
+            <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong>
           </p>
         ) : null}
         {organizations.length > 0 ? (
@@ -152,7 +163,6 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
               <li key={organization.id}>
                 <span>
                   <strong>{organization.name}</strong>
-                  {showDevTools ? ` (${organization.id})` : ""}
                 </span>
               </li>
             ))}

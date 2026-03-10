@@ -260,6 +260,20 @@ export function formatPositionDisplayName(name: string | null | undefined, local
   return toLocaleKey(locale) === "ko" ? "이름 미등록 직급" : "Unnamed position";
 }
 
+export function formatWorkspaceConnectionState(hasWorkspace: boolean, locale: string) {
+  if (hasWorkspace) {
+    return toLocaleKey(locale) === "ko" ? "작업 공간 연결됨" : "Workspace connected";
+  }
+  return toLocaleKey(locale) === "ko" ? "작업 공간 미연결" : "Workspace unavailable";
+}
+
+export function formatAdminSessionConnectionState(hasAdminSession: boolean, locale: string) {
+  if (hasAdminSession) {
+    return toLocaleKey(locale) === "ko" ? "관리자 세션 연결됨" : "Admin session connected";
+  }
+  return toLocaleKey(locale) === "ko" ? "관리자 세션 미연결" : "Admin session unavailable";
+}
+
 export function formatPublicEmployeeNumber(id: string | null | undefined) {
   const normalized = id?.trim() ?? "";
   if (!normalized) {
