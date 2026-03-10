@@ -7,7 +7,7 @@ function readUtf8(...parts: string[]) {
 }
 
 function run() {
-  const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminNavigation = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const adminPeoplePage = readUtf8("src", "app", "admin", "people", "page.tsx");
   const adminPeopleDirectoryActions = readUtf8(
     "src",
@@ -32,7 +32,7 @@ function run() {
   const peopleApi = readUtf8("specs", "people", "api.yaml");
   const globalCss = readUtf8("src", "app", "globals.css");
 
-  assert.match(adminLayout, /\/admin\/people/, "admin navigation should link to people directory page");
+  assert.match(adminNavigation, /\/admin\/people/, "admin navigation should link to people directory page");
 
   assert.match(peopleSurface, /id="org-chart"/, "people page should include organization chart section");
   assert.match(peopleSurface, /id="employee-compare"/, "people page should include employee comparison section");
