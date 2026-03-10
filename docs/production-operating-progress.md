@@ -105,6 +105,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Started `WI-1066` to replace the remaining year-end and withholding explanation labels that still exposed vector-hash, reason-code, and settlement-hash terminology.
 - Closed `WI-1066` through the full GitHub flow and merged it to `main` as `011f5bc52395de96279e5c2771decd1d7df5e509`, then deleted the feature branch.
 - Started `WI-1067` to remove the remaining raw code leakage from filing response-category and rejection-reason selectors.
+- Closed `WI-1067` through the full GitHub flow and merged it to `main` as `f239235319e347af709ac41753eeace4efa80cb7`, then deleted the feature branch.
+- Started `WI-1068` to remove the remaining raw finalization and document-integrity traces from withholding receipt summaries, copied metadata, and load-status messages.
 - Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
@@ -147,8 +149,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close the current `WI-1067` filing response-catalog humanization slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
-2. Re-scan remaining year-end / filing operator inputs for any still-visible explanation-level technical wording after `WI-1067`.
+1. Close the current `WI-1068` withholding integrity trace cleanup slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
+2. Re-scan year-end, withholding, and filing surfaces for any remaining operator-facing integrity or workflow trace leakage after `WI-1068`.
 3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 
 ## 5. Blockers Or Watch Items

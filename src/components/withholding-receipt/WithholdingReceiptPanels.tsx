@@ -27,9 +27,7 @@ type WithholdingSummaryPanelProps = {
     withholdingSocialLabel: string;
     pendingReceiptRunsLabel: string;
     blockingReasonsLabel: string;
-    finalizationIdLabel: string;
     finalizedAtLabel: string;
-    settlementHashLabel: string;
     taxLiabilityLabel: string;
     priorWithheldLabel: string;
     withholdingDeltaLabel: string;
@@ -40,6 +38,7 @@ type WithholdingSummaryPanelProps = {
     issuedAtLabel: string;
     generatedAtLabel: string;
     contentSha256Label: string;
+    documentIntegrityVerifiedLabel: string;
     actionDownloadLoadedDocument: string;
     actionCopyDocumentMetadata: string;
     documentPreviewHiddenNotice: string;
@@ -112,9 +111,7 @@ export function WithholdingSummaryPanel({
         <p className="small">{copy.noFinalizedSettlement}</p>
       ) : (
         <ul className="simple-list">
-          <li><span>{copy.finalizationIdLabel}</span><strong>{finalizedSettlement.settlement.finalizationId}</strong></li>
           <li><span>{copy.finalizedAtLabel}</span><strong>{finalizedAtText}</strong></li>
-          <li><span>{copy.settlementHashLabel}</span><strong>{finalizedSettlement.settlement.settlementHash.slice(0, 16)}...</strong></li>
           <li><span>{copy.taxLiabilityLabel}</span><strong>{formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.annualTaxLiabilityKrw)}</strong></li>
           <li><span>{copy.priorWithheldLabel}</span><strong>{formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.priorWithheldTaxKrw)}</strong></li>
           <li><span>{copy.withholdingDeltaLabel}</span><strong>{formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.withholdingDeltaKrw)}</strong></li>
@@ -131,7 +128,7 @@ export function WithholdingSummaryPanel({
             <li><span>{copy.formatTypeLabel}</span><strong>{documentFormatTypeText}</strong></li>
             <li><span>{copy.issuedAtLabel}</span><strong>{issuedAtText}</strong></li>
             <li><span>{copy.generatedAtLabel}</span><strong>{generatedAtText}</strong></li>
-            <li><span>{copy.contentSha256Label}</span><strong>{receiptDocument.document.contentSha256.slice(0, 16)}...</strong></li>
+            <li><span>{copy.contentSha256Label}</span><strong>{copy.documentIntegrityVerifiedLabel}</strong></li>
           </ul>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => onDownloadDocument(receiptDocument.document)}>
