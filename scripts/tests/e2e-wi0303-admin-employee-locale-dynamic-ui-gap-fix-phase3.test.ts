@@ -44,7 +44,7 @@ async function run() {
   assert.match(adminOnboardingAccountPanels, /\{isKoLocale \? "작업 조직" : "Working organization"\}/);
   assert.match(
     adminOnboardingAccountPanels,
-    /\{isKoLocale \? "Bearer 액세스 토큰\(재정의\)" : "Bearer access token \(override\)"\}/
+    /\{isKoLocale \? "Bearer 액세스 토큰\(수정용\)" : "Bearer access token \(override\)"\}/
   );
   assert.match(adminPeopleInvitePanels, /\{isKoLocale \? "직원 번호 \(선택\)" : "Employee number \(optional\)"\}/);
   assert.match(
