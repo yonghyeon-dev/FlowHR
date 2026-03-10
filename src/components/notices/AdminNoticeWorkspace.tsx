@@ -11,6 +11,7 @@ import AdminNoticeWorkspaceView from "@/components/notices/AdminNoticeWorkspaceV
 type NoticeApiSummary = { total: number; draft: number; scheduled: number; published: number };
 type NoticeApiLog = { id: number; action: string; status: number; ok: boolean; at: string };
 type NoticeAudienceFilter = "all" | "employees" | "admins";
+type NoticeStatusTone = "info" | "success" | "error";
 type DepartmentOption = { id: string; code: string; name: string; active: boolean };
 const DEFAULT_SUMMARY: NoticeApiSummary = { total: 0, draft: 0, scheduled: 0, published: 0 };
 const adminAnalyticsFocusMetricSet = new Set<AdminKpiFocusMetric>([
@@ -193,6 +194,7 @@ export default function AdminNoticeWorkspace() {
   const [readReceipts, setReadReceipts] = useState<NoticeReadReceipt[]>([]);
   const [logs, setLogs] = useState<NoticeApiLog[]>([]);
   const [statusMessage, setStatusMessage] = useState("");
+  const [statusTone, setStatusTone] = useState<NoticeStatusTone | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
   const bearerToken = supabaseSession?.accessToken ?? "";
@@ -232,6 +234,11 @@ export default function AdminNoticeWorkspace() {
     setLogs((previous) => [{ id: Date.now(), action, status, ok, at: new Date().toLocaleString(runtimeLocale) }, ...previous]);
   }, [runtimeLocale]);
 
+  const updateStatus = useCallback((tone: NoticeStatusTone | null, message: string) => {
+    setStatusTone(tone);
+    setStatusMessage(message);
+  }, []);
+
   const callApi = useCallback(async (
     action: string,
     method: "GET" | "POST" | "PATCH" | "DELETE",
@@ -263,28 +270,30 @@ export default function AdminNoticeWorkspace() {
 
   const loadNotices = useCallback(async () => {
     if (!organizationId && !usesBearerToken) {
-      setStatusMessage(copy.messages.needOrganization);
+      updateStatus("error", copy.messages.needOrganization);
       return;
     }
     const query = buildQuery({ organizationId, status: statusFilter, audience: audienceFilter });
     const { response, parsed } = await callApi(copy.refreshAction, "GET", `/api/notices${query}`);
     if (!response.ok) {
-      setStatusMessage(copy.messages.loadFailed);
+      updateStatus("error", copy.messages.loadFailed);
       return;
     }
     setNotices(parseNotices(parsed));
     setSummary(parseSummary(parsed));
     setReadReceipts(parseReadReceipts(parsed));
-    setStatusMessage(`${copy.statusMessagePrefix}: ${copy.refreshAction}`);
+    updateStatus("info", copy.messages.refreshed ?? `${copy.statusMessagePrefix}: ${copy.refreshAction}`);
   }, [
     audienceFilter,
     callApi,
     copy.messages.loadFailed,
     copy.messages.needOrganization,
+    copy.messages.refreshed,
     copy.refreshAction,
     copy.statusMessagePrefix,
     organizationId,
     statusFilter,
+    updateStatus,
     usesBearerToken
   ]);
 
@@ -318,15 +327,15 @@ export default function AdminNoticeWorkspace() {
 
   async function saveNotice() {
     if (!organizationId && !usesBearerToken) {
-      setStatusMessage(copy.messages.needOrganization);
+      updateStatus("error", copy.messages.needOrganization);
       return;
     }
     if (!title.trim()) {
-      setStatusMessage(copy.messages.needTitle);
+      updateStatus("error", copy.messages.needTitle);
       return;
     }
     if (!body.trim()) {
-      setStatusMessage(copy.messages.needBody);
+      updateStatus("error", copy.messages.needBody);
       return;
     }
 
@@ -345,7 +354,7 @@ export default function AdminNoticeWorkspace() {
       ...(hasEditingTarget || publishIso !== null ? { publishAt: publishIso } : {})
     });
     if (!response.ok) {
-      setStatusMessage(copy.messages.loadFailed);
+      updateStatus("error", copy.messages.loadFailed);
       return;
     }
 
@@ -355,7 +364,7 @@ export default function AdminNoticeWorkspace() {
     setAudience("all");
     setSelectedDepartmentIds([]);
     setPublishAt("");
-    setStatusMessage(hasEditingTarget ? copy.messages.updated ?? copy.messages.created : copy.messages.created);
+    updateStatus("success", hasEditingTarget ? copy.messages.updated ?? copy.messages.created : copy.messages.created);
     await loadNotices();
   }
 
@@ -370,7 +379,7 @@ export default function AdminNoticeWorkspace() {
     setAudience(target.audience);
     setSelectedDepartmentIds([...target.targetDepartmentIds]);
     setPublishAt(target.publishAt ? target.publishAt.slice(0, 16) : "");
-    setStatusMessage(copy.messages.editing ?? "");
+    updateStatus("info", copy.messages.editing ?? "");
   }
 
   function cancelEditNotice() {
@@ -380,20 +389,28 @@ export default function AdminNoticeWorkspace() {
     setAudience("all");
     setSelectedDepartmentIds([]);
     setPublishAt("");
-    setStatusMessage("");
+    updateStatus(null, "");
   }
 
   async function publishNow(noticeId: string) {
-    const { response } = await callApi(copy.publishAction, "POST", `/api/notices/${encodeURIComponent(noticeId)}/publish`);
-    if (!response.ok) {
-      setStatusMessage(copy.messages.loadFailed);
+    const target = notices.find((notice) => notice.id === noticeId);
+    if (target && !window.confirm(copy.messages.publishConfirm(target.title))) {
       return;
     }
-    setStatusMessage(copy.messages.published);
+    const { response } = await callApi(copy.publishAction, "POST", `/api/notices/${encodeURIComponent(noticeId)}/publish`);
+    if (!response.ok) {
+      updateStatus("error", copy.messages.loadFailed);
+      return;
+    }
+    updateStatus("success", copy.messages.published);
     await loadNotices();
   }
 
   async function deleteExistingNotice(noticeId: string) {
+    const target = notices.find((notice) => notice.id === noticeId);
+    if (target && !window.confirm(copy.messages.deleteConfirm(target.title))) {
+      return;
+    }
     const actionLabel = copy.deleteAction ?? "Delete";
     const { response, parsed } = await callApi(actionLabel, "DELETE", `/api/notices/${encodeURIComponent(noticeId)}`);
     if (!response.ok) {
@@ -402,9 +419,9 @@ export default function AdminNoticeWorkspace() {
           ? ((parsed as { error: string }).error ?? "")
           : "";
       if (errorCode === "notice.delete.published_locked") {
-        setStatusMessage(copy.messages.deletePublishedLocked ?? copy.messages.deleteFailed ?? copy.messages.loadFailed);
+        updateStatus("error", copy.messages.deletePublishedLocked ?? copy.messages.deleteFailed ?? copy.messages.loadFailed);
       } else {
-        setStatusMessage(copy.messages.deleteFailed ?? copy.messages.loadFailed);
+        updateStatus("error", copy.messages.deleteFailed ?? copy.messages.loadFailed);
       }
       return;
     }
@@ -412,7 +429,7 @@ export default function AdminNoticeWorkspace() {
     if (editingNoticeId === noticeId) {
       cancelEditNotice();
     }
-    setStatusMessage(copy.messages.deleted ?? actionLabel);
+    updateStatus("success", copy.messages.deleted ?? actionLabel);
     await loadNotices();
   }
 
@@ -445,6 +462,7 @@ export default function AdminNoticeWorkspace() {
       logs={logs}
       stats={stats}
       pendingLabel={pendingLabel}
+      statusTone={statusTone}
       statusMessage={statusMessage}
       onStatusFilterChange={setStatusFilter}
       onAudienceFilterChange={setAudienceFilter}

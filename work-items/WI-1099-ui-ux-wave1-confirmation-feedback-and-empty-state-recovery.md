@@ -13,6 +13,13 @@
 - 빈 상태가 오류처럼 보이는 표면을 안내형 상태로 정리한다.
 - 이번 파동에서 다룬 표면에 대한 회귀 가드를 추가한다.
 
+## Initial Slice
+
+- admin notices workspace
+  - 게시/삭제 확인
+  - 성공/오류/안내 피드백 분리
+  - 행동 유도형 빈 상태
+
 ## Acceptance Criteria
 
 - 이번 범위의 파괴적 또는 되돌리기 어려운 액션은 확인 없이 즉시 실행되지 않는다.
@@ -22,7 +29,8 @@
 
 ## Candidate Surfaces
 
-- admin people / notifications / notices follow-ups
+- admin notices follow-up
+- admin people / notifications secondary follow-ups
 - employee notifications / payslips / self-service empty states
 - any adjacent Epic E surfaces selected during the implementation slice
 
