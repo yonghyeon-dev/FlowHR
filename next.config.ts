@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
     tsconfigPath: "./tsconfig.next.json"
   },
   experimental: {
+    cpus: 1,
+    memoryBasedWorkersCount: true,
     webpackBuildWorker: true,
     webpackMemoryOptimizations: true,
     parallelServerCompiles: false,
