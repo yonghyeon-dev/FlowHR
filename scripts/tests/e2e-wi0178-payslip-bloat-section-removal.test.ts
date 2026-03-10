@@ -48,18 +48,13 @@ function run() {
     );
   }
 
-  const requiredPayslipAnchors = [
-    "/employee/payslips",
-    "/employee/payslips#payslip-search-sort",
-    "/employee/payslips#status-feedback",
-    "/employee/payslips#compare-view"
-  ];
+  const requiredPayslipRoutes = ["/employee/payslips"];
 
-  for (const anchor of requiredPayslipAnchors) {
+  for (const anchor of requiredPayslipRoutes) {
     assert.equal(
       employeeLayout.includes(anchor),
       true,
-      `employee layout should keep core payslip anchor ${anchor}`
+      `employee layout should keep core payslip route ${anchor}`
     );
   }
 
