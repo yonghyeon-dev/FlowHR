@@ -125,6 +125,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Closed `WI-1073` through the full GitHub flow and merged it to `main` as `7e804760975bc5b1e679d9da36c7e7368da8b605`, then deleted the feature branch.
 - Re-verified `WI-1073` at deploy time and confirmed `vercel-production-deploy` returns to green when production deploy runs with a forced cold Vercel build.
 - Started `WI-1074` to remove the remaining raw parent and manager identifier fallback from the admin department-management surface.
+- Closed `WI-1074` through the full GitHub flow and merged it to `main` as `fd58431ca7a07c25b299973d8d384a03f7fbe6e8`, then deleted the feature branch.
+- Re-verified `WI-1074` at deploy time and confirmed `vercel-production-deploy` stays green after the department-management surface cleanup.
+- Started `WI-1075` to remove the remaining raw employee identifier fallback from the admin people org chart surface.
 - Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
@@ -167,8 +170,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close `WI-1074` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
-2. Rescan remaining production admin surfaces for raw ID fallback after department-management cleanup.
+1. Close `WI-1075` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
+2. Rescan remaining production admin surfaces for raw ID fallback after org-chart cleanup.
 3. Resume the next production-surface cleanup slice from the updated inventory.
 
 ## 5. Blockers Or Watch Items

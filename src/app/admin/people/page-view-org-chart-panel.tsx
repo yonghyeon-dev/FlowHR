@@ -1,6 +1,11 @@
 ﻿import { useMemo, useState } from "react";
 
 import { type Employee, type OrgTreeNode } from "@/app/admin/people/page-types";
+import {
+  formatEmployeeDisplayName,
+  formatEmployeeStatusLabel,
+  formatPublicEmployeeNumber
+} from "@/lib/product-language";
 
 type AdminPeopleOrgChartPanelProps = {
   isKoLocale: boolean;
@@ -24,13 +29,6 @@ type OrgChartSummary = {
 
 function isUnassignedNode(organizationKey: string, departmentKey: string) {
   return organizationKey === "__none__" || departmentKey === "__none__";
-}
-
-function resolveEmployeeActiveLabel(isKoLocale: boolean, active: boolean) {
-  if (active) {
-    return isKoLocale ? "활성" : "Active";
-  }
-  return isKoLocale ? "비활성" : "Inactive";
 }
 
 function buildOrgChartSummary(tree: OrgTreeNode[]): OrgChartSummary {
@@ -102,6 +100,7 @@ function renderEmployeePill(input: {
   setSelectedEmployeeId: (value: string) => void;
 }) {
   const { isKoLocale, employee, selectedEmployeeId, setSelectedEmployeeId } = input;
+  const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
   return (
     <li key={employee.id}>
       <button
@@ -111,9 +110,10 @@ function renderEmployeePill(input: {
           setSelectedEmployeeId(employee.id);
         }}
       >
-        <strong>{employee.name ?? employee.id}</strong>
+        <strong>{formatEmployeeDisplayName(employee.name, runtimeLocale)}</strong>
         <span className="muted">
-          {employee.id} / {resolveEmployeeActiveLabel(isKoLocale, employee.active)}
+          {isKoLocale ? "사번" : "Employee"} {formatPublicEmployeeNumber(employee.id)} /{" "}
+          {formatEmployeeStatusLabel(employee.active ? "ACTIVE" : "RESIGNED", runtimeLocale)}
         </span>
       </button>
     </li>
