@@ -176,6 +176,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Closed `WI-1091` through the full GitHub flow and merged it to `main` as `dd884a057b8359d16c2aeb379ad3b7d4b2a09cfa`, then deleted the feature branch.
 - Re-verified `WI-1091` at deploy time and confirmed both `ci` and `vercel-production-deploy` stay green after the admin people session-copy cleanup.
 - Started `WI-1092` to replace the remaining approval-policy, approval-history, approval-templates, and approval-executions session wording with workspace/admin session status copy.
+- Started `WI-1093` to remove the remaining raw workspace/session wording, organization summary ID output, and raw employee/status fallback traces from the admin leave-accrual surface.
 - Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
@@ -218,7 +219,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close `WI-1092` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
+1. Close `WI-1093` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
 2. Re-scan remaining non-scheduling session-copy surfaces for the next compact WI.
 3. Continue the next production-surface cleanup slice from the updated inventory.
 
