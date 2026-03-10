@@ -1,11 +1,11 @@
-﻿"use client";
+"use client";
+
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import type { NoticeItem, NoticeReadReceipt } from "@/features/notices/types";
+
 import { EmployeeNoticeBoardList } from "@/components/notices/EmployeeNoticeBoardList";
 import { resolveEmployeeNoticeBoardCopy } from "@/components/notices/copy";
-import { resolveEmployeeNoticeSourceEntry } from "@/components/notices/employee-source-context";
 import {
   buildNoticeQuery,
   buildReadAtByNoticeIdMap,
@@ -19,12 +19,20 @@ import {
   type EmployeeNoticeAgingRiskFilter,
   type EmployeeNoticeReadStatusFilter
 } from "@/components/notices/employee-notice-board-helpers";
+import { resolveEmployeeNoticeSourceEntry } from "@/components/notices/employee-source-context";
+import type { NoticeItem, NoticeReadReceipt } from "@/features/notices/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatEmployeeSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
+
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
   return ["1", "true", "yes", "on"].includes(normalized);
 }
+
 export default function EmployeeNoticeBoard() {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
@@ -54,6 +62,10 @@ export default function EmployeeNoticeBoard() {
   const usesBearerToken = bearerToken.trim().length > 0;
   const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
   const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
+  const hasWorkspaceSession = Boolean(organizationId.trim());
+  const hasEmployeeSession = Boolean((supabaseSession?.actorId ?? supabaseSession?.userId ?? "").trim());
+  const workspaceStatusLabel = runtimeLocale === "ko-KR" ? "작업 공간 상태" : "Workspace status";
+  const employeeSessionStatusLabel = runtimeLocale === "ko-KR" ? "직원 세션 상태" : "Employee session status";
   const publishedCount = useMemo(
     () => notices.filter((notice) => notice.status === "PUBLISHED").length,
     [notices]
@@ -80,12 +92,17 @@ export default function EmployeeNoticeBoard() {
       }),
     [agingRiskFilter, notices, readNoticeIds, searchQuery, unreadOnly, readStatusFilter]
   );
-  const visibleUnreadNoticeIds = useMemo(() => filteredNotices.filter((notice) => !readNoticeIds.includes(notice.id)).map((notice) => notice.id), [filteredNotices, readNoticeIds]);
-  const shouldScopeMarkAllRead = searchQuery.trim().length > 0 || unreadOnly || readStatusFilter !== "all" || agingRiskFilter !== "all";
+  const visibleUnreadNoticeIds = useMemo(
+    () => filteredNotices.filter((notice) => !readNoticeIds.includes(notice.id)).map((notice) => notice.id),
+    [filteredNotices, readNoticeIds]
+  );
+  const shouldScopeMarkAllRead =
+    searchQuery.trim().length > 0 || unreadOnly || readStatusFilter !== "all" || agingRiskFilter !== "all";
   const isAllQuickFilter = !unreadOnly && readStatusFilter === "all" && agingRiskFilter === "all";
   const isUnreadQuickFilter = !unreadOnly && readStatusFilter === "unread" && agingRiskFilter === "all";
   const isAgingRiskQuickFilter = !unreadOnly && readStatusFilter === "unread" && agingRiskFilter === "aging_3d";
   const readAtByNoticeId = useMemo(() => buildReadAtByNoticeIdMap(readReceipts), [readReceipts]);
+
   function buildActorHeaders() {
     const headers: Record<string, string> = {};
     if (usesBearerToken) {
@@ -100,6 +117,7 @@ export default function EmployeeNoticeBoard() {
     headers["x-actor-organization-id"] = organizationId.trim();
     return headers;
   }
+
   async function loadNotices() {
     if (requiresLoginSession) {
       setStatusMessage(productionSessionRequiredNotice);
@@ -138,6 +156,7 @@ export default function EmployeeNoticeBoard() {
       setPending(false);
     }
   }
+
   // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-load intentionally keys off session readiness only
   useEffect(() => {
     if (autoLoadAttempted || requiresLoginSession || (!organizationId.trim() && !usesBearerToken)) {
@@ -146,6 +165,7 @@ export default function EmployeeNoticeBoard() {
     setAutoLoadAttempted(true);
     void loadNotices();
   }, [autoLoadAttempted, organizationId, requiresLoginSession, usesBearerToken]);
+
   async function markAsRead(noticeId: string) {
     if (requiresLoginSession) {
       setStatusMessage(productionSessionRequiredNotice);
@@ -178,6 +198,7 @@ export default function EmployeeNoticeBoard() {
       setPending(false);
     }
   }
+
   async function markAllAsRead() {
     if (requiresLoginSession) {
       setStatusMessage(productionSessionRequiredNotice);
@@ -197,7 +218,9 @@ export default function EmployeeNoticeBoard() {
         "content-type": "application/json"
       };
       const payload: { organizationId: string; noticeIds?: string[] } = { organizationId };
-      if (shouldScopeMarkAllRead && visibleUnreadNoticeIds.length < unreadCount) payload.noticeIds = visibleUnreadNoticeIds;
+      if (shouldScopeMarkAllRead && visibleUnreadNoticeIds.length < unreadCount) {
+        payload.noticeIds = visibleUnreadNoticeIds;
+      }
       const response = await fetch("/api/notices/read-all", {
         method: "POST",
         headers,
@@ -215,8 +238,23 @@ export default function EmployeeNoticeBoard() {
       setPending(false);
     }
   }
-  function clearFilters() { setSearchQuery(""); setUnreadOnly(false); setReadStatusFilter("all"); setAgingRiskFilter("all"); }
-  function applyQuickFilter(nextReadStatusFilter: EmployeeNoticeReadStatusFilter, nextAgingRiskFilter: EmployeeNoticeAgingRiskFilter) { setUnreadOnly(false); setReadStatusFilter(nextReadStatusFilter); setAgingRiskFilter(nextAgingRiskFilter); }
+
+  function clearFilters() {
+    setSearchQuery("");
+    setUnreadOnly(false);
+    setReadStatusFilter("all");
+    setAgingRiskFilter("all");
+  }
+
+  function applyQuickFilter(
+    nextReadStatusFilter: EmployeeNoticeReadStatusFilter,
+    nextAgingRiskFilter: EmployeeNoticeAgingRiskFilter
+  ) {
+    setUnreadOnly(false);
+    setReadStatusFilter(nextReadStatusFilter);
+    setAgingRiskFilter(nextAgingRiskFilter);
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -242,8 +280,8 @@ export default function EmployeeNoticeBoard() {
           <h2>{copy.filtersTitle}</h2>
           {showDevTools ? (
             <p className="small muted">
-              {copy.organizationIdLabel}: <code>{organizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
-              <code>{employeeId || "-"}</code>
+              {workspaceStatusLabel}: <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, runtimeLocale)}</strong> /{" "}
+              {employeeSessionStatusLabel}: <strong>{formatEmployeeSessionConnectionState(hasEmployeeSession, runtimeLocale)}</strong>
             </p>
           ) : null}
           <label>
@@ -348,4 +386,3 @@ export default function EmployeeNoticeBoard() {
     </main>
   );
 }
-
