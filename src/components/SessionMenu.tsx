@@ -8,7 +8,9 @@ import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import {
   formatActorRoleLabel,
-  formatUserFacingErrorMessage
+  formatSignedInAccountLabel,
+  formatUserFacingErrorMessage,
+  formatWorkspaceConnectionState
 } from "@/lib/product-language";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
@@ -22,13 +24,10 @@ export default function SessionMenu({ className }: SessionMenuProps) {
   const { t, locale } = useI18n();
   const [pending, setPending] = useState(false);
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
-  const sessionStatusLabel = snapshot?.organizationId
-    ? runtimeLocale === "ko-KR"
-      ? "조직이 연결된 계정"
-      : "Organization connected"
-    : runtimeLocale === "ko-KR"
-      ? "조직 연결 확인 필요"
-      : "Organization check required";
+  const sessionStatusLabel = formatWorkspaceConnectionState(
+    Boolean((snapshot?.organizationId ?? "").trim()),
+    runtimeLocale
+  );
   const roleLabel = formatActorRoleLabel(snapshot?.role ?? "unknown", runtimeLocale);
 
   async function signOut() {
@@ -49,7 +48,7 @@ export default function SessionMenu({ className }: SessionMenuProps) {
         <>
             <div className="session-meta">
               <div className="session-id">
-                <strong>{snapshot.email ?? snapshot.userId}</strong>
+                <strong>{formatSignedInAccountLabel(snapshot.email, runtimeLocale)}</strong>
                 <span className="session-pill">{roleLabel}</span>
               </div>
               <div className="session-sub">{sessionStatusLabel}</div>
