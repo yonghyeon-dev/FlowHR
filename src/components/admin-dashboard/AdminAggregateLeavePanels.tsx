@@ -1,4 +1,5 @@
 ﻿import type { AttendanceAggregateDto, LeaveBalanceDto } from "@/app/admin/page-types";
+import { formatPublicEmployeeNumber } from "@/lib/product-language";
 
 type AdminAggregateLeavePanelsProps = {
   aggregateEmployeeId: string;
@@ -102,7 +103,7 @@ export function AdminAggregateLeavePanels({
             {aggregates.map((aggregate) => (
               <li key={aggregate.employeeId}>
                 <span>
-                  <strong>{aggregate.employeeId}</strong>{" "}
+                  <strong>{formatPublicEmployeeNumber(aggregate.employeeId)}</strong>{" "}
                   <span className="muted">
                     승인 {aggregate.counts.approved} / 대기 {aggregate.counts.pending} / 반려 {aggregate.counts.rejected} / 급여반영 {aggregate.counts.payable}
                     {" · "}정규 {minutesToHours(aggregate.totals.regular)} / 연장 {minutesToHours(aggregate.totals.overtime)} / 야간 {minutesToHours(aggregate.totals.night)} / 휴일 {minutesToHours(aggregate.totals.holiday)}
