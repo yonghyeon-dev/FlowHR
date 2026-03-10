@@ -190,13 +190,13 @@ export function buildFilingFailureMessage(input: FailureMessageInput) {
       )
     ) {
       return locale === "ko"
-        ? "처리 대기 중인 신고 제출 건이 있습니다. ACK 처리 또는 취소 후 다시 시도해 주세요."
-        : "A pending filing submission already exists. Acknowledge or cancel it before trying again.";
+        ? "처리 대기 중인 신고 제출 건이 있습니다. 응답 처리 또는 취소 후 다시 시도해 주세요."
+        : "A pending filing submission already exists. Save a response or cancel it before trying again.";
     }
     if (includesMessage(message, /only rejected acknowledged submissions can be resubmitted/i)) {
       return locale === "ko"
-        ? "반려된 제출 건만 재제출할 수 있습니다."
-        : "Only rejected acknowledged submissions can be resubmitted.";
+        ? "응답 처리까지 끝난 반려 건만 재제출할 수 있습니다."
+        : "Only rejected submissions with a saved response can be resubmitted.";
     }
     if (includesMessage(message, /selected submission has already been resubmitted/i)) {
       return locale === "ko"
@@ -205,13 +205,13 @@ export function buildFilingFailureMessage(input: FailureMessageInput) {
     }
     if (includesMessage(message, /canceled filing submission cannot be acknowledged/i)) {
       return locale === "ko"
-        ? "취소된 신고 건은 ACK 처리할 수 없습니다."
-        : "Canceled filing submissions cannot be acknowledged.";
+        ? "취소된 신고 건은 응답 처리할 수 없습니다."
+        : "Canceled filing submissions cannot receive a response.";
     }
     if (includesMessage(message, /filing submission is already acknowledged/i)) {
       return locale === "ko"
-        ? "이미 ACK 처리된 신고 건입니다."
-        : "This filing submission is already acknowledged.";
+        ? "이미 응답 처리가 끝난 신고 건입니다."
+        : "This filing submission already has a saved response.";
     }
     if (includesMessage(message, /filing submission is already canceled/i)) {
       return locale === "ko"
@@ -220,8 +220,8 @@ export function buildFilingFailureMessage(input: FailureMessageInput) {
     }
     if (includesMessage(message, /acknowledged filing submission cannot be canceled/i)) {
       return locale === "ko"
-        ? "ACK 완료된 신고 건은 취소할 수 없습니다."
-        : "Acknowledged filing submissions cannot be canceled.";
+        ? "응답 처리가 끝난 신고 건은 취소할 수 없습니다."
+        : "Filing submissions with a saved response cannot be canceled.";
     }
     if (includesMessage(message, /only canceled filing submission can be reopened/i)) {
       return locale === "ko"

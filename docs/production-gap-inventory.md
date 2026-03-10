@@ -28,6 +28,7 @@ Legend:
 | 13 | Escalation webhook timestamp | ISO timestamp shown | User locale date/time | New -> WI-1053 |
 | 30 | Service errors | Technical error text such as actor-context failure | Localized recovery guidance | New -> WI-1053 |
 | 31 | Year-end / filing summaries | Raw hashes, finalization IDs, submission IDs, ack codes, and operator-facing technical labels visible | Human-readable status summaries and operator copy without internal trace values or technical filter keys | Partial -> WI-1062, WI-1063 |
+| 32 | Year-end / filing recovery and workflow copy | Failure guidance still uses ACK terminology and workflow summary panel stays English-only | Operator-facing recovery guidance and workflow labels in product language | New -> WI-1064 |
 
 ## B. External Notification Productization
 
@@ -85,3 +86,4 @@ Legend:
 6. WI-1056 UX and dev-remnant cleanup
 7. WI-1062 year-end and filing surface humanization
 8. WI-1063 year-end and filing operator copy
+9. WI-1064 year-end and filing guidance copy
