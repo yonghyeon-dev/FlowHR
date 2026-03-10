@@ -395,6 +395,10 @@ WI candidates:
 - `WI-1103`: first IA refactor seam selection and migration plan
 - `WI-1113`: visual design principles and shell system definition
 
+Reference design docs:
+
+- `docs/role-tenant-product-shell-blueprint.md`
+
 ## 4.2 Phase 2. Shared UX Systemization
 
 Goal:
