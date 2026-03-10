@@ -43,6 +43,9 @@ export function AdminDashboardPanels({
     inviteRoleLabels[role as keyof typeof inviteRoleLabels] ?? role;
   const toInviteDeliveryModeLabel = (mode: string) =>
     inviteDeliveryModeLabels[mode as keyof typeof inviteDeliveryModeLabels] ?? mode;
+  const selectedOrganizationName =
+    pageState.organizations.find((organization) => organization.id === pageState.organizationId)?.name ??
+    pageState.organizationName;
 
   return (
     <section className="panel-grid">
@@ -70,6 +73,7 @@ export function AdminDashboardPanels({
       <AdminPeopleInvitePanels
         isKoLocale={isKoLocale}
         organizationId={pageState.organizationId}
+        organizationName={selectedOrganizationName}
         employeeId={pageState.employeeId}
         employeeName={pageState.employeeName}
         employeeEmail={pageState.employeeEmail}
@@ -101,7 +105,6 @@ export function AdminDashboardPanels({
         onInviteRoleChange={pageState.setInviteRole}
         onInviteDeliveryModeChange={pageState.setInviteDeliveryMode}
         onInviteActorIdChange={pageState.setInviteActorId}
-        onOrganizationIdChange={pageState.setOrganizationId}
         onCreateInvite={() => void directoryActions.createInvite()}
       />
       <AdminSchedulingPanel

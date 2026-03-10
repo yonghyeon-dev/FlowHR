@@ -15,6 +15,7 @@ type InviteDeliveryModeLabels = Record<InviteDeliveryMode, string>;
 type AdminPeopleInvitePanelsProps = {
   isKoLocale: boolean;
   organizationId: string;
+  organizationName: string;
   employeeId: string;
   employeeName: string;
   employeeEmail: string;
@@ -40,13 +41,13 @@ type AdminPeopleInvitePanelsProps = {
   onInviteRoleChange: (role: InviteRole) => void;
   onInviteDeliveryModeChange: (mode: InviteDeliveryMode) => void;
   onInviteActorIdChange: (value: string) => void;
-  onOrganizationIdChange: (value: string) => void;
   onCreateInvite: () => void;
 };
 
 export function AdminPeopleInvitePanels({
   isKoLocale,
   organizationId,
+  organizationName,
   employeeId,
   employeeName,
   employeeEmail,
@@ -72,10 +73,13 @@ export function AdminPeopleInvitePanels({
   onInviteRoleChange,
   onInviteDeliveryModeChange,
   onInviteActorIdChange,
-  onOrganizationIdChange,
   onCreateInvite
 }: AdminPeopleInvitePanelsProps) {
   const locale = isKoLocale ? "ko-KR" : "en-US";
+  const workspaceLabel = organizationName.trim() || (isKoLocale ? "현재 선택한 워크스페이스" : "Current workspace");
+  const workspaceMissingLabel = isKoLocale
+    ? "먼저 상단의 조직 온보딩에서 워크스페이스를 선택해 주세요."
+    : "Select a workspace in organization onboarding first.";
 
   return (
     <>
@@ -83,7 +87,7 @@ export function AdminPeopleInvitePanels({
         <h2>{isKoLocale ? "직원 관리" : "Employee Management"}</h2>
         <p className="small">
           {isKoLocale
-            ? "출퇴근, 휴가, 급여 흐름은 직원 마스터가 있어야 정상 동작합니다. 먼저 직원 정보를 준비하세요."
+            ? "출퇴근, 휴가, 급여 시나리오는 직원 마스터가 있어야 정상 동작합니다. 먼저 직원 정보를 준비해 주세요."
             : "Attendance, leave, and payroll flows require employee master data. Create employees first."}
         </p>
         <div className="input-grid">
@@ -140,8 +144,12 @@ export function AdminPeopleInvitePanels({
         <h2>{isKoLocale ? "초대 및 가입" : "Invite and sign-up"}</h2>
         <p className="small">
           {isKoLocale
-            ? "직원에게 전달할 초대 링크를 생성합니다. 직원 번호를 함께 넣으면 가입 후 직원 포털이 바로 연결됩니다."
+            ? "직원에게 전달할 초대 링크를 생성합니다. 직원 번호를 함께 넣으면 가입 후 직원 포털과 바로 연결됩니다."
             : "Generate invite links for employees. Include the employee number to map the employee portal immediately after sign-up."}
+        </p>
+        <p className="small">
+          {isKoLocale ? "초대가 연결될 워크스페이스" : "Invite workspace"}:{" "}
+          <strong>{organizationId.trim() ? workspaceLabel : workspaceMissingLabel}</strong>
         </p>
         <div className="input-grid">
           <label className="full">
@@ -176,10 +184,6 @@ export function AdminPeopleInvitePanels({
               placeholder={isKoLocale ? "예: EMP-1001" : "e.g. EMP-1001"}
             />
           </label>
-          <label className="full">
-            {isKoLocale ? "대상 조직" : "Target organization"}
-            <input value={organizationId} onChange={(event) => onOrganizationIdChange(event.target.value)} />
-          </label>
         </div>
         <div className="actions">
           <button className="btn btn-primary" onClick={onCreateInvite} disabled={!inviteEmail.trim() || !organizationId.trim()}>
@@ -207,7 +211,7 @@ export function AdminPeopleInvitePanels({
             )}
             <p className="small muted" style={{ marginTop: 8 }}>
               {isKoLocale
-                ? "로그인 페이지로 연결되려면 Supabase Auth Redirect URL에 현재 도메인이 허용되어야 합니다."
+                ? "로그인 페이지로 연결하려면 Supabase Auth Redirect URL에 현재 도메인이 허용되어 있어야 합니다."
                 : "The current domain must be allowed in Supabase Auth Redirect URLs for the login redirect to work."}
             </p>
           </>
