@@ -10,7 +10,7 @@ import {
 } from "@/app/employee/page-interaction-actions";
 import { useEmployeeInteractionOrchestratorInput } from "@/app/employee/page-interaction-orchestrator";
 import {
-  resolveEmployeeRequestsRouteForFocusSection,
+  resolveEmployeePromotedRouteForFocusSection,
   resolveEmployeeResubmitDraftPrefill,
   resolveAttendanceCorrectionSchedulePrefill,
   resolveEmployeeFocusSectionId
@@ -51,8 +51,12 @@ import type {
   WorkScheduleDto
 } from "@/app/employee/page-types";
 import { EmployeeAccountOverviewPanels } from "@/components/employee-dashboard/EmployeeAccountOverviewPanels";
-import { EmployeeAttendanceLeavePanels } from "@/components/employee-dashboard/EmployeeAttendanceLeavePanels";
+import { EmployeeApiLogsPanel } from "@/components/employee-dashboard/EmployeeApiLogsPanel";
+import { EmployeeAttendanceFormPanel } from "@/components/employee-dashboard/EmployeeAttendanceFormPanel";
 import { EmployeeDashboardChrome } from "@/components/employee-dashboard/EmployeeDashboardChrome";
+import { EmployeeLeaveCalendarPanel } from "@/components/employee-dashboard/EmployeeLeaveCalendarPanel";
+import { EmployeeLeaveRequestPanel } from "@/components/employee-dashboard/EmployeeLeaveRequestPanel";
+import { EmployeeSchedulePanel } from "@/components/employee-dashboard/EmployeeSchedulePanel";
 import { useI18n } from "@/lib/i18n/provider";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -60,7 +64,15 @@ const FOCUS_SECTION_RETRY_TIMEOUT_MS = 3500;
 const FOCUS_SECTION_RETRY_INTERVAL_MS = 120;
 const FOCUS_SECTION_OBSERVER_TIMEOUT_MS = 8000;
 
-export default function EmployeeSelfServicePage() {
+export type EmployeeSelfServicePageMode = "home" | "attendance" | "leave";
+
+type EmployeeSelfServicePageProps = {
+  mode?: EmployeeSelfServicePageMode;
+};
+
+export function EmployeeSelfServicePage({
+  mode = "home"
+}: EmployeeSelfServicePageProps) {
   const { locale } = useI18n();
   const router = useRouter();
   const isKoLocale = locale === "ko";
@@ -69,8 +81,8 @@ export default function EmployeeSelfServicePage() {
   const searchParams = useSearchParams();
   const attendanceSchedulePrefill = useMemo(() => resolveAttendanceCorrectionSchedulePrefill({ searchParams, correctionRequestNote, isKoLocale }), [searchParams, correctionRequestNote, isKoLocale]);
   const focusSectionId = useMemo(() => resolveEmployeeFocusSectionId(searchParams), [searchParams]);
-  const requestsRouteForFocusSection = useMemo(
-    () => resolveEmployeeRequestsRouteForFocusSection(focusSectionId),
+  const promotedRouteForFocusSection = useMemo(
+    () => resolveEmployeePromotedRouteForFocusSection(focusSectionId),
     [focusSectionId]
   );
   const resubmitDraftPrefill = useMemo(
@@ -356,11 +368,11 @@ export default function EmployeeSelfServicePage() {
   }, [employeeId, isProductionRuntime, supabaseSessionLoading, usesBearerToken]);
 
   useEffect(() => {
-    if (!requestsRouteForFocusSection) {
+    if (mode !== "home" || !promotedRouteForFocusSection) {
       return;
     }
-    router.replace(requestsRouteForFocusSection);
-  }, [requestsRouteForFocusSection, router]);
+    router.replace(promotedRouteForFocusSection);
+  }, [mode, promotedRouteForFocusSection, router]);
 
   useEffect(() => {
     if (!resubmitDraftPrefill) {
@@ -388,7 +400,7 @@ export default function EmployeeSelfServicePage() {
   ]);
 
   useEffect(() => {
-    if (!focusSectionId || requestsRouteForFocusSection) {
+    if (!focusSectionId || promotedRouteForFocusSection) {
       appliedFocusSectionRef.current = null;
       return;
     }
@@ -466,18 +478,142 @@ export default function EmployeeSelfServicePage() {
       cancelled = true;
       stopTracking();
     };
-  }, [focusSectionId, requestsRouteForFocusSection, snapshotLoaded]);
+  }, [focusSectionId, promotedRouteForFocusSection, snapshotLoaded]);
   useApplyAttendanceSchedulePrefillEffect({ attendanceSchedulePrefill, attendance, appliedAttendanceSchedulePrefillRef, setCheckInAt, setCheckOutAt, setAttendanceNotes, applyAttendanceRecordToCorrectionForm });
 
   if (supabaseSessionLoading) return null;
 
+  const sharedPanelProps = {
+    sectionTitles,
+    attendanceCopy,
+    leaveCopy,
+    leaveCalendarCopy,
+    scheduleCopy,
+    apiLogsCopy,
+    callApiLabels,
+    listBadgeLabels,
+    preSubmitStatusLabels,
+    showDevTools,
+    requiresLoginSession: blocksEmployeeApiActions,
+    attendance,
+    leaveRequests,
+    schedules,
+    leaveBalance,
+    checkInAt,
+    checkOutAt,
+    breakMinutes,
+    isHoliday,
+    attendanceNotes,
+    lastAttendanceId,
+    selectedCorrectionRecordId,
+    hasSelectedCorrectionRecord: selectedCorrectionRecord !== null,
+    correctionDeltaLabel,
+    attendancePreSubmitChecks,
+    attendancePreSubmitValid,
+    correctionValidationMessage: correctionValidation.message,
+    correctionValidationIsValid: correctionValidation.isValid,
+    latestAttendance,
+    attendanceNotePresets,
+    leaveType,
+    leaveUnit,
+    leaveHours,
+    leaveStartDate,
+    leaveEndDate,
+    leaveReason,
+    cancelReason,
+    lastLeaveRequestId,
+    leaveBalanceSummary,
+    leavePreSubmitChecks,
+    leavePreSubmitValid,
+    leaveUsageRatePercent,
+    leaveUsageRingStyle,
+    leaveBalanceCards,
+    leaveUsageProjectionLabel,
+    leaveCalendarMonthLabel,
+    leaveCalendarWeekdays,
+    leaveCalendarCells,
+    leaveCalendarRows,
+    pendingLabel,
+    logs,
+    stats,
+    latestPayload,
+    formatDateTime: formatDateTimeByLocale,
+    formatDays,
+    toLeaveTypeLabel,
+    toRequestStatusLabel,
+    onCheckInAtChange: setCheckInAt,
+    onCheckOutAtChange: setCheckOutAt,
+    onBreakMinutesChange: setBreakMinutes,
+    onIsHolidayChange: setIsHoliday,
+    onAttendanceNotesChange: setAttendanceNotes,
+    onLastAttendanceIdChange: setLastAttendanceId,
+    onSelectCorrectionTarget: selectCorrectionTarget,
+    onCreateAttendance: () => void mutationActions.createAttendance(),
+    onCheckOutNow: () => void mutationActions.checkOutNow(),
+    onRequestAttendanceCorrection: () => void mutationActions.requestAttendanceCorrection(),
+    onApplySelectedCorrectionRecord: applySelectedCorrectionRecord,
+    onApplyLatestAttendanceToCorrectionForm: applyLatestAttendanceToCorrectionForm,
+    onApplyAttendanceRecordToCorrectionForm: applyAttendanceRecordToCorrectionForm,
+    onLeaveTypeChange: setLeaveType,
+    onLeaveUnitChange: setLeaveUnit,
+    onLeaveHoursChange: setLeaveHours,
+    onLeaveStartDateChange: setLeaveStartDate,
+    onLeaveEndDateChange: setLeaveEndDate,
+    onCancelReasonChange: setCancelReason,
+    onLeaveReasonChange: setLeaveReason,
+    onLastLeaveRequestIdChange: setLastLeaveRequestId,
+    onApplyLeaveQuickPreset: applyLeaveQuickPreset,
+    onCreateLeave: () => void mutationActions.createLeave(),
+    onCancelLeave: () => void mutationActions.cancelLeave(),
+    onPrefillLeaveFromCalendarDate: prefillLeaveFormFromCalendarDate,
+    onMoveCalendarMonth: (delta: number) => void moveCalendarMonth(delta),
+    onResetCalendarToCurrentMonth: () => void resetCalendarToCurrentMonth(),
+    onClearLogs: clearLogs
+  } as const;
+
+  const showsHomeHub = mode === "home";
+  const showsAttendanceWorkspace = mode === "attendance";
+  const showsLeaveWorkspace = mode === "leave";
+
   return (
     <main className="saas-content">
-        <EmployeeDashboardChrome
-          showDevTools={showDevTools}
-          isKoLocale={isKoLocale}
-          requiresLoginSession={blocksEmployeeApiActions}
-          productionSessionRequiredNotice={productionSessionRequiredNotice}
+      {!showsHomeHub ? (
+        <section className="hero-panel">
+          <p className="eyebrow">{isKoLocale ? "직원 작업 워크스페이스" : "Employee workspace"}</p>
+          <h1>{showsAttendanceWorkspace ? (isKoLocale ? "근태 작업 워크스페이스" : "Attendance workspace") : isKoLocale ? "휴가 작업 워크스페이스" : "Leave workspace"}</h1>
+          <p className="hero-copy">
+            {showsAttendanceWorkspace
+              ? isKoLocale
+                ? "Today 홈에서 분리한 출퇴근 기록과 정정 요청을 이 전용 경로에서 처리합니다."
+                : "Handle check-in, check-out, and correction work from this dedicated route instead of the Today home."
+              : isKoLocale
+                ? "Today 홈에서 분리한 휴가 요청과 캘린더 확인을 이 전용 경로에서 처리합니다."
+                : "Handle leave requests and calendar review from this dedicated route instead of the Today home."}
+          </p>
+          <div className="hero-meta">
+            <span>
+              {showsAttendanceWorkspace
+                ? isKoLocale
+                  ? "출퇴근 기록과 일정 기반 정정 초안 이어받기"
+                  : "Check-in records and schedule-based correction handoff"
+                : isKoLocale
+                  ? "휴가 요청, 잔여 연차, 캘린더 기반 초안 이어받기"
+                  : "Leave requests, balances, and calendar-based draft handoff"}
+            </span>
+            <button className="btn btn-primary" type="button" onClick={() => router.push("/employee")}>
+              {isKoLocale ? "Today로 돌아가기" : "Return to Today"}
+            </button>
+            <button className="btn btn-secondary" type="button" onClick={() => router.push("/employee/requests")}>
+              {isKoLocale ? "요청 워크스페이스 열기" : "Open requests workspace"}
+            </button>
+          </div>
+        </section>
+      ) : null}
+      <EmployeeDashboardChrome
+        showDevTools={showDevTools}
+        isKoLocale={isKoLocale}
+        requiresLoginSession={blocksEmployeeApiActions}
+        productionSessionRequiredNotice={productionSessionRequiredNotice}
         attendanceSummary={attendanceSummary}
         leaveBalanceLabel={leaveBalance ? leaveBalanceCopy.dayUnit(formatDays(leaveBalance.remainingDays)) : "-"}
         pendingLeaveCount={pendingLeaveCount}
@@ -485,112 +621,36 @@ export default function EmployeeSelfServicePage() {
         pendingLabel={pendingLabel}
       />
       <section className="panel-grid">
-        <EmployeeAccountOverviewPanels
-          isKoLocale={isKoLocale}
-          showDevTools={showDevTools}
-          isProductionRuntime={isProductionRuntime}
-          usesBearerToken={usesBearerToken}
-          requiresLoginSession={blocksEmployeeApiActions}
-          supabaseSession={supabaseSession}
-          supabaseSessionError={supabaseSessionError}
-          periodStart={periodStart}
-          periodEnd={periodEnd}
-          supabaseUrl={supabaseUrl}
-          integratedSummaryCards={integratedSummaryCards}
-          integratedSubmitChecklistCards={integratedSubmitChecklistCards}
-          onPeriodStartChange={setPeriodStart}
-          onPeriodEndChange={setPeriodEnd}
-          onRefreshEmployeeSnapshot={() => void refreshEmployeeSnapshot()}
-          onJumpToSection={jumpToSection}
-        />
-        <EmployeeAttendanceLeavePanels
-          sectionTitles={sectionTitles}
-          attendanceCopy={attendanceCopy}
-          leaveCopy={leaveCopy}
-          leaveCalendarCopy={leaveCalendarCopy}
-          scheduleCopy={scheduleCopy}
-          apiLogsCopy={apiLogsCopy}
-          callApiLabels={callApiLabels}
-          listBadgeLabels={listBadgeLabels}
-          preSubmitStatusLabels={preSubmitStatusLabels}
-          showDevTools={showDevTools}
-          requiresLoginSession={blocksEmployeeApiActions}
-          attendance={attendance}
-          leaveRequests={leaveRequests}
-          schedules={schedules}
-          leaveBalance={leaveBalance}
-          checkInAt={checkInAt}
-          checkOutAt={checkOutAt}
-          breakMinutes={breakMinutes}
-          isHoliday={isHoliday}
-          attendanceNotes={attendanceNotes}
-          lastAttendanceId={lastAttendanceId}
-          selectedCorrectionRecordId={selectedCorrectionRecordId}
-          hasSelectedCorrectionRecord={selectedCorrectionRecord !== null}
-          correctionDeltaLabel={correctionDeltaLabel}
-          attendancePreSubmitChecks={attendancePreSubmitChecks}
-          attendancePreSubmitValid={attendancePreSubmitValid}
-          correctionValidationMessage={correctionValidation.message}
-          correctionValidationIsValid={correctionValidation.isValid}
-          latestAttendance={latestAttendance}
-          attendanceNotePresets={attendanceNotePresets}
-          leaveType={leaveType}
-          leaveUnit={leaveUnit}
-          leaveHours={leaveHours}
-          leaveStartDate={leaveStartDate}
-          leaveEndDate={leaveEndDate}
-          leaveReason={leaveReason}
-          cancelReason={cancelReason}
-          lastLeaveRequestId={lastLeaveRequestId}
-          leaveBalanceSummary={leaveBalanceSummary}
-          leavePreSubmitChecks={leavePreSubmitChecks}
-          leavePreSubmitValid={leavePreSubmitValid}
-          leaveUsageRatePercent={leaveUsageRatePercent}
-          leaveUsageRingStyle={leaveUsageRingStyle}
-          leaveBalanceCards={leaveBalanceCards}
-          leaveUsageProjectionLabel={leaveUsageProjectionLabel}
-          leaveCalendarMonthLabel={leaveCalendarMonthLabel}
-          leaveCalendarWeekdays={leaveCalendarWeekdays}
-          leaveCalendarCells={leaveCalendarCells}
-          leaveCalendarRows={leaveCalendarRows}
-          pendingLabel={pendingLabel}
-          logs={logs}
-          stats={stats}
-          latestPayload={latestPayload}
-          formatDateTime={formatDateTimeByLocale}
-          formatDays={formatDays}
-          toLeaveTypeLabel={toLeaveTypeLabel}
-          toRequestStatusLabel={toRequestStatusLabel}
-          onCheckInAtChange={setCheckInAt}
-          onCheckOutAtChange={setCheckOutAt}
-          onBreakMinutesChange={setBreakMinutes}
-          onIsHolidayChange={setIsHoliday}
-          onAttendanceNotesChange={setAttendanceNotes}
-          onLastAttendanceIdChange={setLastAttendanceId}
-          onSelectCorrectionTarget={selectCorrectionTarget}
-          onCreateAttendance={() => void mutationActions.createAttendance()}
-          onCheckOutNow={() => void mutationActions.checkOutNow()}
-          onRequestAttendanceCorrection={() => void mutationActions.requestAttendanceCorrection()}
-          onApplySelectedCorrectionRecord={applySelectedCorrectionRecord}
-          onApplyLatestAttendanceToCorrectionForm={applyLatestAttendanceToCorrectionForm}
-          onApplyAttendanceRecordToCorrectionForm={applyAttendanceRecordToCorrectionForm}
-          onLeaveTypeChange={setLeaveType}
-          onLeaveUnitChange={setLeaveUnit}
-          onLeaveHoursChange={setLeaveHours}
-          onLeaveStartDateChange={setLeaveStartDate}
-          onLeaveEndDateChange={setLeaveEndDate}
-          onCancelReasonChange={setCancelReason}
-          onLeaveReasonChange={setLeaveReason}
-          onLastLeaveRequestIdChange={setLastLeaveRequestId}
-          onApplyLeaveQuickPreset={applyLeaveQuickPreset}
-          onCreateLeave={() => void mutationActions.createLeave()}
-          onCancelLeave={() => void mutationActions.cancelLeave()}
-          onPrefillLeaveFromCalendarDate={prefillLeaveFormFromCalendarDate}
-          onMoveCalendarMonth={(delta) => void moveCalendarMonth(delta)}
-          onResetCalendarToCurrentMonth={() => void resetCalendarToCurrentMonth()}
-          onClearLogs={clearLogs}
-        />
+        {showsHomeHub ? (
+          <EmployeeAccountOverviewPanels
+            isKoLocale={isKoLocale}
+            showDevTools={showDevTools}
+            isProductionRuntime={isProductionRuntime}
+            usesBearerToken={usesBearerToken}
+            requiresLoginSession={blocksEmployeeApiActions}
+            supabaseSession={supabaseSession}
+            supabaseSessionError={supabaseSessionError}
+            periodStart={periodStart}
+            periodEnd={periodEnd}
+            supabaseUrl={supabaseUrl}
+            integratedSummaryCards={integratedSummaryCards}
+            integratedSubmitChecklistCards={integratedSubmitChecklistCards}
+            onPeriodStartChange={setPeriodStart}
+            onPeriodEndChange={setPeriodEnd}
+            onRefreshEmployeeSnapshot={() => void refreshEmployeeSnapshot()}
+            onJumpToSection={jumpToSection}
+          />
+        ) : null}
+        {showsAttendanceWorkspace ? <EmployeeAttendanceFormPanel {...sharedPanelProps} /> : null}
+        {showsLeaveWorkspace ? <EmployeeLeaveRequestPanel {...sharedPanelProps} /> : null}
+        {showsLeaveWorkspace ? <EmployeeLeaveCalendarPanel {...sharedPanelProps} /> : null}
+        {showsHomeHub ? <EmployeeSchedulePanel {...sharedPanelProps} /> : null}
+        {showsHomeHub && showDevTools ? <EmployeeApiLogsPanel {...sharedPanelProps} /> : null}
       </section>
     </main>
   );
+}
+
+export default function EmployeeSelfServiceHomePage() {
+  return <EmployeeSelfServicePage mode="home" />;
 }

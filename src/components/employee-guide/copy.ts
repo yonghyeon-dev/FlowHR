@@ -71,8 +71,8 @@ const defaultCopy: EmployeeGuideCopy = {
   ],
   quickActionsTitle: "Quick actions",
   quickActions: [
-    { label: "Attendance", href: "/employee?focus=attendance", description: "Check-in/check-out and correction request." },
-    { label: "Leave", href: "/employee?focus=leave", description: "Submit leave request and track status." },
+    { label: "Attendance", href: "/employee/attendance", description: "Check-in/check-out and correction request." },
+    { label: "Leave", href: "/employee/leave", description: "Submit leave request and track status." },
     { label: "Payslips", href: "/employee/payslips", description: "Review confirmed payroll details." },
     { label: "Receipts", href: "/employee/payslip-receipts", description: "Track payslip receipt status." }
   ],
@@ -126,8 +126,8 @@ export const employeeGuideCopyByLocale: Record<FlowLocale, EmployeeGuideCopy> = 
     ],
     quickActionsTitle: "빠른 이동",
     quickActions: [
-      { label: "근태", href: "/employee?focus=attendance", description: "출퇴근 기록/정정 요청을 처리합니다." },
-      { label: "휴가", href: "/employee?focus=leave", description: "휴가 요청을 등록하고 상태를 확인합니다." },
+      { label: "근태", href: "/employee/attendance", description: "출퇴근 기록/정정 요청을 처리합니다." },
+      { label: "휴가", href: "/employee/leave", description: "휴가 요청을 등록하고 상태를 확인합니다." },
       { label: "명세서", href: "/employee/payslips", description: "확정 급여 명세를 확인합니다." },
       { label: "수신 확인", href: "/employee/payslip-receipts", description: "명세서 수신 상태를 확인합니다." }
     ],

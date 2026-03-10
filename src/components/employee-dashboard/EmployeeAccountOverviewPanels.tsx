@@ -107,13 +107,13 @@ function resolvePriorityWorkspaceTarget(
   switch (sectionId) {
     case "attendance":
       return {
-        href: "/employee/requests#attendance-actions",
-        label: isKoLocale ? "출퇴근 요청 센터 열기" : "Open attendance requests"
+        href: "/employee/attendance",
+        label: isKoLocale ? "근태 작업 열기" : "Open attendance workspace"
       };
     case "leave":
       return {
-        href: "/employee/requests#leave-actions",
-        label: isKoLocale ? "휴가 요청 센터 열기" : "Open leave requests"
+        href: "/employee/leave",
+        label: isKoLocale ? "휴가 작업 열기" : "Open leave workspace"
       };
     case "request-feedback":
     case "request-search-sort":
@@ -141,6 +141,8 @@ function resolveChecklistActionTarget(
 ): ChecklistActionTarget {
   const workspaceTarget = resolvePriorityWorkspaceTarget(sectionId, isKoLocale);
   if (
+    sectionId === "attendance" ||
+    sectionId === "leave" ||
     sectionId === "request-feedback" ||
     sectionId === "request-search-sort" ||
     sectionId === "request-timeline" ||
@@ -242,27 +244,43 @@ export function EmployeeAccountOverviewPanels({
         </p>
         <div className="actions">
           {actionPriorityBadges.map((badge) => (
-            <button
-              key={badge.key}
-              type="button"
-              className={`btn ${
-                badge.severity === "critical" ? "btn-primary" : "btn-secondary"
-              } btn-small`}
-              onClick={() => onJumpToSection(badge.targetSectionId)}
-            >
-              {badge.label} ({badge.remainingCount}/{badge.totalCount}) / {" "}
-              {badge.severity === "critical"
-                ? isKoLocale
-                  ? "긴급"
-                  : "Critical"
-                : badge.severity === "watch"
+            (() => {
+              const actionTarget = resolveChecklistActionTarget(
+                badge.targetSectionId,
+                isKoLocale
+              );
+              const badgeLabel = `${badge.label} (${badge.remainingCount}/${badge.totalCount}) / ${
+                badge.severity === "critical"
                   ? isKoLocale
-                    ? "주의"
-                    : "Watch"
-                  : isKoLocale
-                    ? "안정"
-                    : "Stable"}
-            </button>
+                    ? "긴급"
+                    : "Critical"
+                  : badge.severity === "watch"
+                    ? isKoLocale
+                      ? "주의"
+                      : "Watch"
+                    : isKoLocale
+                      ? "안정"
+                      : "Stable"
+              }`;
+              const className = `btn ${
+                badge.severity === "critical" ? "btn-primary" : "btn-secondary"
+              } btn-small`;
+
+              return actionTarget.kind === "link" ? (
+                <Link key={badge.key} className={className} href={actionTarget.href}>
+                  {badgeLabel}
+                </Link>
+              ) : (
+                <button
+                  key={badge.key}
+                  type="button"
+                  className={className}
+                  onClick={() => onJumpToSection(actionTarget.sectionId)}
+                >
+                  {badgeLabel}
+                </button>
+              );
+            })()
           ))}
         </div>
         {priorityChecklistCard ? (

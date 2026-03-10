@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1118` so request-heavy employee work leaves Today home and settles under `/employee/requests`.
-2. Start the next employee self-service extraction slice for attendance and leave route promotion after the requests workspace lands.
-3. Begin the first shared workspace implementation slice once employee request/attendance seams are explicit.
+1. Start `WI-1119` so attendance and leave task-heavy work leaves Today home and settles under dedicated employee workspaces.
+2. Begin the first shared workspace implementation slice once employee request and attendance/leave seams are explicit.
+3. Align mobile employee entry points with the new route-first Today / Requests / Attendance structure.
 
 ## 5. Blockers Or Watch Items
 
@@ -275,3 +275,6 @@ Latest planning reset:
 - Closed `WI-1116` and aligned admin workspace hubs with grouped shell sections while preserving operational settings and source-context risk entry links.
 - Started `WI-1117` to create the first stable employee requests route seam and reduce top-level dependence on hidden-subpage entry points.
 - Started `WI-1118` to extract request feedback, search, timeline, and resubmit follow-up from the Today home into the dedicated `/employee/requests` workspace while preserving route-based draft handoff back to employee forms.
+- Closed `WI-1118` through the full GitHub flow and merged it to `main` as `5a86b081718d1435c4a73b2b1b996c221a033af8`, then deleted the feature branch.
+- Re-verified `WI-1118` on the delivery path and confirmed both `ci` (`22927102521`) and `vercel-production-deploy` (`22927102517`) stay green after the employee requests workspace extraction.
+- Started `WI-1119` to promote attendance correction, leave request, and leave calendar work from the Today home into dedicated employee routes while preserving schedule-based draft handoff.

@@ -106,7 +106,7 @@ export default function EmployeeScheduleBoardView({
 }: EmployeeScheduleBoardViewProps) {
   const searchParams = useSearchParams();
   const sourceEntry = resolveEmployeeScheduleSourceEntry(searchParams.get("source"), runtimeLocale === "ko-KR");
-  const attendanceCorrectionHref = `/employee?focus=attendance&attendanceSource=schedule&fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}`;
+  const attendanceCorrectionHref = `/employee/attendance?attendanceSource=schedule&fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}`;
   const hasWorkspaceSession = sessionOrganizationId.trim().length > 0;
   const hasEmployeeSession = sessionEmployeeId.trim().length > 0;
   return (
