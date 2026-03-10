@@ -9,6 +9,11 @@
   type ProfileField,
   type UpdatedWindow
 } from "@/app/admin/people/page-types";
+import {
+  formatDepartmentDisplayName,
+  formatOrganizationDisplayName,
+  formatPositionDisplayName
+} from "@/lib/product-language";
 
 export function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
@@ -101,6 +106,7 @@ type FormatAdminPeopleProfileValueInput = {
 
 export function formatAdminPeopleProfileValue(input: FormatAdminPeopleProfileValueInput) {
   const { field, value, isKoLocale, organizationById, departmentById, positionById } = input;
+  const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
   if (value === null || value === undefined) {
     return "-";
   }
@@ -112,15 +118,15 @@ export function formatAdminPeopleProfileValue(input: FormatAdminPeopleProfileVal
   }
   if (field === "organizationId") {
     const key = String(value);
-    return organizationById.get(key)?.name ?? key;
+    return formatOrganizationDisplayName(organizationById.get(key)?.name ?? null, runtimeLocale);
   }
   if (field === "departmentId") {
     const key = String(value);
-    return departmentById.get(key)?.name ?? key;
+    return formatDepartmentDisplayName(departmentById.get(key)?.name ?? null, runtimeLocale);
   }
   if (field === "positionId") {
     const key = String(value);
-    return positionById.get(key)?.name ?? key;
+    return formatPositionDisplayName(positionById.get(key)?.name ?? null, runtimeLocale);
   }
   return String(value);
 }
@@ -286,7 +292,7 @@ export function buildOrgTree(input: BuildOrgTreeInput): OrgTreeNode[] {
   for (const employee of filteredEmployees) {
     const orgKey = employee.organizationId ?? "__none__";
     const orgName = employee.organizationId
-      ? (organizationById.get(employee.organizationId)?.name ?? employee.organizationId)
+      ? formatOrganizationDisplayName(organizationById.get(employee.organizationId)?.name ?? null, runtimeLocale)
       : isKoLocale
         ? "미지정 조직"
         : "Unassigned organization";
@@ -310,7 +316,7 @@ export function buildOrgTree(input: BuildOrgTreeInput): OrgTreeNode[] {
           ? isKoLocale
             ? "미지정 부서"
             : "Unassigned department"
-          : (departmentById.get(deptKey)?.name ?? deptKey),
+          : formatDepartmentDisplayName(departmentById.get(deptKey)?.name ?? null, runtimeLocale),
       employees: deptEmployees.sort((a, b) =>
         (normalize(a.name) || a.id).localeCompare(normalize(b.name) || b.id, runtimeLocale)
       )
@@ -348,28 +354,34 @@ export function buildCompareRows(input: BuildCompareRowsInput): CompareRow[] {
     {
       label: isKoLocale ? "조직" : "Organization",
       a: compareEmployeeA.organizationId
-        ? (organizationById.get(compareEmployeeA.organizationId)?.name ?? compareEmployeeA.organizationId)
+        ? formatOrganizationDisplayName(
+            organizationById.get(compareEmployeeA.organizationId)?.name ?? null,
+            runtimeLocale
+          )
         : "-",
       b: compareEmployeeB.organizationId
-        ? (organizationById.get(compareEmployeeB.organizationId)?.name ?? compareEmployeeB.organizationId)
+        ? formatOrganizationDisplayName(
+            organizationById.get(compareEmployeeB.organizationId)?.name ?? null,
+            runtimeLocale
+          )
         : "-"
     },
     {
       label: isKoLocale ? "부서" : "Department",
       a: compareEmployeeA.departmentId
-        ? (departmentById.get(compareEmployeeA.departmentId)?.name ?? compareEmployeeA.departmentId)
+        ? formatDepartmentDisplayName(departmentById.get(compareEmployeeA.departmentId)?.name ?? null, runtimeLocale)
         : "-",
       b: compareEmployeeB.departmentId
-        ? (departmentById.get(compareEmployeeB.departmentId)?.name ?? compareEmployeeB.departmentId)
+        ? formatDepartmentDisplayName(departmentById.get(compareEmployeeB.departmentId)?.name ?? null, runtimeLocale)
         : "-"
     },
     {
       label: isKoLocale ? "직급" : "Position",
       a: compareEmployeeA.positionId
-        ? (positionById.get(compareEmployeeA.positionId)?.name ?? compareEmployeeA.positionId)
+        ? formatPositionDisplayName(positionById.get(compareEmployeeA.positionId)?.name ?? null, runtimeLocale)
         : "-",
       b: compareEmployeeB.positionId
-        ? (positionById.get(compareEmployeeB.positionId)?.name ?? compareEmployeeB.positionId)
+        ? formatPositionDisplayName(positionById.get(compareEmployeeB.positionId)?.name ?? null, runtimeLocale)
         : "-"
     },
     {

@@ -236,6 +236,30 @@ export function formatEmployeeDisplayName(name: string | null | undefined, local
   return toLocaleKey(locale) === "ko" ? "이름 미등록 직원" : "Unnamed employee";
 }
 
+export function formatOrganizationDisplayName(name: string | null | undefined, locale: string) {
+  const trimmed = name?.trim() ?? "";
+  if (trimmed.length > 0) {
+    return trimmed;
+  }
+  return toLocaleKey(locale) === "ko" ? "이름 미등록 조직" : "Unnamed organization";
+}
+
+export function formatDepartmentDisplayName(name: string | null | undefined, locale: string) {
+  const trimmed = name?.trim() ?? "";
+  if (trimmed.length > 0) {
+    return trimmed;
+  }
+  return toLocaleKey(locale) === "ko" ? "이름 미등록 부서" : "Unnamed department";
+}
+
+export function formatPositionDisplayName(name: string | null | undefined, locale: string) {
+  const trimmed = name?.trim() ?? "";
+  if (trimmed.length > 0) {
+    return trimmed;
+  }
+  return toLocaleKey(locale) === "ko" ? "이름 미등록 직급" : "Unnamed position";
+}
+
 export function formatPublicEmployeeNumber(id: string | null | undefined) {
   const normalized = id?.trim() ?? "";
   if (!normalized) {
