@@ -29,7 +29,7 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(employeePage, /prefillLeaveFormFromCalendarDate/);
-  assert.match(employeePage, /onPrefillLeaveFromCalendarDate=\{prefillLeaveFormFromCalendarDate\}/);
+  assert.match(employeePage, /onPrefillLeaveFromCalendarDate: prefillLeaveFormFromCalendarDate,/);
   assert.match(attendanceLeavePanels, /onPrefillLeaveFromCalendarDate: \(dateKey: string\) => void/);
   assert.match(leaveCalendarPanel, /clickToPrefill/);
   assert.match(leaveCalendarPanel, /is-clickable/);
