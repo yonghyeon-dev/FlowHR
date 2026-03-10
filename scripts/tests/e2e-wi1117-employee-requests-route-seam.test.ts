@@ -44,10 +44,10 @@ function run() {
   assert.match(requestsPage, /id: "leave-actions"/);
   assert.match(requestsPage, /id: "request-monitoring"/);
   assert.match(requestsPage, /id: "resubmit-workbench"/);
-  assert.match(requestsPage, /\/employee\?focus=request-feedback/);
-  assert.match(requestsPage, /\/employee\?focus=request-search-sort/);
-  assert.match(requestsPage, /\/employee\?focus=request-timeline/);
-  assert.match(requestsPage, /\/employee\?focus=request-resubmit/);
+  assert.match(requestsPage, /\/employee\/requests#request-feedback/);
+  assert.match(requestsPage, /\/employee\/requests#request-search-sort/);
+  assert.match(requestsPage, /\/employee\/requests#request-timeline/);
+  assert.match(requestsPage, /\/employee\/requests#resubmit-workbench/);
 
   assert.match(workItem, /직원 요청 영역 라우트 승격 시임/);
 }

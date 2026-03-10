@@ -10,6 +10,13 @@ async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
   const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeRequestsPageClient = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "requests",
+    "page-client.tsx"
+  );
 
   const adminChrome = readUtf8("src", "components", "admin-dashboard", "AdminDashboardChrome.tsx");
   const adminOnboardingAccountPanels = readUtf8(
@@ -92,19 +99,21 @@ async function run() {
 
   assert.match(employeePage, /from "@\/components\/employee-dashboard\/EmployeeDashboardChrome"/);
   assert.match(employeePage, /from "@\/components\/employee-dashboard\/EmployeeAccountOverviewPanels"/);
-  assert.match(employeePage, /from "@\/components\/employee-dashboard\/EmployeeRequestFeedbackPanels"/);
-  assert.match(employeePage, /from "@\/components\/employee-dashboard\/EmployeeResubmitPanel"/);
   assert.match(employeePage, /<EmployeeDashboardChrome/);
   assert.match(employeePage, /<EmployeeAccountOverviewPanels/);
-  assert.match(employeePage, /<EmployeeRequestFeedbackPanels/);
-  assert.match(employeePage, /<EmployeeResubmitPanel/);
+  assert.match(employeePage, /resolveEmployeeRequestsRouteForFocusSection/);
+  assert.match(employeePage, /resolveEmployeeResubmitDraftPrefill/);
   assert.doesNotMatch(employeePage, /<article className="panel panel-request-feedback" id="request-feedback">/);
   assert.doesNotMatch(employeePage, /<article className="panel panel-request-resubmit" id="request-resubmit">/);
+  assert.doesNotMatch(employeePage, /<EmployeeRequestFeedbackPanels/);
+  assert.doesNotMatch(employeePage, /<EmployeeResubmitPanel/);
 
   assert.match(employeeChrome, /export function EmployeeDashboardChrome/);
   assert.match(employeeAccountOverviewPanels, /id="account"/);
   assert.match(employeeAccountOverviewPanels, /id="self-service-overview"/);
   assert.match(employeeAccountOverviewPanels, /id="submit-checklist"/);
+  assert.match(employeeRequestsPageClient, /from "@\/components\/employee-dashboard\/EmployeeRequestFeedbackPanels"/);
+  assert.match(employeeRequestsPageClient, /from "@\/components\/employee-dashboard\/EmployeeRequestsResubmitWorkspacePanel"/);
   assert.match(employeeRequestFeedbackPanels, /id="request-feedback"/);
   assert.match(employeeRequestFeedbackPanels, /id="request-search-sort"/);
   assert.match(employeeRequestFeedbackPanels, /id="request-timeline"/);

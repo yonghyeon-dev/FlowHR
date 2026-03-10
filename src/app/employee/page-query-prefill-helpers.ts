@@ -29,6 +29,15 @@ const EMPLOYEE_FOCUS_ALIASES: Record<string, string> = {
   timeline: "request-timeline"
 };
 
+const REQUESTS_ROUTE_SECTION_MAP: Record<string, string> = {
+  "request-feedback": "/employee/requests#request-feedback",
+  "request-search-sort": "/employee/requests#request-search-sort",
+  "request-timeline": "/employee/requests#request-timeline",
+  "request-resubmit": "/employee/requests#resubmit-workbench"
+};
+
+const RESUBMIT_CHANNEL_SET = new Set(["attendance", "leave"]);
+
 export type AttendanceCorrectionSchedulePrefill = {
   key: string;
   fromDate: string;
@@ -78,6 +87,36 @@ export function resolveEmployeeFocusSectionId(
     return null;
   }
   return normalizedFocus;
+}
+
+export function resolveEmployeeRequestsRouteForFocusSection(
+  focusSectionId: string | null
+) {
+  if (!focusSectionId) {
+    return null;
+  }
+  return REQUESTS_ROUTE_SECTION_MAP[focusSectionId] ?? null;
+}
+
+export type EmployeeResubmitDraftPrefill = {
+  key: string;
+  channel: "attendance" | "leave";
+  recordId: string;
+};
+
+export function resolveEmployeeResubmitDraftPrefill(
+  searchParams: SearchParamsLike
+): EmployeeResubmitDraftPrefill | null {
+  const channel = searchParams.get("resubmitChannel")?.trim().toLowerCase() ?? "";
+  const recordId = searchParams.get("resubmitRecordId")?.trim() ?? "";
+  if (!RESUBMIT_CHANNEL_SET.has(channel) || recordId.length === 0) {
+    return null;
+  }
+  return {
+    key: `${channel}:${recordId}`,
+    channel: channel as "attendance" | "leave",
+    recordId
+  };
 }
 
 export function resolveAttendanceCorrectionSchedulePrefill(input: {
