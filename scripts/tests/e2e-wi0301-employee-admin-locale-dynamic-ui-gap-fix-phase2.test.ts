@@ -21,6 +21,30 @@ async function run() {
     "employee-dashboard",
     "EmployeeAttendanceLeaveFormsPanel.tsx"
   );
+  const employeeAttendanceFormPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAttendanceFormPanel.tsx"
+  );
+  const employeeLeaveRequestPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeLeaveRequestPanel.tsx"
+  );
+  const employeeSchedulePanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeSchedulePanel.tsx"
+  );
+  const employeeApiLogsPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeApiLogsPanel.tsx"
+  );
   const employeeResubmitPanel = readUtf8("src", "components", "employee-dashboard", "EmployeeResubmitPanel.tsx");
   const employeeTypes = readUtf8("src", "app", "employee", "page-types.ts");
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
@@ -38,23 +62,25 @@ async function run() {
   assert.match(employeePage, /const supabaseUrl = process\.env\.NEXT_PUBLIC_SUPABASE_URL \?\? notConfiguredLabel;/);
   assert.match(employeePage, /const toRequestStatusLabel = useCallback\(/);
   assert.match(employeePage, /const toLeaveTypeLabel = useCallback\(/);
-  assert.match(employeePage, /<EmployeeAttendanceLeavePanels/);
+  assert.match(employeePage, /EmployeeAttendanceFormPanel/);
+  assert.match(employeePage, /EmployeeLeaveRequestPanel/);
+  assert.match(employeePage, /EmployeeSchedulePanel/);
 
   assert.match(employeeRequestFeedbackPanels, /\{toRequestStatusLabel\(row\.status\)\}/);
   assert.match(employeeRequestFeedbackPanels, /\{toRequestStatusLabel\(item\.status\)\}/);
-  assert.match(employeeAttendanceLeaveFormsPanel, /\{toRequestStatusLabel\(record\.state\)\}/);
-  assert.match(employeeAttendanceLeaveFormsPanel, /\{toRequestStatusLabel\(request\.state\)\}/);
-  assert.match(employeeAttendanceLeavePanels, /\{listBadgeLabels\.empty\}/);
+  assert.match(employeeAttendanceFormPanel, /\{toRequestStatusLabel\(record\.state\)\}/);
+  assert.match(employeeLeaveRequestPanel, /\{toRequestStatusLabel\(request\.state\)\}/);
+  assert.match(employeeSchedulePanel, /\{listBadgeLabels\.empty\}/);
   assert.match(employeeResubmitPanel, /\{listBadgeLabels\.applied\}/);
   assert.match(
-    employeeAttendanceLeavePanels,
+    employeeSchedulePanel,
     /\{schedule\.isHoliday \? listBadgeLabels\.holiday : listBadgeLabels\.work\}/
   );
   assert.match(
-    employeeAttendanceLeavePanels,
+    employeeApiLogsPanel,
     /\{log\.ok \? listBadgeLabels\.success : listBadgeLabels\.fail\}/
   );
-  assert.match(employeeAttendanceLeaveFormsPanel, /attendanceNotePresets\.map\(\(preset\) => \(/);
+  assert.match(employeeAttendanceFormPanel, /attendanceNotePresets\.map\(\(preset\) => \(/);
 
   assert.doesNotMatch(employeePage, /const requestStatusLabels = useMemo\(/);
   assert.doesNotMatch(employeePage, /const listBadgeLabels = useMemo\(/);

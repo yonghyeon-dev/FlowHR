@@ -20,6 +20,12 @@ function run() {
     "employee-dashboard",
     "EmployeeAttendanceLeaveFormsPanel.tsx"
   );
+  const employeeAttendanceFieldPanelSource = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAttendanceFormPanel.tsx"
+  );
   const employeeLocaleHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
 
   assert.ok(
@@ -38,7 +44,7 @@ function run() {
     "employee attendance panel should show correction delta preview"
   );
   assert.match(
-    `${employeePageSource}\n${employeeAttendancePanelSource}\n${employeeAttendanceFormPanelSource}`,
+    `${employeePageSource}\n${employeeAttendancePanelSource}\n${employeeAttendanceFormPanelSource}\n${employeeAttendanceFieldPanelSource}`,
     /attendanceNotePresets\.map\(\(preset\) => \(/,
     "employee attendance panel should render locale-aware note preset shortcuts"
   );
