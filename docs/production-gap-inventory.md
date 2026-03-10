@@ -32,6 +32,7 @@ Legend:
 | 33 | Year-end / filing control copy | Preflight action and response fallback still expose `정산 해시` / `ACK-OK` style control wording | Operator-facing actions and fallback labels use product language | New -> WI-1065 |
 | 34 | Year-end explanation labels | Year-end and withholding cards still expose `벡터 해시`, `사유 코드`, `정산 해시` style explanation labels | Summary cards use operator-facing explanation and 기준 wording | New -> WI-1066 |
 | 35 | Filing response catalog options | Response and rejection selectors still expose raw code values like `code - label` and `OTHER` | Catalog selectors show product labels without raw codes | New -> WI-1067 |
+| 36 | Withholding integrity traces | Withholding summary and copied metadata still expose raw finalization IDs and content-hash fragments | Product surfaces show human-readable completion state without internal integrity values | New -> WI-1068 |
 
 ## B. External Notification Productization
 
@@ -93,3 +94,4 @@ Legend:
 10. WI-1065 year-end and filing control copy
 11. WI-1066 year-end explanation copy
 12. WI-1067 filing response catalog humanization
+13. WI-1068 withholding integrity trace cleanup

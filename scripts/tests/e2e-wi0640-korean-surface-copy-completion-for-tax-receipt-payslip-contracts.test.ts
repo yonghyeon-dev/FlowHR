@@ -24,7 +24,7 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(payslipPageCopy, /organizationIdOptional: "로그인 조직"/);
-  assert.match(payslipPageCopy, /employeeId: "로그인 직원"/);
+  assert.match(payslipPageCopy, /employeeId: "직원 번호"/);
   assert.match(payslipPageCopy, /downloadCsv: "목록 내보내기"/);
   assert.match(payslipPageCopy, /apiCalls: "요청 건수"/);
 
@@ -34,7 +34,8 @@ async function run() {
 
   assert.match(withholdingCopyRuntime, /metadataReceiptNumberLabel: "영수증 번호"/);
   assert.match(withholdingCopyRuntime, /metadataContentTypeLabel: "콘텐츠 타입"/);
-  assert.match(withholdingCopyRuntime, /metadataContentSha256Label: "콘텐츠 해시값"/);
+  assert.match(withholdingCopyRuntime, /metadataContentSha256Label: "문서 무결성"/);
+  assert.match(withholdingCopyRuntime, /documentIntegrityVerifiedLabel: "검증 정보 포함"/);
   assert.match(withholdingConsole, /copy\.metadataReceiptNumberLabel/);
   assert.match(withholdingConsole, /copy\.metadataContentTypeLabel/);
   assert.doesNotMatch(withholdingConsole, /receiptNumber=/);

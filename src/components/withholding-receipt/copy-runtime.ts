@@ -85,6 +85,7 @@ export type WithholdingReceiptCopy = {
   metadataIssuedAtLabel: string;
   metadataGeneratedAtLabel: string;
   metadataContentSha256Label: string;
+  documentIntegrityVerifiedLabel: string;
   documentPreviewHiddenNotice: string;
   apiLogsTitle: string;
   apiLogsTotalLabel: string;
@@ -164,7 +165,7 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     formatTypeLabel: "형식 / 타입",
     issuedAtLabel: "발급 시각",
     generatedAtLabel: "생성 시각",
-    contentSha256Label: "콘텐츠 해시값",
+    contentSha256Label: "문서 무결성",
     actionDownloadLoadedDocument: "불러온 문서 다운로드",
     actionCopyDocumentMetadata: "문서 메타데이터 복사",
     metadataReceiptNumberLabel: "영수증 번호",
@@ -172,7 +173,8 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     metadataContentTypeLabel: "콘텐츠 타입",
     metadataIssuedAtLabel: "발급 시각",
     metadataGeneratedAtLabel: "생성 시각",
-    metadataContentSha256Label: "콘텐츠 해시값",
+    metadataContentSha256Label: "문서 무결성",
+    documentIntegrityVerifiedLabel: "검증 정보 포함",
     documentPreviewHiddenNotice: "문서 본문 미리보기는 다운로드에서 확인할 수 있습니다.",
     apiLogsTitle: "요청 로그",
     apiLogsTotalLabel: "총",
@@ -250,7 +252,7 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     formatTypeLabel: "Format / Type",
     issuedAtLabel: "Issued At",
     generatedAtLabel: "Generated At",
-    contentSha256Label: "Content SHA256",
+    contentSha256Label: "Document Integrity",
     actionDownloadLoadedDocument: "Download Loaded Document",
     actionCopyDocumentMetadata: "Copy Document Metadata",
     metadataReceiptNumberLabel: "Receipt Number",
@@ -258,7 +260,8 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     metadataContentTypeLabel: "Content Type",
     metadataIssuedAtLabel: "Issued At",
     metadataGeneratedAtLabel: "Generated At",
-    metadataContentSha256Label: "Content SHA256",
+    metadataContentSha256Label: "Document Integrity",
+    documentIntegrityVerifiedLabel: "Verification included",
     documentPreviewHiddenNotice: "Use download to review full document content.",
     apiLogsTitle: "API Logs",
     apiLogsTotalLabel: "total",

@@ -283,7 +283,7 @@ export function useWithholdingReceiptRequests({
     }
 
     setFinalizedSettlement(body);
-    setStatusMessage(`${copy.loadedFinalizedSettlementPrefix} ${body.settlement.finalizationId}`);
+    setStatusMessage(copy.loadedFinalizedSettlementPrefix);
     setTimeout(() => setStatusMessage(""), 3000);
   }, [
     copy.invalidInputStatus,

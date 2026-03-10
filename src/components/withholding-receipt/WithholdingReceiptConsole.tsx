@@ -142,7 +142,7 @@ export default function WithholdingReceiptConsole() {
       `${copy.metadataContentTypeLabel}: ${resolveContentTypeLabel(document.contentType)}`,
       `${copy.metadataIssuedAtLabel}: ${formatDateTimeByLocale(document.issuedAt, runtimeLocale)}`,
       `${copy.metadataGeneratedAtLabel}: ${formatDateTimeByLocale(document.generatedAt, runtimeLocale)}`,
-      `${copy.metadataContentSha256Label}: ${document.contentSha256}`
+      `${copy.metadataContentSha256Label}: ${copy.documentIntegrityVerifiedLabel}`
     ].join("\n");
     try {
       await navigator.clipboard.writeText(metadataText);
