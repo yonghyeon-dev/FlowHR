@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1116` so admin dashboard workspace hubs and grouped shell stop drifting.
-2. Start the first employee self-service IA implementation slice on top of the grouped shell baseline.
-3. Begin the first shared workspace implementation slice after shell and IA seams are both fixed.
+1. Close `WI-1117` so employee request flows gain a stable route seam instead of relying only on hidden-subpage entry.
+2. Start the next employee self-service route-promotion slice after the requests seam lands.
+3. Begin the first shared workspace implementation slice after employee route seams are explicit.
 
 ## 5. Blockers Or Watch Items
 
@@ -272,3 +272,5 @@ Latest planning reset:
 - Closed `WI-1108` and regrouped admin navigation into the same grouped-shell model.
 - Closed `WI-1109` and aligned the admin control-tower dashboard entries with the grouped shell baseline.
 - Started `WI-1116` to align admin workspace hubs with grouped shell sections while preserving operational settings and source-context risk entry links.
+- Closed `WI-1116` and aligned admin workspace hubs with grouped shell sections while preserving operational settings and source-context risk entry links.
+- Started `WI-1117` to create the first stable employee requests route seam and reduce top-level dependence on hidden-subpage entry points.
