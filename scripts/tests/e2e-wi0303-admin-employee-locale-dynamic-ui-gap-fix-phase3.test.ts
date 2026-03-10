@@ -32,6 +32,18 @@ async function run() {
     "employee-dashboard",
     "EmployeeAttendanceLeaveFormsPanel.tsx"
   );
+  const employeeLeaveRequestPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeLeaveRequestPanel.tsx"
+  );
+  const employeeApiLogsPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeApiLogsPanel.tsx"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-0303-admin-employee-locale-dynamic-ui-gap-fix-phase3.md"
@@ -58,10 +70,10 @@ async function run() {
   assert.match(employeeAccountOverviewPanels, /formatWorkspaceConnectionState\(hasWorkspaceSession, locale\)/);
   assert.match(employeeAccountOverviewPanels, /formatEmployeeSessionConnectionState\(hasEmployeeSession, locale\)/);
   assert.match(
-    employeeAttendanceLeaveFormsPanel,
+    employeeLeaveRequestPanel,
     /<option value="ANNUAL">\{toLeaveTypeLabel\("ANNUAL"\)\}<\/option>/
   );
-  assert.match(employeeAttendanceLeavePanels, /<h2>\{sectionTitles\.apiLogs\}<\/h2>/);
+  assert.match(employeeApiLogsPanel, /<h2>\{sectionTitles\.apiLogs\}<\/h2>/);
   assert.doesNotMatch(employeePage, /\?\?\? \?\? \?\?\?/);
 
   assert.match(workItem, /WI-0303/i);
