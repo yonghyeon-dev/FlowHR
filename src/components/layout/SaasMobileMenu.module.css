@@ -57,6 +57,26 @@
   gap: 8px;
 }
 
+.section {
+  display: grid;
+  gap: 8px;
+}
+
+.sectionTitle {
+  margin: 0;
+  padding: 2px 2px 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sectionLinks {
+  display: grid;
+  gap: 8px;
+}
+
 .nav a,
 .footer a {
   text-decoration: none;

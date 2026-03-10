@@ -77,6 +77,28 @@ body {
   flex-direction: column;
   gap: 6px;
 }
+.saas-nav-section {
+  display: grid;
+  gap: 6px;
+}
+.saas-nav-section + .saas-nav-section {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(205, 221, 245, 0.72);
+}
+.saas-nav-section-title {
+  margin: 0;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.saas-nav-link-list {
+  display: grid;
+  gap: 6px;
+}
 .saas-nav a {
   text-decoration: none;
   color: var(--ink);
