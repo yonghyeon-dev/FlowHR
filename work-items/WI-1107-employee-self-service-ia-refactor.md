@@ -12,6 +12,7 @@
 - 상위 셸에서 `?focus=` 및 hash 기반 hidden-subpage 링크를 제거한다.
 - 모바일과 데스크톱이 같은 목적지 모델을 따르도록 묶는다.
 - 첫 slice에서는 stable route 중심 상위 그룹만 정리하고, hidden-subpage 승격은 후속 slice에서 이어간다.
+- 첫 구현 범위는 `Today / Requests / Documents / Notices & Alerts / Account` 다섯 그룹의 셸 재편과 회귀 가드 추가까지로 제한한다.
 
 ## Acceptance Criteria
 
