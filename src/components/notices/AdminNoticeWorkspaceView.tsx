@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 
 import {
   resolveNoticeAudienceLabel,
@@ -6,6 +6,10 @@ import {
   resolveNoticeWorkspaceCopy
 } from "@/components/notices/copy";
 import type { NoticeItem, NoticeStatus } from "@/features/notices/types";
+import {
+  formatAdminSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 
 type NoticeApiSummary = {
   total: number;
@@ -134,6 +138,11 @@ export default function AdminNoticeWorkspaceView({
   const draftCount = notices.filter((notice) => notice.status === "DRAFT").length;
   const scheduledCount = notices.filter((notice) => notice.status === "SCHEDULED").length;
   const publishedCount = notices.filter((notice) => notice.status === "PUBLISHED").length;
+  const hasWorkspaceSession = Boolean(sessionOrganizationId.trim());
+  const hasAdminSession = Boolean(sessionActorId.trim());
+  const runtimeLocale = copy.pageTitle === "공지사항 워크스페이스" ? "ko-KR" : "en-US";
+  const workspaceStatusLabel = runtimeLocale === "ko-KR" ? "작업 공간 상태" : "Workspace status";
+  const adminSessionStatusLabel = runtimeLocale === "ko-KR" ? "관리자 세션 상태" : "Admin session status";
 
   return (
     <main className="saas-content">
@@ -163,8 +172,8 @@ export default function AdminNoticeWorkspaceView({
           <h2>{copy.filtersTitle}</h2>
           {showDevTools ? (
             <p className="small muted">
-              {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.actorIdLabel}:{" "}
-              <code>{sessionActorId || "-"}</code>
+              {workspaceStatusLabel}: <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, runtimeLocale)}</strong> /{" "}
+              {adminSessionStatusLabel}: <strong>{formatAdminSessionConnectionState(hasAdminSession, runtimeLocale)}</strong>
             </p>
           ) : null}
           <div className="input-grid">

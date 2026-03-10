@@ -55,6 +55,7 @@ Legend:
 | 56 | Admin approval residual session copy surface | Approval policy, approval history, approval templates, and approval executions still keep raw session wording on session-state surfaces | Approval surfaces should use workspace status and admin session status wording only | New -> WI-1092 |
 | 57 | Admin leave accrual residual surface | Leave accrual still exposes raw workspace/session wording, organization summary IDs, raw employee IDs, and enum-like status copy on the operator surface | Leave accrual should use workspace/admin session status copy, current-workspace product wording, employee-facing labels, and user-facing status/reason text only | New -> WI-1093 |
 | 58 | Admin leave calendar residual surface | Leave calendar still exposes raw workspace error wording, raw organization summary IDs, and raw employee IDs on the operator surface | Leave calendar should use workspace/admin session status copy, current-workspace product wording, employee-facing labels, and user-facing error text only | New -> WI-1094 |
+| 59 | Notices session context surface | Admin and employee notice filters still expose raw organization, actor, or employee identifiers in devtools context lines | Notice surfaces should use workspace/admin session/employee session status wording only | New -> WI-1095 |
 
 ## B. External Notification Productization
 
@@ -141,3 +142,4 @@ Legend:
 35. WI-1092 admin approval residual session copy follow-up
 36. WI-1093 admin leave accrual surface follow-up
 37. WI-1094 admin leave calendar surface follow-up
+38. WI-1095 notices session context follow-up
