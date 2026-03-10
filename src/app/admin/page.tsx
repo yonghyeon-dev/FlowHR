@@ -285,7 +285,7 @@ export default function AdminDashboardPage() {
     return null;
   }
 
-  const workspaceHubs = buildAdminWorkspaceHubs(isKoLocale);
+  const workspaceHubs = buildAdminWorkspaceHubs(locale, t);
   const dashboardEntryLinks = buildAdminDashboardEntryLinks(t);
   const dashboardQueueContextLinks = {
     approvalQueue: { href: "/admin/approval-executions?source=admin-dashboard" },
