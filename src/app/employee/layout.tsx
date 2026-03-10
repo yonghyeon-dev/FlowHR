@@ -1,7 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import SaasMobileMenu, { type SaasMobileMenuLink } from "@/components/layout/SaasMobileMenu";
+import SaasMobileMenu, {
+  type SaasMobileMenuLink,
+  type SaasMobileMenuSection
+} from "@/components/layout/SaasMobileMenu";
 import NotificationBell from "@/components/NotificationBell";
 import SessionMenu from "@/components/SessionMenu";
 import { createTranslator } from "@/lib/i18n/messages";
@@ -22,37 +25,50 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
   const locale = await getRequestLocale();
   const t = createTranslator(locale);
 
-  const navLinks: SaasMobileMenuLink[] = [
-    { href: "/employee", label: t("employee.nav.overview") },
-    { href: "/employee/guide", label: t("employee.nav.guide") },
-    { href: "/employee/onboarding", label: t("employee.nav.onboardingChecklist") },
-    { href: "/employee?focus=account", label: t("employee.nav.account") },
-    { href: "/employee?focus=self-service-overview", label: t("employee.nav.selfServiceOverview") },
-    { href: "/employee?focus=submit-checklist", label: t("employee.nav.submitChecklist") },
-    { href: "/employee?focus=request-feedback", label: t("employee.nav.requestFeedback") },
-    { href: "/employee?focus=request-search-sort", label: t("employee.nav.requestSearchSort") },
-    { href: "/employee?focus=request-timeline", label: t("employee.nav.requestTimeline") },
-    { href: "/employee?focus=request-resubmit", label: t("employee.nav.requestResubmit") },
-    { href: "/employee?focus=attendance", label: t("employee.nav.attendance") },
-    { href: "/employee?focus=leave", label: t("employee.nav.leave") },
-    { href: "/employee?focus=leave-calendar", label: t("employee.nav.leaveCalendar") },
-    { href: "/employee?focus=schedule", label: t("employee.nav.schedule") },
-    { href: "/employee/schedule", label: t("employee.nav.scheduleBoard") },
-    { href: "/employee/notices", label: t("employee.nav.notices") },
-    { href: "/employee/benefits", label: t("employee.nav.benefits") },
-    { href: "/employee/recruitment", label: t("employee.nav.recruitment") },
-    { href: "/employee/contracts", label: t("employee.nav.contracts") },
-    { href: "/employee/payslips", label: t("employee.nav.payslips") },
-    { href: "/employee/payslip-receipts", label: t("employee.nav.payslipReceipts") },
-    { href: "/employee/withholding-receipt", label: t("employee.nav.withholdingReceipt") },
-    { href: "/employee/year-end-input", label: t("employee.nav.yearEndInput") },
-    { href: "/employee/payslips#payslip-search-sort", label: t("employee.nav.payslipSearchSort") },
-    { href: "/employee/payslips#status-feedback", label: t("employee.nav.statusFeedback") },
-    { href: "/employee/payslips#compare-view", label: t("employee.nav.compareView") },
-    { href: "/employee/profile", label: t("employee.nav.profile") },
-    { href: "/employee/people", label: t("employee.nav.people") },
-    { href: "/employee/settings", label: t("employee.nav.settings") }
+  const navSections: SaasMobileMenuSection[] = [
+    {
+      title: t("employee.navGroup.today"),
+      links: [
+        { href: "/employee", label: t("employee.nav.overview") },
+        { href: "/employee/guide", label: t("employee.nav.guide") },
+        { href: "/employee/onboarding", label: t("employee.nav.onboardingChecklist") }
+      ]
+    },
+    {
+      title: t("employee.navGroup.requests"),
+      links: [
+        { href: "/employee/schedule", label: t("employee.nav.scheduleBoard") },
+        { href: "/employee/benefits", label: t("employee.nav.benefits") }
+      ]
+    },
+    {
+      title: t("employee.navGroup.documents"),
+      links: [
+        { href: "/employee/contracts", label: t("employee.nav.contracts") },
+        { href: "/employee/payslips", label: t("employee.nav.payslips") },
+        { href: "/employee/payslip-receipts", label: t("employee.nav.payslipReceipts") },
+        { href: "/employee/withholding-receipt", label: t("employee.nav.withholdingReceipt") },
+        { href: "/employee/year-end-input", label: t("employee.nav.yearEndInput") }
+      ]
+    },
+    {
+      title: t("employee.navGroup.noticesAndAlerts"),
+      links: [
+        { href: "/employee/notifications", label: t("employee.nav.notifications") },
+        { href: "/employee/notices", label: t("employee.nav.notices") },
+        { href: "/employee/recruitment", label: t("employee.nav.recruitment") }
+      ]
+    },
+    {
+      title: t("employee.navGroup.account"),
+      links: [
+        { href: "/employee/profile", label: t("employee.nav.profile") },
+        { href: "/employee/people", label: t("employee.nav.people") },
+        { href: "/employee/settings", label: t("employee.nav.settings") }
+      ]
+    }
   ];
+  const navLinks: SaasMobileMenuLink[] = navSections.flatMap((section) => section.links);
 
   const footerLinks: SaasMobileMenuLink[] = showDevTools
     ? [{ href: "/admin", label: t("employee.nav.admin") }]
@@ -65,6 +81,7 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
         menuLabel={t("shell.mobileMenu")}
         navAriaLabel={t("employee.nav.aria")}
         navLinks={navLinks}
+        navSections={navSections}
         footerLinks={footerLinks}
       />
       <div className="saas-shell">
@@ -75,35 +92,18 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
           </div>
 
           <nav className="saas-nav" aria-label={t("employee.nav.aria")}>
-            <Link href="/employee">{t("employee.nav.overview")}</Link>
-            <Link href="/employee/guide">{t("employee.nav.guide")}</Link>
-            <Link href="/employee/onboarding">{t("employee.nav.onboardingChecklist")}</Link>
-            <Link href="/employee?focus=account">{t("employee.nav.account")}</Link>
-            <Link href="/employee?focus=self-service-overview">{t("employee.nav.selfServiceOverview")}</Link>
-            <Link href="/employee?focus=submit-checklist">{t("employee.nav.submitChecklist")}</Link>
-            <Link href="/employee?focus=request-feedback">{t("employee.nav.requestFeedback")}</Link>
-            <Link href="/employee?focus=request-search-sort">{t("employee.nav.requestSearchSort")}</Link>
-            <Link href="/employee?focus=request-timeline">{t("employee.nav.requestTimeline")}</Link>
-            <Link href="/employee?focus=request-resubmit">{t("employee.nav.requestResubmit")}</Link>
-            <Link href="/employee?focus=attendance">{t("employee.nav.attendance")}</Link>
-            <Link href="/employee?focus=leave">{t("employee.nav.leave")}</Link>
-            <Link href="/employee?focus=leave-calendar">{t("employee.nav.leaveCalendar")}</Link>
-            <Link href="/employee?focus=schedule">{t("employee.nav.schedule")}</Link>
-            <Link href="/employee/schedule">{t("employee.nav.scheduleBoard")}</Link>
-            <Link href="/employee/notices">{t("employee.nav.notices")}</Link>
-            <Link href="/employee/benefits">{t("employee.nav.benefits")}</Link>
-            <Link href="/employee/recruitment">{t("employee.nav.recruitment")}</Link>
-            <Link href="/employee/contracts">{t("employee.nav.contracts")}</Link>
-            <Link href="/employee/payslips">{t("employee.nav.payslips")}</Link>
-            <Link href="/employee/payslip-receipts">{t("employee.nav.payslipReceipts")}</Link>
-            <Link href="/employee/withholding-receipt">{t("employee.nav.withholdingReceipt")}</Link>
-            <Link href="/employee/year-end-input">{t("employee.nav.yearEndInput")}</Link>
-            <Link href="/employee/payslips#payslip-search-sort">{t("employee.nav.payslipSearchSort")}</Link>
-            <Link href="/employee/payslips#status-feedback">{t("employee.nav.statusFeedback")}</Link>
-            <Link href="/employee/payslips#compare-view">{t("employee.nav.compareView")}</Link>
-            <Link href="/employee/profile">{t("employee.nav.profile")}</Link>
-            <Link href="/employee/people">{t("employee.nav.people")}</Link>
-            <Link href="/employee/settings">{t("employee.nav.settings")}</Link>
+            {navSections.map((section) => (
+              <div key={section.title} className="saas-nav-section">
+                <p className="saas-nav-section-title">{section.title}</p>
+                <div className="saas-nav-link-list">
+                  {section.links.map((item) => (
+                    <Link key={item.href} href={item.href}>
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
           </nav>
 
           <div className="saas-sidebar-footer">

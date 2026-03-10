@@ -51,10 +51,16 @@ function run() {
   );
 
   const employeeLayoutSource = readUtf8("src", "app", "employee", "layout.tsx");
-  assert.match(
+  assert.doesNotMatch(
     employeeLayoutSource,
-    /href="\/employee\?focus=leave-calendar"/,
-    "employee navigation should include leave calendar focus link"
+    /\/employee\?focus=leave-calendar/,
+    "employee shell should not expose leave calendar as a hidden-subpage focus link"
+  );
+  assert.ok(
+    /employee\.navGroup\.requests/.test(employeeLayoutSource) &&
+      /employee\.navGroup\.documents/.test(employeeLayoutSource) &&
+      /employee\.navGroup\.noticesAndAlerts/.test(employeeLayoutSource),
+    "employee shell should regroup self-service navigation into stable product areas"
   );
 }
 
