@@ -107,6 +107,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Started `WI-1067` to remove the remaining raw code leakage from filing response-category and rejection-reason selectors.
 - Closed `WI-1067` through the full GitHub flow and merged it to `main` as `f239235319e347af709ac41753eeace4efa80cb7`, then deleted the feature branch.
 - Started `WI-1068` to remove the remaining raw finalization and document-integrity traces from withholding receipt summaries, copied metadata, and load-status messages.
+- Closed `WI-1068` through the full GitHub flow and merged it to `main` as `8065209e37a31ceffa6d2a4fdf38256a940fb81b`, then deleted the feature branch.
+- Investigated repeated `vercel-production-deploy` failures from `WI-1064` onward and confirmed the common failure point is Vercel `npm run build` OOM during the deploy step after successful Prisma migration.
+- Started `WI-1069` to scope Next production build lint/typecheck to app source so repository-wide `scripts/tests` growth no longer pushes Vercel builds over memory limits.
 - Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
@@ -149,7 +152,7 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close the current `WI-1068` withholding integrity trace cleanup slice through the full GitHub flow (`push -> PR -> CI -> merge -> branch cleanup`).
+1. Close `WI-1069` through the full GitHub flow and confirm the next `vercel-production-deploy` run completes successfully.
 2. Re-scan year-end, withholding, and filing surfaces for any remaining operator-facing integrity or workflow trace leakage after `WI-1068`.
 3. Re-scan the remaining production surfaces for any unmapped dev-remnant or operator-copy leaks before opening the next execution branch.
 

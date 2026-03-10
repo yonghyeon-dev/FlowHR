@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactStrictMode: true
+  reactStrictMode: true,
+  eslint: {
+    dirs: ["src"]
+  },
+  typescript: {
+    tsconfigPath: "./tsconfig.next.json"
+  }
 };
 
 export default nextConfig;
