@@ -134,6 +134,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Closed `WI-1076` through the full GitHub flow and merged it to `main` as `332642728bf823bb1f932ed4ec1bc973a0bc1307`, then deleted the feature branch.
 - Re-verified `WI-1076` at deploy time and confirmed `vercel-production-deploy` stays green after the admin scheduling surface cleanup.
 - Started `WI-1077` to remove the remaining raw employee identifier fallback from the admin attendance aggregate surface.
+- Closed `WI-1077` through the full GitHub flow and merged it to `main` as `a8f9c29793f483d510d1aebb23044d8163c1675f`, then deleted the feature branch.
+- Re-verified `WI-1077` at deploy time and confirmed `vercel-production-deploy` stays green after the admin attendance aggregate surface cleanup.
+- Started `WI-1078` to remove the remaining raw employee identifier fallback from the admin attendance live surface.
 - Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
@@ -176,8 +179,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close `WI-1077` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
-2. Rescan remaining production admin surfaces for raw ID fallback after attendance aggregate cleanup.
+1. Close `WI-1078` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
+2. Rescan remaining production admin surfaces for raw ID fallback after attendance live cleanup.
 3. Resume the next production-surface cleanup slice from the updated inventory.
 
 ## 5. Blockers Or Watch Items

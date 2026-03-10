@@ -8,6 +8,7 @@ import type {
 
 import type { AttendanceLiveCopy } from "@/components/admin-attendance-live/copy";
 import { formatDateTime, formatMinutes } from "@/components/admin-attendance-live/helpers";
+import { formatEmployeeDisplayName, formatPublicEmployeeNumber } from "@/lib/product-language";
 
 export type AttendanceLiveFilterStatus = "all" | AttendanceLiveStatus;
 
@@ -172,7 +173,11 @@ export function AdminAttendanceLiveTablePanel({ copy, rows, locale }: TablePanel
             <tbody>
               {rows.map((row) => (
                 <tr key={row.scheduleId}>
-                  <td style={CELL_STYLE}>{row.employeeName ?? row.employeeId}</td>
+                  <td style={CELL_STYLE}>
+                    {formatEmployeeDisplayName(row.employeeName, locale)}
+                    <br />
+                    <span className="muted">{formatPublicEmployeeNumber(row.employeeId)}</span>
+                  </td>
                   <td style={CELL_STYLE}>{row.departmentName ?? "-"}</td>
                   <td style={CELL_STYLE}>{formatDateTime(row.scheduleStartAt, locale)}<br /><span className="muted">{formatDateTime(row.scheduleEndAt, locale)}</span></td>
                   <td style={CELL_STYLE}>{formatDateTime(row.checkInAt, locale)}</td>
