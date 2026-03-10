@@ -610,6 +610,7 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       <AdminKpiContextPanel
         copy={copy}
         showDevTools={showDevTools}
+        runtimeLocale={runtimeLocale}
         sessionOrganizationId={organizationId}
         sessionActorId={adminActorId}
         periodStart={periodStart}

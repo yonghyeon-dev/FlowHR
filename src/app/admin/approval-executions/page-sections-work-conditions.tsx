@@ -1,6 +1,11 @@
 "use client";
 
-import { formatNotificationChannelLabel, formatUserFacingErrorMessage } from "@/lib/product-language";
+import {
+  formatAdminSessionConnectionState,
+  formatNotificationChannelLabel,
+  formatUserFacingErrorMessage,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 
 import type {
   ApprovalDomain,
@@ -80,13 +85,17 @@ export function ApprovalExecutionWorkConditionsPanel(props: WorkConditionsPanelP
     onEscalationDispatch
   } = props;
 
+  const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
+
   return (
     <article className="panel">
       <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
       {showDevTools ? (
         <p className="small muted">
-          {isKoLocale ? "조직" : "Organization"}: <code>{organizationId || "-"}</code> /{" "}
-          {isKoLocale ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
+          {isKoLocale ? "조직" : "Organization"}:{" "}
+          <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong> /{" "}
+          {isKoLocale ? "세션 액터" : "Session actor"}:{" "}
+          <strong>{formatAdminSessionConnectionState(Boolean(adminActorId.trim()), runtimeLocale)}</strong>
         </p>
       ) : null}
       <div className="input-grid">
@@ -133,14 +142,18 @@ export function ApprovalExecutionWorkConditionsPanel(props: WorkConditionsPanelP
         </label>
       </div>
       <details className="details">
-        <summary>{isKoLocale ? "세부 조건" : "Advanced options"}</summary>
+        <summary>{isKoLocale ? "고급 조건" : "Advanced options"}</summary>
         <div className="input-grid" style={{ marginTop: 12 }}>
           <label>
             {isKoLocale ? "요청 분류" : "Request subtype"}
             <input
               value={targetEntityType}
               onChange={(event) => setTargetEntityType(event.target.value)}
-              placeholder={isKoLocale ? "예: 출퇴근 정정, 휴가 신청, 급여 승인" : "Attendance correction / Leave request / Payroll approval"}
+              placeholder={
+                isKoLocale
+                  ? "예: 출퇴근 정정, 휴가 요청, 급여 승인"
+                  : "Attendance correction / Leave request / Payroll approval"
+              }
             />
           </label>
           <label>
@@ -148,7 +161,7 @@ export function ApprovalExecutionWorkConditionsPanel(props: WorkConditionsPanelP
             <input
               value={targetEntityId}
               onChange={(event) => setTargetEntityId(event.target.value)}
-              placeholder={isKoLocale ? "특정 요청만 확인할 때 입력" : "Optional request reference"}
+              placeholder={isKoLocale ? "특정 요청만 확인할 때만 입력" : "Optional request reference"}
             />
           </label>
           <label>
@@ -197,7 +210,7 @@ export function ApprovalExecutionWorkConditionsPanel(props: WorkConditionsPanelP
       {statusMessage ? <p className="small">{statusMessage}</p> : null}
       {supabaseSessionError ? (
         <p className="small fail">
-          {formatUserFacingErrorMessage(supabaseSessionError, isKoLocale ? "ko-KR" : "en-US")}
+          {formatUserFacingErrorMessage(supabaseSessionError, runtimeLocale)}
         </p>
       ) : null}
     </article>
