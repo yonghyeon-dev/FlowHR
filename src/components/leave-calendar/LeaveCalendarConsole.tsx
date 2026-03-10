@@ -5,6 +5,10 @@ import { useMemo, useState } from "react";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import {
+  formatAdminSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
+import {
   normalizeAdminAnalyticsFocusMetric,
   resolveAdminAnalyticsBackHref
 } from "@/components/admin-kpi/admin-analytics-context";
@@ -176,8 +180,8 @@ export default function LeaveCalendarConsole() {
           <h2>{copy.queryTitle}</h2>
           {showDevTools ? (
             <p className="small">
-              {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
-              {locale === "ko" ? "세션 관리자" : "Session admin"}: <code>{adminActorId || "-"}</code>
+              <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong> /{" "}
+              <strong>{formatAdminSessionConnectionState(Boolean(adminActorId.trim()), runtimeLocale)}</strong>
             </p>
           ) : null}
           <label>
