@@ -38,6 +38,7 @@ Legend:
 | 39 | Admin people org chart surface | Employee pills fall back to raw internal employee IDs in the title and metadata line | Human-readable employee name, public employee number, and employment status only | New -> WI-1075 |
 | 40 | Admin scheduling surface | Schedule list exposes raw `employeeId` and `schedule.id` in the admin dashboard | Public employee number plus schedule timing only, never raw internal schedule or employee identifiers | New -> WI-1076 |
 | 41 | Admin attendance aggregate surface | Attendance aggregate rows expose raw `employeeId` in the admin dashboard | Public employee number only, never raw internal employee identifiers | New -> WI-1077 |
+| 42 | Admin attendance live surface | Attendance live table falls back to raw `employeeId` when employee name is missing | Employee name and public employee number only, never raw internal employee identifiers | New -> WI-1078 |
 
 ## B. External Notification Productization
 
@@ -107,3 +108,4 @@ Legend:
 18. WI-1075 admin org chart surface humanization
 19. WI-1076 admin scheduling surface humanization
 20. WI-1077 admin aggregate leave surface humanization
+21. WI-1078 admin attendance live surface humanization
