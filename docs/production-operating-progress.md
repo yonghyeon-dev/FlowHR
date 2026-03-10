@@ -230,8 +230,8 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1104` so the shared workspace interaction contract becomes the baseline for the next shell and workspace refactors.
-2. Start `WI-1105` so confirmation, feedback, and empty-state primitives stop being re-implemented per surface.
+1. Close `WI-1105` so confirmation, feedback, recovery, and empty-state primitives become shared implementation inputs.
+2. Start `WI-1106` so language, status, and date/time rules align with the new primitives before broad shell migration.
 3. Begin the first implementation slice under `WI-1107` using the employee shell regrouping plan instead of the legacy `?focus=` model.
 
 ## 5. Blockers Or Watch Items
@@ -263,3 +263,5 @@ Latest planning reset:
 - Closed `WI-1102` and froze `docs/role-tenant-product-shell-blueprint.md` as the role/tenant/product-shell operating model.
 - Closed `WI-1103` and froze `docs/first-ia-refactor-seam-migration-plan.md` so the first safe IA seam is explicit before implementation starts.
 - Started `WI-1104` to define the shared workspace interaction contract that future UI implementation WIs must follow.
+- Closed `WI-1104` and added `docs/shared-workspace-interaction-contract.md` as the common workspace frame and state contract for future admin/employee surfaces.
+- Started `WI-1105` to define shared feedback, confirmation, recovery, and empty-state primitives before shell regrouping begins.
