@@ -182,7 +182,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Closed `WI-1094` through the full GitHub flow and merged it to `main` as `f013f848768acab96f5b6d8394fd764bfd3766c3`, then deleted the feature branch.
 - Started `WI-1095` to replace the remaining raw organization, actor, and employee identifier context lines on admin and employee notices surfaces with session-status product wording.
 - Closed `WI-1095` through the full GitHub flow and merged it to `main` as `ce230023844d295abdd4badb5230bf6dd405bd24`, then deleted the feature branch.
-- Started `WI-1096` to replace the remaining raw login session identifiers and developer-oriented auth/session copy on the login surface with product-facing session status wording.
+- Closed `WI-1096` through the full GitHub flow and merged it to `main` as `2715b8eff75f430ffe8cc0bf000c61919527b7ad`, then deleted the feature branch.
+- Started `WI-1097` to replace the remaining raw production/login session recovery wording and employee-number guidance across employee self-service with shared product-facing session notices.
 - Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
@@ -225,8 +226,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close `WI-1096` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
-2. Re-scan adjacent self-service auth/session guidance surfaces after the login cleanup lands.
+1. Close `WI-1097` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
+2. Re-scan adjacent employee self-service auth/session guidance surfaces after `WI-1097` lands.
 3. Continue the next production-surface cleanup slice from the updated inventory.
 
 ## 5. Blockers Or Watch Items

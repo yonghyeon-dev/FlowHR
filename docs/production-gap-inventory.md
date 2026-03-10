@@ -57,6 +57,7 @@ Legend:
 | 58 | Admin leave calendar residual surface | Leave calendar still exposes raw workspace error wording, raw organization summary IDs, and raw employee IDs on the operator surface | Leave calendar should use workspace/admin session status copy, current-workspace product wording, employee-facing labels, and user-facing error text only | New -> WI-1094 |
 | 59 | Notices session context surface | Admin and employee notice filters still expose raw organization, actor, or employee identifiers in devtools context lines | Notice surfaces should use workspace/admin session/employee session status wording only | New -> WI-1095 |
 | 60 | Login session surface | Login page still exposes raw signed-in identifiers and developer-oriented session/auth copy | Login page should show signed-in account, role, workspace status, and session status only, with product-facing guidance and user-safe auth errors | New -> WI-1096 |
+| 61 | Employee session guidance surface | Employee self-service still repeats raw production/login session and employee-number recovery wording across onboarding, benefits, notices, recruitment, scheduling, payslips, year-end, withholding, and payslip-receipt surfaces | Employee self-service should use one shared sign-in-session recovery message and one shared employee-number recovery message across all affected product surfaces | New -> WI-1097 |
 
 ## B. External Notification Productization
 
@@ -145,3 +146,4 @@ Legend:
 37. WI-1094 admin leave calendar surface follow-up
 38. WI-1095 notices session context follow-up
 39. WI-1096 login session surface productization
+40. WI-1097 employee session guidance productization

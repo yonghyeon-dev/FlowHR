@@ -21,6 +21,7 @@ import { resolveEmployeeBenefitsCopy } from "@/components/benefits/copy";
 import type { BenefitCatalogItem, BenefitRequestItem, BenefitRequestStatus } from "@/features/benefits/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import { formatLoginSessionRequiredNotice } from "@/lib/product-language";
 
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
@@ -32,10 +33,7 @@ export default function EmployeeBenefitsWorkspace() {
   const { locale } = useI18n();
   const copy = resolveEmployeeBenefitsCopy(locale);
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
-  const productionSessionRequiredNotice =
-    locale === "ko"
-      ? "프로덕션에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요."
-      : "A login session is required in production. Please sign in again at /login.";
+  const productionSessionRequiredNotice = formatLoginSessionRequiredNotice(locale);
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();

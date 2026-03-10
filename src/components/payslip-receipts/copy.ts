@@ -1,4 +1,5 @@
 ﻿import { type FlowLocale } from "@/lib/i18n/locales";
+import { formatLoginSessionRequiredNotice } from "@/lib/product-language";
 
 export type PayslipReceiptCopy = {
   heroEyebrow: string;
@@ -98,7 +99,7 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     noApiCallYet: "아직 요청 이력이 없습니다.",
     backToEmployeeAction: "직원 화면으로",
     requestFailedCheckLogsStatus: "요청을 완료하지 못했습니다. 현재 상태를 확인한 뒤 다시 시도해 주세요.",
-    productionSessionRequiredNotice: "운영 환경에서는 로그인 세션이 필요합니다.",
+    productionSessionRequiredNotice: formatLoginSessionRequiredNotice("ko"),
     employeeIdRequiredStatus: "직원 번호는 필수입니다.",
     loadedConfirmedPayslipsPrefix: "확정 급여명세서 로드 완료",
     pendingLoadPayslipList: "급여명세서 수신 대상 조회",
@@ -152,7 +153,7 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     noApiCallYet: "No API call yet.",
     backToEmployeeAction: "Back to Employee",
     requestFailedCheckLogsStatus: "We couldn't complete the request. Review the current state and try again.",
-    productionSessionRequiredNotice: "A login session is required in production.",
+    productionSessionRequiredNotice: formatLoginSessionRequiredNotice("en"),
     employeeIdRequiredStatus: "employeeId is required",
     loadedConfirmedPayslipsPrefix: "loaded confirmed payslips",
     pendingLoadPayslipList: "load payslip receipt list",

@@ -1,4 +1,5 @@
 ﻿import { type FlowLocale } from "@/lib/i18n/locales";
+import { formatLoginSessionRequiredNotice } from "@/lib/product-language";
 
 export function parseRequiredInt(value: string, fieldName: string, locale: FlowLocale) {
   const parsed = Number(value);
@@ -126,7 +127,7 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     requestFailedStatus: "요청이 실패했습니다",
     requestFailedCheckLogsStatus: "요청을 완료하지 못했습니다. 현재 상태를 확인한 뒤 다시 시도해 주세요.",
     invalidInputStatus: "입력값을 다시 확인해 주세요.",
-    productionSessionRequiredNotice: "운영 환경에서는 로그인 세션이 필요합니다.",
+    productionSessionRequiredNotice: formatLoginSessionRequiredNotice("ko"),
     loadedReceiptPrefix: "영수증 로드 완료",
     loadedDocumentPrefix: "문서 로드 완료",
     loadedFinalizedSettlementPrefix: "확정 정산 로드 완료",
@@ -213,7 +214,7 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     requestFailedStatus: "request failed",
     requestFailedCheckLogsStatus: "We couldn't complete the request. Review the current state and try again.",
     invalidInputStatus: "Review the entered values and try again.",
-    productionSessionRequiredNotice: "A login session is required in production.",
+    productionSessionRequiredNotice: formatLoginSessionRequiredNotice("en"),
     loadedReceiptPrefix: "loaded receipt",
     loadedDocumentPrefix: "loaded document",
     loadedFinalizedSettlementPrefix: "loaded finalized settlement",

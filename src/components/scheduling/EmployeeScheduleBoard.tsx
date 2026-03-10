@@ -25,6 +25,7 @@ import {
 } from "@/components/scheduling/helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import { formatLoginSessionRequiredNotice } from "@/lib/product-language";
 
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
@@ -35,10 +36,7 @@ export default function EmployeeScheduleBoard() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
-  const productionSessionRequiredNotice =
-    isKoLocale
-      ? "프로덕션에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요."
-      : "A login session is required in production. Please sign in again at /login.";
+  const productionSessionRequiredNotice = formatLoginSessionRequiredNotice(locale);
   const copy = employeeScheduleCopyByLocale[locale];
   const monthRange = buildCurrentMonthDateRange();
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);

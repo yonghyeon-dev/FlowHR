@@ -11,6 +11,7 @@ import { isTruthyFlag } from "@/app/admin/page-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import {
   formatEmployeeSessionConnectionState,
+  formatLoginSessionRequiredNotice,
   formatWorkspaceConnectionState
 } from "@/lib/product-language";
 import {
@@ -40,10 +41,7 @@ export default function EmployeeYearEndInputConsole() {
   const sourceEntry = resolveEmployeeYearEndInputSourceEntry(searchParams.get("source"), locale === "ko");
   const copy = employeeYearEndInputCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
-  const productionSessionRequiredNotice =
-    locale === "ko"
-      ? "\ud504\ub85c\ub355\uc158\uc5d0\uc11c\ub294 \ub85c\uadf8\uc778 \uc138\uc158\uc774 \ud544\uc694\ud569\ub2c8\ub2e4. /login\uc5d0\uc11c \ub2e4\uc2dc \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694."
-      : "A login session is required in production. Please sign in again at /login.";
+  const productionSessionRequiredNotice = formatLoginSessionRequiredNotice(locale);
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();

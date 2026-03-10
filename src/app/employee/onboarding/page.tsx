@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatEmployeeNumberRequiredNotice,
+  formatLoginSessionRequiredNotice
+} from "@/lib/product-language";
 
 type OnboardingTask = {
   id: string;
@@ -44,15 +48,15 @@ export default function EmployeeOnboardingChecklistPage() {
   const copy = useMemo(() => {
     if (isKoLocale) {
       return {
-        requiresLoginSessionError: "프로덕션에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요.",
-        missingEmployeeIdError: "세션에서 직원 번호를 확인할 수 없습니다. /login에서 다시 로그인해 주세요.",
-        loadChecklistFailed: "온보딩 체크리스트를 불러오지 못했습니다.",
-        completeChecklistFailed: "체크리스트 완료 처리에 실패했습니다."
+        requiresLoginSessionError: formatLoginSessionRequiredNotice("ko"),
+        missingEmployeeIdError: formatEmployeeNumberRequiredNotice("ko"),
+        loadChecklistFailed: "\uc628\ubcf4\ub529 \uccb4\ud06c\ub9ac\uc2a4\ud2b8\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
+        completeChecklistFailed: "\uccb4\ud06c\ub9ac\uc2a4\ud2b8\ub97c \uc644\ub8cc \ucc98\ub9ac\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4."
       };
     }
     return {
-      requiresLoginSessionError: "A login session is required in production. Please sign in again at /login.",
-      missingEmployeeIdError: "Employee number is missing in the session. Please sign in again at /login.",
+      requiresLoginSessionError: formatLoginSessionRequiredNotice("en"),
+      missingEmployeeIdError: formatEmployeeNumberRequiredNotice("en"),
       loadChecklistFailed: "Failed to load onboarding checklist.",
       completeChecklistFailed: "Failed to mark checklist task as complete."
     };
