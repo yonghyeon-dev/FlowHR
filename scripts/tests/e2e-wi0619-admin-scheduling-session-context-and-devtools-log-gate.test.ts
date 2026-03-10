@@ -25,7 +25,10 @@ async function run() {
   assert.doesNotMatch(view, /onAccessTokenChange/);
   assert.doesNotMatch(view, /copy\.accessTokenLabel/);
   assert.match(view, /\{showDevTools \? \(/);
-  assert.match(view, /Session organization|세션 조직|copy\.organizationIdLabel/);
+  assert.match(view, /formatWorkspaceConnectionState\(/);
+  assert.match(view, /formatAdminSessionConnectionState\(/);
+  assert.doesNotMatch(view, /<code>\{sessionOrganizationId \|\| "-"\}<\/code>/);
+  assert.doesNotMatch(view, /<code>\{sessionActorId \|\| "-"\}<\/code>/);
 
   assert.match(workItem, /WI-0619/i);
   assert.match(workItem, /scheduling|session|devtools|log/i);

@@ -4,6 +4,10 @@ import { useSearchParams } from "next/navigation";
 import type { EmployeeScheduleCopy } from "@/components/scheduling/copy";
 import { resolveEmployeeScheduleSourceEntry } from "@/components/scheduling/employee-source-context";
 import {
+  formatEmployeeSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
+import {
   formatDateTime,
   formatHours,
   type ScheduleApiLog,
@@ -103,6 +107,8 @@ export default function EmployeeScheduleBoardView({
   const searchParams = useSearchParams();
   const sourceEntry = resolveEmployeeScheduleSourceEntry(searchParams.get("source"), runtimeLocale === "ko-KR");
   const attendanceCorrectionHref = `/employee?focus=attendance&attendanceSource=schedule&fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}`;
+  const hasWorkspaceSession = sessionOrganizationId.trim().length > 0;
+  const hasEmployeeSession = sessionEmployeeId.trim().length > 0;
   return (
     <main className="saas-content">
       <header className="hero">
@@ -124,8 +130,10 @@ export default function EmployeeScheduleBoardView({
           <h2>{copy.filtersTitle}</h2>
           {showDevTools ? (
             <p className="small muted">
-              {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
-              <code>{sessionEmployeeId || "-"}</code>
+              {copy.organizationIdLabel}:{" "}
+              <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, runtimeLocale)}</strong> /{" "}
+              {copy.employeeIdLabel}:{" "}
+              <strong>{formatEmployeeSessionConnectionState(hasEmployeeSession, runtimeLocale)}</strong>
             </p>
           ) : null}
           <div className="input-grid">

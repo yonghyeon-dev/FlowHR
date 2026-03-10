@@ -167,6 +167,9 @@ Phase 0: establish a compact execution system that stays referenced while produc
 - Closed `WI-1088` through the full GitHub flow and merged it to `main` as `5a2bc2b98305c5030f31aae93e4e7dc220c71271`, then deleted the feature branch.
 - Re-verified `WI-1088` at deploy time and confirmed both `ci` and `vercel-production-deploy` stay green after the shared session-menu copy cleanup.
 - Started `WI-1089` to replace raw session organization and session actor code-like devtools context on leave accrual, payroll close, and payslip delivery with workspace/admin session status wording.
+- Closed `WI-1089` through the full GitHub flow and merged it to `main` as `b3d3fd346b0ed304462d7e5ca69475e8e5600447`, then deleted the feature branch.
+- Re-verified `WI-1089` at deploy time and confirmed both `ci` and `vercel-production-deploy` stay green after the admin payroll operational session-copy cleanup.
+- Started `WI-1090` to replace raw session organization / actor / employee wording on admin and employee scheduling devtools with connection-state product wording.
 - Started `WI-1065` to remove the remaining year-end/filing control wording that still exposed `정산 해시` and raw fallback response codes on operator surfaces.
 - Verified the current implementation pass with `npm run typecheck`.
 - Confirmed the actual development process from repository evidence:
@@ -209,8 +212,8 @@ Phase 0: establish a compact execution system that stays referenced while produc
 
 ## 4. Next Queue
 
-1. Close `WI-1089` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
-2. Re-scan remaining payroll operational session-copy surfaces for the next compact WI.
+1. Close `WI-1090` through the full GitHub flow and keep `vercel-production-deploy` green after merge.
+2. Re-scan remaining non-scheduling session-copy surfaces for the next compact WI.
 3. Continue the next production-surface cleanup slice from the updated inventory.
 
 ## 5. Blockers Or Watch Items

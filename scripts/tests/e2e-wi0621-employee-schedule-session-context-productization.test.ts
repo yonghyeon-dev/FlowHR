@@ -24,8 +24,13 @@ async function run() {
   assert.doesNotMatch(view, /copy\.accessTokenLabel/);
   assert.match(view, /sessionOrganizationId/);
   assert.match(view, /\{showDevTools \? \(/);
+  assert.match(view, /formatWorkspaceConnectionState\(/);
+  assert.match(view, /formatEmployeeSessionConnectionState\(/);
+  assert.doesNotMatch(view, /<code>\{sessionOrganizationId \|\| "-"\}<\/code>/);
+  assert.doesNotMatch(view, /<code>\{sessionEmployeeId \|\| "-"\}<\/code>/);
 
-  assert.match(copy, /sessionOrganizationId|세션 조직|Session organization/);
+  assert.match(copy, /Workspace status|작업 공간 상태/);
+  assert.match(copy, /Employee session status|직원 세션 상태/);
   assert.match(workItem, /WI-0621/i);
   assert.match(roadmap, /WI-0621/i);
 }
