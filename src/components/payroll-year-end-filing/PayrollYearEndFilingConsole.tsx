@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import FilingApiLogsPanel from "@/components/payroll-year-end-filing/FilingApiLogsPanel";
@@ -213,6 +214,12 @@ export default function PayrollYearEndFilingConsole() {
       submissionValidationStatusFilter
     ]
   );
+  const completedWorkspacePanels = [
+    preflightChecklist,
+    finalization,
+    filingExport,
+    submissionListSummary
+  ].filter(Boolean).length;
 
   useEffect(() => {
     if (ackCodeOptions.length === 0) {
@@ -899,19 +906,55 @@ export default function PayrollYearEndFilingConsole() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="hero">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
+        <p className="small muted workspace-source-banner">
+          {locale === "ko"
+            ? "연말정산 확정, 신고 제출, 응답 확인, 재제출까지 하나의 관리자 작업면으로 묶은 신고 콘솔입니다."
+            : "Manage finalization, filing submission, acknowledgement, and resubmission from one admin workspace."}
+        </p>
+        <div className="page-actions" style={{ marginTop: 8 }}>
+          <Link href="/admin/payroll-year-end" className="btn btn-secondary btn-small">
+            {copy.backToYearEndAction}
+          </Link>
+          <Link href="/admin" className="btn btn-secondary btn-small">
+            {copy.backToAdminAction}
+          </Link>
+        </div>
       </header>
 
-        <section className="panel-grid">
-          <article className="panel">
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.title}>
+        <article className="kpi">
+          <span>{copy.yearLabel}</span>
+          <strong>{year}</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.employeeIdLabel}</span>
+          <strong>{employeeId.trim() || "-"}</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.apiLogsTotalLabel}</span>
+          <strong>
+            {stats.total} / {copy.apiLogsSuccessLabel} {stats.success}
+          </strong>
+        </article>
+        <article className="kpi">
+          <span>{locale === "ko" ? "준비 패널" : "Loaded panels"}</span>
+          <strong>{completedWorkspacePanels} / 4</strong>
+        </article>
+      </section>
+
+        <section className="panel-grid workspace-panel-grid">
+          <article className="panel workspace-section-card workspace-toolbar-card">
             <h2>{copy.inputTitle}</h2>
             {showDevTools ? (
-              <p className="small muted">
+              <p className="small muted workspace-source-banner">
+                {locale === "ko" ? "세션 조직" : "Session organization"}:{" "}
                 <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong> /{" "}
+                {locale === "ko" ? "세션 관리자" : "Session admin"}:{" "}
                 <strong>{formatAdminSessionConnectionState(Boolean(adminActorId.trim()), runtimeLocale)}</strong>
               </p>
             ) : null}
@@ -1169,8 +1212,8 @@ export default function PayrollYearEndFilingConsole() {
             <button className="btn btn-secondary" onClick={() => void runLoadSubmissionTimeline()} disabled={pendingLabel !== null}>{copy.loadSubmissionTimelineAction}</button>
             <button className="btn btn-secondary" onClick={() => void runAddEvidenceNote()} disabled={pendingLabel !== null}>{copy.addEvidenceNoteAction}</button>
           </div>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
+          {statusMessage ? <p className="small workspace-inline-status">{statusMessage}</p> : null}
+          {supabaseSessionError ? <p className="small fail workspace-inline-status">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
         </article>
 
         <FilingSettlementSummaryPanels
@@ -1217,7 +1260,7 @@ export default function PayrollYearEndFilingConsole() {
           />
         ) : null}
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.filingSubmissionsPanelTitle}</h2>
           {!submissionListSummary ? (
             <p className="small">{copy.noSubmissionSummaryYet}</p>
