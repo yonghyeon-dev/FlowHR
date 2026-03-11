@@ -8,11 +8,11 @@ const messages = {
 
     "home.title": "한국형 HR SaaS MVP",
     "home.copy": "근태, 휴가, 급여, 결재를 한 제품 안에서 끝까지 연결합니다. (Shiftee/Flex 상위호환 목표)",
-    "home.cta.admin": "관리자 대시보드",
+    "home.cta.admin": "관리자 허브",
     "home.cta.employee": "직원 포털",
     "home.cta.payslip": "급여 명세서",
     "home.cta.login": "로그인",
-    "home.admin.title": "관리자 대시보드",
+    "home.admin.title": "관리자 허브",
     "home.admin.copy":
       "직원/조직, 승인 대기함(출퇴근·휴가), 근태 집계, 급여 프리뷰/확정까지 한 흐름으로 처리합니다.",
     "home.admin.open": "/admin 열기",
@@ -210,11 +210,11 @@ const messages = {
     "home.title": "Korean HR SaaS MVP",
     "home.copy":
       "Connect attendance, leave, payroll, and approvals end-to-end in one product. (Target: outperform Shiftee/Flex)",
-    "home.cta.admin": "Admin Dashboard",
+    "home.cta.admin": "Admin hub",
     "home.cta.employee": "Employee Portal",
     "home.cta.payslip": "Payslips",
     "home.cta.login": "Log In",
-    "home.admin.title": "Admin Dashboard",
+    "home.admin.title": "Admin hub",
     "home.admin.copy":
       "Handle people/org management, approval queues (attendance and leave), attendance aggregates, and payroll preview/finalization in one flow.",
     "home.admin.open": "Open /admin",

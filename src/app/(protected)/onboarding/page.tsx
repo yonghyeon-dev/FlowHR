@@ -76,7 +76,7 @@ export default function OrganizationOnboardingPage() {
         loadingTitle: "조직 온보딩 준비 중",
         loadingSubtitle: "조직 정보를 확인하고 있습니다.",
         pageTitle: "조직 온보딩 위자드",
-        pageSubtitle: "첫 로그인 관리자용 기본 설정입니다. 3단계를 완료하면 관리자 대시보드로 이동합니다.",
+        pageSubtitle: "첫 로그인 관리자용 기본 설정입니다. 3단계를 완료하면 관리자 허브로 이동합니다.",
         progressLabelPrefix: "진행 단계",
         companyNameLabel: "회사명",
         companyNamePlaceholder: "예: 플로우HR",
@@ -95,7 +95,7 @@ export default function OrganizationOnboardingPage() {
         submitPendingLabel: "저장 중...",
         completeOnboardingButtonLabel: "온보딩 완료",
         onboardingCompleteNotice: "조직 기본 설정이 완료되었습니다.",
-        moveToDashboardButtonLabel: "대시보드로 이동"
+        moveToDashboardButtonLabel: "허브로 이동"
       };
     }
 
@@ -112,7 +112,7 @@ export default function OrganizationOnboardingPage() {
       loadingTitle: "Preparing organization onboarding",
       loadingSubtitle: "Checking organization details.",
       pageTitle: "Organization Onboarding Wizard",
-      pageSubtitle: "Initial setup for first-time admins. Complete all 3 steps to continue to the admin dashboard.",
+      pageSubtitle: "Initial setup for first-time admins. Complete all 3 steps to continue to the admin hub.",
       progressLabelPrefix: "Progress",
       companyNameLabel: "Company name",
       companyNamePlaceholder: "e.g. FlowHR",
@@ -131,7 +131,7 @@ export default function OrganizationOnboardingPage() {
       submitPendingLabel: "Saving...",
       completeOnboardingButtonLabel: "Complete onboarding",
       onboardingCompleteNotice: "Organization setup is complete.",
-      moveToDashboardButtonLabel: "Go to dashboard"
+      moveToDashboardButtonLabel: "Go to admin hub"
     };
   }, [isKoLocale]);
   const weekdays = useMemo<Array<{ value: number; label: string }>>(() => {

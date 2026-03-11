@@ -312,7 +312,7 @@ export default function AdminDashboardPage() {
     <main className="saas-content">
       <header className="page-header">
         <div>
-          <h1 className="page-title">{isKoLocale ? "관리자 대시보드" : "Admin Dashboard"}</h1>
+          <h1 className="page-title">{isKoLocale ? "관리자 허브" : "Admin hub"}</h1>
           <p className="page-subtitle">
             {isKoLocale ? "핵심 지표와 대기 업무를 확인하고, 각 전용 워크스페이스로 이동해 작업하세요." : "Review key metrics and work queues, then continue in dedicated workspaces."}
           </p>
