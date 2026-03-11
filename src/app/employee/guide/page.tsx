@@ -20,7 +20,7 @@ const onboardingSteps: GuideStep[] = [
       "요청 피드백과 타임라인에서 처리 상태를 확인합니다.",
     ],
     caution: "정정 요청은 급여 계산과 연결되므로 사유를 구체적으로 작성해야 합니다.",
-    href: "/employee/attendance?source=employee-guide",
+    href: "/employee/attendance/correction?source=employee-guide",
     cta: "출퇴근 요청 센터 열기",
   },
   {
@@ -33,7 +33,7 @@ const onboardingSteps: GuideStep[] = [
       "요청 피드백에서 승인/반려 상태를 확인합니다.",
     ],
     caution: "반차나 시간 단위 휴가는 시작/종료 시간을 다시 확인하세요.",
-    href: "/employee/leave?source=employee-guide",
+    href: "/employee/leave/request?source=employee-guide",
     cta: "휴가 요청 센터 열기",
   },
   {

@@ -100,7 +100,8 @@ function run() {
     /\/employee\/requests\/monitoring\?source=employee-dashboard/
   );
   assert.match(guidePage, /\/employee\/requests\?source=employee-guide/);
-  assert.match(guideCopy, /\/employee\/attendance\?source=employee-guide/);
+  assert.match(guideCopy, /\/employee\/attendance\/correction\?source=employee-guide/);
+  assert.match(guideCopy, /\/employee\/leave\/request\?source=employee-guide/);
   assert.match(
     scheduleSummaryPanel,
     /\/employee\/attendance\/correction\?source=employee-dashboard/
