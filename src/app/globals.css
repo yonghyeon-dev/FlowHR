@@ -608,11 +608,71 @@ body {
   background: linear-gradient(180deg, #ffffff 0%, #f8fffb 100%);
   border-color: rgba(176, 209, 195, 0.34);
 }
+.employee-home-workspace-card {
+  display: grid;
+  gap: 14px;
+}
+.employee-home-workspace-card-copy {
+  display: grid;
+  gap: 6px;
+}
+.employee-home-workspace-card-copy h3 {
+  margin: 0;
+}
 .admin-hub-workspace-card .actions {
   margin-top: 12px;
 }
 .employee-home-workspace-card .actions {
   margin-top: 12px;
+}
+.employee-home-workspace-primary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.employee-home-workspace-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.employee-home-shortcuts-panel {
+  border-color: rgba(176, 209, 195, 0.42);
+  background: linear-gradient(180deg, #ffffff 0%, #f7fffb 100%);
+}
+.employee-home-shortcuts-grid {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.employee-home-shortcut-card {
+  border: 1px solid rgba(176, 209, 195, 0.3);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+.employee-home-shortcut-card p {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+.employee-home-shortcut-card span {
+  font-size: 0.79rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.employee-home-shortcuts-actions {
+  margin-top: 14px;
+}
+.employee-home-priority-badge-strip {
+  margin-top: 12px;
+}
+.employee-home-priority-body {
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
 }
 .employee-home-panel-grid {
   align-items: start;
@@ -4509,6 +4569,9 @@ button.queue-badge:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .employee-home-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+  .employee-home-shortcuts-grid {
     grid-template-columns: 1fr;
   }
   .summary-grid {

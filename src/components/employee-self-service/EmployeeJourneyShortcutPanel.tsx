@@ -4,34 +4,30 @@ import Link from "next/link";
 
 import { useI18n } from "@/lib/i18n/provider";
 
-type EmployeeJourneyShortcutPanelProps = {
-  onJumpToSection: (sectionId: string) => void;
-};
-
 type EmployeeShortcut = {
   key: string;
   label: string;
   detail: string;
-  sectionId?: string;
-  href?: string;
+  href: string;
 };
 
 const COPY = {
   ko: {
-    title: "직원 여정 바로가기",
-    description: "전체 화면을 스크롤하지 않고 주요 셀프서비스 영역으로 바로 이동합니다.",
-    ariaLabel: "직원 셀프서비스 바로가기",
-    jumpButton: "바로 열기",
-    payslipCta: "급여 명세서 보기",
-    adminApprovalCta: "관리자 승인함 열기"
+    title: "바로 실행할 작업",
+    description: "자주 쓰는 직원 작업을 홈에서 바로 열어 다음 행동으로 이어집니다.",
+    ariaLabel: "직원 바로 실행 작업",
+    jumpButton: "작업 열기",
+    payslipCta: "급여 문서 보기",
+    guideCta: "이용 가이드 보기"
   },
   en: {
-    title: "Employee journey shortcuts",
-    description: "Jump into the core self-service areas without scrolling through the full page.",
-    ariaLabel: "employee self-service shortcuts",
-    jumpButton: "Open now",
-    payslipCta: "View payslips",
-    adminApprovalCta: "Open admin approvals"
+    title: "Start a task now",
+    description:
+      "Open the most common employee actions directly from home and continue to the next step.",
+    ariaLabel: "employee quick task launcher",
+    jumpButton: "Open task",
+    payslipCta: "Open payroll docs",
+    guideCta: "View guide"
   }
 } as const;
 
@@ -40,31 +36,31 @@ const SHORTCUTS = {
     {
       key: "attendance",
       label: "출퇴근 정정",
-      detail: "오늘 근태 기록을 확인하고 정정 요청 폼으로 바로 이동합니다.",
+      detail: "오늘 근태 기록을 확인하고 정정 요청 입력으로 바로 이동합니다.",
       href: "/employee/attendance/correction?source=employee-dashboard"
     },
     {
       key: "leave",
-      label: "휴가 요청",
-      detail: "휴가 유형과 기간을 입력하는 신청 폼으로 이동합니다.",
+      label: "휴가 신청",
+      detail: "휴가 유형과 기간을 입력하는 요청 워크스페이스를 바로 엽니다.",
       href: "/employee/leave/request?source=employee-dashboard"
     },
     {
       key: "leave-calendar",
       label: "휴가 캘린더",
-      detail: "팀 휴가 밀도를 확인하고 날짜별 일정을 살펴봅니다.",
+      detail: "팀 휴가 분포를 보고 일정 계획에 바로 이어집니다.",
       href: "/employee/leave/calendar?source=employee-dashboard"
     },
     {
       key: "request-feedback",
-      label: "요청 상태 센터",
-      detail: "요청 피드백, 검색, 재제출 후속 조치를 전용 워크스페이스에서 이어갑니다.",
+      label: "요청 상태 확인",
+      detail: "피드백, 검색, 재제출이 필요한 요청을 전용 워크스페이스에서 이어갑니다.",
       href: "/employee/requests/monitoring?source=employee-dashboard"
     },
     {
       key: "schedule",
-      label: "이번 주 일정",
-      detail: "이번 주 근무 일정을 확인하는 섹션으로 이동합니다.",
+      label: "이번 주 근무",
+      detail: "이번 주 근무 일정을 확인하는 화면으로 바로 이동합니다.",
       href: "/employee/schedule?source=employee-dashboard"
     }
   ],
@@ -72,80 +68,62 @@ const SHORTCUTS = {
     {
       key: "attendance",
       label: "Attendance correction",
-      detail: "Review today's attendance and move into the correction form.",
+      detail: "Review today's attendance log and move straight into the correction request form.",
       href: "/employee/attendance/correction?source=employee-dashboard"
     },
     {
       key: "leave",
       label: "Leave request",
-      detail: "Jump into the leave request form with the main input fields ready.",
+      detail: "Open the leave request workspace with the primary form fields ready.",
       href: "/employee/leave/request?source=employee-dashboard"
     },
     {
       key: "leave-calendar",
       label: "Leave calendar",
-      detail: "Check team leave density and open the date-based calendar view.",
+      detail: "Check team leave density and continue into the calendar planning view.",
       href: "/employee/leave/calendar?source=employee-dashboard"
     },
     {
       key: "request-feedback",
-      label: "Request status center",
-      detail: "Continue feedback, search, and resubmit follow-up in the dedicated workspace.",
+      label: "Request status",
+      detail: "Continue feedback, search, and resubmission follow-up in the dedicated workspace.",
       href: "/employee/requests/monitoring?source=employee-dashboard"
     },
     {
       key: "schedule",
       label: "This week schedule",
-      detail: "Move directly to the current work schedule section.",
+      detail: "Move directly into the current work-schedule view.",
       href: "/employee/schedule?source=employee-dashboard"
     }
   ]
 } satisfies Record<"ko" | "en", EmployeeShortcut[]>;
 
-export function EmployeeJourneyShortcutPanel({
-  onJumpToSection
-}: EmployeeJourneyShortcutPanelProps) {
+export function EmployeeJourneyShortcutPanel() {
   const { locale } = useI18n();
   const copy = locale === "ko" ? COPY.ko : COPY.en;
   const shortcuts = locale === "ko" ? SHORTCUTS.ko : SHORTCUTS.en;
 
   return (
-    <article className="panel" id="self-service-quick-jump">
+    <article className="panel employee-home-shortcuts-panel" id="self-service-quick-jump">
       <h2>{copy.title}</h2>
       <p className="small">{copy.description}</p>
-      <div className="submit-checklist-grid" aria-label={copy.ariaLabel}>
+      <div className="employee-home-shortcuts-grid" aria-label={copy.ariaLabel}>
         {shortcuts.map((shortcut) => (
-          <article key={shortcut.key} className="submit-checklist-card is-ready">
+          <article key={shortcut.key} className="employee-home-shortcut-card">
             <p>{shortcut.label}</p>
             <span>{shortcut.detail}</span>
-            {shortcut.href ? (
-              <Link className="btn btn-secondary btn-small" href={shortcut.href}>
-                {copy.jumpButton}
-              </Link>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-secondary btn-small"
-                onClick={() => {
-                  const sectionId =
-                    "sectionId" in shortcut && typeof shortcut.sectionId === "string"
-                      ? shortcut.sectionId
-                      : "";
-                  onJumpToSection(sectionId);
-                }}
-              >
-                {copy.jumpButton}
-              </button>
-            )}
+            <Link className="btn btn-secondary btn-small" href={shortcut.href}>
+              {copy.jumpButton}
+            </Link>
           </article>
         ))}
       </div>
-      <div className="actions" style={{ marginTop: 10 }}>
+      <div className="actions employee-home-shortcuts-actions">
+        <Link className="btn btn-primary btn-small" href="/employee/guide">
+          {copy.guideCta}
+        </Link>
         <Link className="btn btn-secondary btn-small" href="/employee/payslips">
           {copy.payslipCta}
-        </Link>
-        <Link className="btn btn-secondary btn-small" href="/admin/approval-executions">
-          {copy.adminApprovalCta}
         </Link>
       </div>
     </article>

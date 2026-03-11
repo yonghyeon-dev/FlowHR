@@ -20,7 +20,12 @@ function run() {
     "employee-dashboard",
     "EmployeeAccountOverviewPanels.tsx"
   );
-  const approvalQueuePanelSource = readUtf8("src", "components", "admin-approval", "ApprovalQueuePanel.tsx");
+  const approvalQueuePanelSource = readUtf8(
+    "src",
+    "components",
+    "admin-approval",
+    "ApprovalQueuePanel.tsx"
+  );
   const approvalQueueSearchSortSource = readUtf8(
     "src",
     "components",
@@ -64,7 +69,11 @@ function run() {
     `ApprovalQueueSearchSortPanel should stay under 300 lines (current: ${countLines(approvalQueueSearchSortSource)})`
   );
 
-  assert.match(employeePageSource, /EmployeeAccountOverviewPanels/, "employee page should mount account overview panels");
+  assert.match(
+    employeePageSource,
+    /EmployeeAccountOverviewPanels/,
+    "employee page should mount account overview panels"
+  );
   assert.match(
     employeeAccountOverviewPanelsSource,
     /EmployeeJourneyShortcutPanel/,
@@ -72,7 +81,7 @@ function run() {
   );
   assert.match(
     employeeJourneyShortcutSource,
-    /직원 여정 바로가기|Employee Journey Shortcuts/,
+    /바로 실행할 작업|Start a task now|직원 여정 바로가기|Employee journey shortcuts/i,
     "employee journey shortcut panel should expose a simplified IA entry"
   );
   assert.ok(

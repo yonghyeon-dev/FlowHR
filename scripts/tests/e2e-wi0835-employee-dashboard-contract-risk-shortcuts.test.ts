@@ -37,22 +37,22 @@ async function run() {
   assert.ok(koDocumentsHub, "Korean documents hub should exist");
   assert.ok(enDocumentsHub, "English documents hub should exist");
   assert.ok(
-    koDocumentsHub?.links.some((link) =>
+    koDocumentsHub?.secondaryLinks.some((link) =>
       link.href.includes("status=pending_response&deadline=due_soon")
     )
   );
   assert.ok(
-    koDocumentsHub?.links.some((link) =>
+    koDocumentsHub?.secondaryLinks.some((link) =>
       link.href.includes("status=pending_response&deadline=overdue")
     )
   );
   assert.ok(
-    enDocumentsHub?.links.some((link) =>
+    enDocumentsHub?.secondaryLinks.some((link) =>
       link.href.includes("status=pending_response&deadline=due_soon")
     )
   );
   assert.ok(
-    enDocumentsHub?.links.some((link) =>
+    enDocumentsHub?.secondaryLinks.some((link) =>
       link.href.includes("status=pending_response&deadline=overdue")
     )
   );
