@@ -13,6 +13,14 @@ function countLines(source: string) {
 function run() {
   const adminPageSource = readUtf8("src", "app", "admin", "page.tsx");
   const adminPageStateSource = readUtf8("src", "app", "admin", "page-state.ts");
+  const previewBuilderStateSource = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "payroll-close",
+    "preview-builder",
+    "page-state.ts"
+  );
   const adminPayrollHelperSource = readUtf8("src", "app", "admin", "page-payroll-helpers.ts");
   const adminPayrollPanelSource = readUtf8("src", "components", "admin-dashboard", "AdminPayrollPanel.tsx");
   const presetGuidePanelSource = readUtf8(
@@ -34,7 +42,7 @@ function run() {
     "admin payroll preview should render the preset guide panel (directly or via extracted panel)"
   );
   assert.match(
-    `${adminPageSource}\n${adminPageStateSource}`,
+    `${adminPageSource}\n${adminPageStateSource}\n${previewBuilderStateSource}`,
     /const \[payrollIncomeTaxLookupPresetId, setPayrollIncomeTaxLookupPresetId\] = useState\(""\);/,
     "admin payroll preview should keep preset state (page or extracted state hook)"
   );
