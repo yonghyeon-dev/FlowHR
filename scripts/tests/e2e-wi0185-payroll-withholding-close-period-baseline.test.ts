@@ -51,6 +51,13 @@ async function run() {
 
   const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const payrollClosePageSource = readUtf8("src", "app", "admin", "payroll-close", "page.tsx");
+  const payrollClosePageClientSource = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "payroll-close",
+    "page-client.tsx"
+  );
   const payrollCloseConsoleSource = readUtf8(
     "src",
     "components",
@@ -64,8 +71,13 @@ async function run() {
   assert.match(adminNavSource, /\/admin\/payroll-close/, "admin nav should include payroll close route");
   assert.match(
     payrollClosePageSource,
+    /AdminPayrollClosePageClient/,
+    "payroll close page should route through the dedicated page client"
+  );
+  assert.match(
+    payrollClosePageClientSource,
     /PayrollClosePeriodConsole/,
-    "payroll close page should render dedicated console"
+    "payroll close page client should render dedicated console"
   );
   assert.match(
     payrollCloseConsoleSource,
