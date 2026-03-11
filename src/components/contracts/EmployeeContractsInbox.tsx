@@ -43,9 +43,7 @@ import { EmployeeContractsInboxQuickFilters } from "@/components/contracts/Emplo
 import { resolveContractsWorkspaceMessageToneClass } from "@/components/contracts/workspace-visual-helpers";
 import { useI18n } from "@/lib/i18n/provider";
 
-type EmployeeContractsInboxProps = {
-  accessToken: string;
-};
+type EmployeeContractsInboxProps = { accessToken: string };
 
 export default function EmployeeContractsInbox({ accessToken }: EmployeeContractsInboxProps) {
   const searchParams = useSearchParams();
@@ -110,11 +108,7 @@ export default function EmployeeContractsInbox({ accessToken }: EmployeeContract
   useEffect(() => {
     if (!accessToken) return;
     reload().catch((loadError) => {
-      setError(
-        loadError instanceof Error
-          ? normalizeContractsErrorMessageForRuntime(loadError.message, copy.loadError)
-          : copy.loadError
-      );
+      setError(loadError instanceof Error ? normalizeContractsErrorMessageForRuntime(loadError.message, copy.loadError) : copy.loadError);
     });
   }, [copy.loadError, reload]);
   useEffect(() => setSignatureEvidence(null), [selected?.id]);
