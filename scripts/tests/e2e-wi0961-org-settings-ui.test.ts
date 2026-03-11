@@ -41,12 +41,15 @@ async function readJson<T>(response: Response) {
 async function run() {
   const pageSource = readUtf8("src", "app", "admin", "settings", "page.tsx");
   assert.match(pageSource, /조직 설정 관리자/);
-  assert.match(pageSource, /회계연도 시작월/);
-  assert.match(pageSource, /표준 근무시간\(일\)/);
-  assert.match(pageSource, /초과근무 기준\(시간\)/);
+  assert.match(pageSource, /회계연도 시작 월/);
+  assert.match(pageSource, /일일 기준 근무시간/);
+  assert.match(pageSource, /연장근로 기준 시간/);
   assert.match(pageSource, /급여 주기/);
-  assert.match(pageSource, /타임존/);
+  assert.match(pageSource, /시간대/);
   assert.match(pageSource, /통화 코드/);
+  assert.match(pageSource, /workspace-shell admin-workspace-shell/);
+  assert.match(pageSource, /workspace-summary-strip/);
+  assert.match(pageSource, /출퇴근 보안 설정/);
   assert.match(pageSource, /\/api\/admin\/settings/);
   assert.match(pageSource, /method: "GET"/);
   assert.match(pageSource, /method: "PATCH"/);

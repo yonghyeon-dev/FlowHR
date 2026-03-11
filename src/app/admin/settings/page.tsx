@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
@@ -31,6 +32,7 @@ type SettingsFormState = {
 type AdminSettingsCopy = {
   pageTitle: string;
   pageSubtitle: string;
+  sourceHint: string;
   reloadLabel: string;
   reloadLoadingLabel: string;
   saveLabel: string;
@@ -38,6 +40,12 @@ type AdminSettingsCopy = {
   formSectionTitle: string;
   formSectionDescription: string;
   guideSectionTitle: string;
+  guideSectionDescription: string;
+  summaryLabels: {
+    fiscalYearStartMonth: string;
+    workRule: string;
+    payPeriod: string;
+  };
   timezonePlaceholder: string;
   currencyPlaceholder: string;
   loadFailed: string;
@@ -47,6 +55,10 @@ type AdminSettingsCopy = {
   currencyInvalid: string;
   apiLoadLabel: string;
   apiSaveLabel: string;
+  navigation: {
+    backToHub: string;
+    securitySettings: string;
+  };
   invalidFieldValue: (fieldName: string) => string;
   fields: {
     fiscalYearStartMonth: string;
@@ -78,90 +90,110 @@ function getAdminSettingsCopy(locale: string): AdminSettingsCopy {
   if (locale === "ko") {
     return {
       pageTitle: "조직 설정 관리자",
-      pageSubtitle: "회계, 근무, 급여 기준값을 조회하고 저장합니다.",
+      pageSubtitle: "회계, 근무, 급여 기본값을 한 화면에서 점검하고 업데이트합니다.",
+      sourceHint: "운영 기본값은 다른 워크스페이스의 계산과 자동화 기준으로 바로 연결됩니다.",
       reloadLabel: "다시 불러오기",
       reloadLoadingLabel: "불러오는 중...",
       saveLabel: "설정 저장",
-      saveLoadingLabel: "저장 중...",
-      formSectionTitle: "설정 입력",
-      formSectionDescription: "아래 항목은 GET/PATCH /api/admin/settings 와 연동됩니다.",
+      saveLoadingLabel: "저장하는 중...",
+      formSectionTitle: "운영 기본값 입력",
+      formSectionDescription: "아래 입력값은 GET/PATCH /api/admin/settings와 연결되며 저장 즉시 조직 기본값으로 반영됩니다.",
       guideSectionTitle: "입력 가이드",
+      guideSectionDescription: "월마감, 연장근로, 급여 계산에 쓰이는 기본값이므로 현재 운영 기준과 맞는지 먼저 확인하세요.",
+      summaryLabels: {
+        fiscalYearStartMonth: "회계연도 시작",
+        workRule: "근무 기본값",
+        payPeriod: "급여 주기"
+      },
       timezonePlaceholder: "예: Asia/Seoul",
       currencyPlaceholder: "예: KRW",
       loadFailed: "조직 설정을 불러오지 못했습니다.",
       saveFailed: "조직 설정 저장에 실패했습니다.",
       saveSuccess: "조직 설정이 저장되었습니다.",
-      timezoneRequired: "타임존을 입력해 주세요.",
-      currencyInvalid: "통화 코드는 3자리 영문 코드여야 합니다. (예: KRW)",
+      timezoneRequired: "시간대를 입력해 주세요.",
+      currencyInvalid: "통화 코드는 3자리 영문 코드여야 합니다. 예: KRW",
       apiLoadLabel: "조직 설정 조회",
       apiSaveLabel: "조직 설정 저장",
+      navigation: {
+        backToHub: "관리자 허브",
+        securitySettings: "출퇴근 보안 설정"
+      },
       invalidFieldValue: (fieldName) => `${fieldName} 값을 확인해 주세요.`,
       fields: {
-        fiscalYearStartMonth: "회계연도 시작월",
-        standardWorkHoursPerDay: "일일 근무시간(시간)",
-        standardWorkDaysPerWeek: "주간 근무일수(일)",
-        overtimeThresholdHours: "초과근무 기준(시간)",
+        fiscalYearStartMonth: "회계연도 시작 월",
+        standardWorkHoursPerDay: "일일 기준 근무시간",
+        standardWorkDaysPerWeek: "주간 기준 근무일수",
+        overtimeThresholdHours: "연장근로 기준 시간",
         payPeriod: "급여 주기",
-        timezone: "타임존",
+        timezone: "시간대",
         currency: "통화 코드"
       },
       payPeriodOptions: {
-        monthly: "월간 (MONTHLY)",
-        biweekly: "격주 (BIWEEKLY)"
+        monthly: "월 단위 정산",
+        biweekly: "격주 정산"
       },
       guideItems: [
-        "회계연도 시작월: 1~12 정수",
-        "일일 근무시간(시간): 1~24",
-        "주간 근무일수(일): 1~7 정수",
-        "초과근무 기준(시간): 0~168",
-        "급여 주기: 월간 또는 격주",
-        "타임존: 예) Asia/Seoul, Asia/Tokyo",
-        "통화: 3자리 코드 (예: KRW, USD)"
+        "회계연도 시작 월은 1~12 사이의 정수만 허용됩니다.",
+        "일일 기준 근무시간은 1~24시간 범위에서 입력합니다.",
+        "주간 기준 근무일수는 1~7일 범위에서 입력합니다.",
+        "연장근로 기준 시간은 0~168시간 범위에서 입력합니다.",
+        "시간대는 실제 운영 지역과 동일하게 유지해야 근태와 급여 산출이 어긋나지 않습니다.",
+        "통화 코드는 KRW, USD처럼 3자리 영문 코드로 입력합니다."
       ]
     };
   }
 
   return {
     pageTitle: "Organization Settings Admin",
-    pageSubtitle: "Review and update accounting, work, and payroll defaults.",
+    pageSubtitle: "Review and update accounting, work, and payroll defaults in one place.",
+    sourceHint: "These defaults feed downstream payroll, attendance, and automation workspaces.",
     reloadLabel: "Reload",
     reloadLoadingLabel: "Loading...",
-    saveLabel: "Save Settings",
+    saveLabel: "Save settings",
     saveLoadingLabel: "Saving...",
-    formSectionTitle: "Settings Input",
-    formSectionDescription: "The fields below are connected to GET/PATCH /api/admin/settings.",
-    guideSectionTitle: "Input Guide",
+    formSectionTitle: "Operating defaults",
+    formSectionDescription: "The fields below are wired to GET/PATCH /api/admin/settings and become the organization baseline immediately after save.",
+    guideSectionTitle: "Input guide",
+    guideSectionDescription: "Confirm the live operating baseline before changing values used by payroll and overtime calculations.",
+    summaryLabels: {
+      fiscalYearStartMonth: "Fiscal year start",
+      workRule: "Work rule baseline",
+      payPeriod: "Pay cycle"
+    },
     timezonePlaceholder: "e.g. Asia/Seoul",
     currencyPlaceholder: "e.g. KRW",
     loadFailed: "Failed to load organization settings.",
     saveFailed: "Failed to save organization settings.",
     saveSuccess: "Organization settings were saved.",
     timezoneRequired: "Please enter a timezone.",
-    currencyInvalid: "Currency code must be a 3-letter alphabetic code. (e.g. KRW)",
+    currencyInvalid: "Currency code must be a 3-letter alphabetic code. Example: KRW",
     apiLoadLabel: "Load organization settings",
     apiSaveLabel: "Save organization settings",
+    navigation: {
+      backToHub: "Admin hub",
+      securitySettings: "Attendance security"
+    },
     invalidFieldValue: (fieldName) => `Please check the value for ${fieldName}.`,
     fields: {
-      fiscalYearStartMonth: "Fiscal Year Start Month",
-      standardWorkHoursPerDay: "Standard Work Hours Per Day",
-      standardWorkDaysPerWeek: "Standard Work Days Per Week",
-      overtimeThresholdHours: "Overtime Threshold Hours",
-      payPeriod: "Pay Period",
+      fiscalYearStartMonth: "Fiscal year start month",
+      standardWorkHoursPerDay: "Standard work hours per day",
+      standardWorkDaysPerWeek: "Standard work days per week",
+      overtimeThresholdHours: "Overtime threshold hours",
+      payPeriod: "Pay period",
       timezone: "Timezone",
-      currency: "Currency Code"
+      currency: "Currency code"
     },
     payPeriodOptions: {
-      monthly: "Monthly (MONTHLY)",
-      biweekly: "Biweekly (BIWEEKLY)"
+      monthly: "Monthly",
+      biweekly: "Biweekly"
     },
     guideItems: [
-      "Fiscal year start month: integer from 1 to 12",
-      "Standard work hours per day: from 1 to 24",
-      "Standard work days per week: integer from 1 to 7",
-      "Overtime threshold hours: from 0 to 168",
-      "Pay period: Monthly or Biweekly",
-      "Timezone: e.g. Asia/Seoul, Asia/Tokyo",
-      "Currency: 3-letter code (e.g. KRW, USD)"
+      "Fiscal year start month must be an integer from 1 to 12.",
+      "Standard work hours per day must stay between 1 and 24.",
+      "Standard work days per week must stay between 1 and 7.",
+      "Overtime threshold hours must stay between 0 and 168.",
+      "Timezone should match the organization’s live operating region.",
+      "Currency codes must use a 3-letter alphabetic value such as KRW or USD."
     ]
   };
 }
@@ -207,6 +239,10 @@ function parseNumber(value: string, invalidValueErrorMessage: string) {
     throw new Error(invalidValueErrorMessage);
   }
   return parsed;
+}
+
+function formatPayPeriodLabel(period: PayPeriod, copy: AdminSettingsCopy) {
+  return period === "BIWEEKLY" ? copy.payPeriodOptions.biweekly : copy.payPeriodOptions.monthly;
 }
 
 export default function AdminSettingsPage() {
@@ -317,24 +353,48 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="page-header">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <div>
           <h1 className="page-title">{copy.pageTitle}</h1>
           <p className="page-subtitle">{copy.pageSubtitle}</p>
+          <p className="small muted workspace-source-banner">{copy.sourceHint}</p>
         </div>
         <div className="page-actions">
+          <Link className="btn btn-secondary" href="/admin">
+            {copy.navigation.backToHub}
+          </Link>
+          <Link className="btn btn-secondary" href="/admin/attendance-security">
+            {copy.navigation.securitySettings}
+          </Link>
           <button className="btn btn-secondary" type="button" onClick={() => void loadSettings()} disabled={isLoading}>
             {isLoading ? copy.reloadLoadingLabel : copy.reloadLabel}
           </button>
         </div>
       </header>
 
-      {error ? <p className="small fail">{error}</p> : null}
-      {notice ? <p className="small ok">{notice}</p> : null}
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.pageTitle}>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.summaryLabels.fiscalYearStartMonth}</p>
+          <strong>{form.fiscalYearStartMonth}월</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.summaryLabels.workRule}</p>
+          <strong>
+            {form.standardWorkHoursPerDay}h · 주 {form.standardWorkDaysPerWeek}일
+          </strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.summaryLabels.payPeriod}</p>
+          <strong>{formatPayPeriodLabel(form.payPeriod, copy)}</strong>
+        </article>
+      </section>
 
-      <section className="panel-grid">
-        <article className="panel">
+      {error ? <p className="small fail workspace-inline-status">{error}</p> : null}
+      {notice ? <p className="small ok workspace-inline-status">{notice}</p> : null}
+
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.formSectionTitle}</h2>
           <p className="small muted">{copy.formSectionDescription}</p>
 
@@ -425,8 +485,9 @@ export default function AdminSettingsPage() {
           </div>
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card workspace-note-card">
           <h2>{copy.guideSectionTitle}</h2>
+          <p className="small muted">{copy.guideSectionDescription}</p>
           <ul className="simple-list">
             {copy.guideItems.map((item) => (
               <li key={item}>{item}</li>
