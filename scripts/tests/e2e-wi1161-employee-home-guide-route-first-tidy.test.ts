@@ -39,7 +39,7 @@ function run() {
   assert.match(guidePage, /EmployeeGuideDashboard/);
 
   assert.match(dashboard, /workspace-shell employee-workspace-shell/);
-  assert.match(dashboard, /workspace-page-header employee-workspace-status-header/);
+  assert.match(dashboard, /EmployeeWorkspaceHero/);
   assert.match(dashboard, /workspace-summary-strip employee-workspace-status-strip/);
   assert.match(dashboard, /requestsHubLabel/);
 
