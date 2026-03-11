@@ -230,7 +230,7 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1129` by promoting the employee leave-calendar hash destination onto a stable subroute while keeping legacy hash entry as compatibility-only behavior.
+1. Close `WI-1130` by promoting the employee attendance and leave primary hash destinations onto stable subroutes while keeping legacy hash entry as compatibility-only behavior.
 2. Continue the next employee route-first pass by trimming the remaining hash-only or pseudo-state deep links inside workspace surfaces.
 3. Begin the next admin route-first slice after employee calendar entry parity is explicit.
 
@@ -308,3 +308,6 @@ Latest planning reset:
 - Closed `WI-1128` through the full GitHub flow and merged it to `main` as `7877b61bf315ad8a5a919d634da7618db9a54df9`, then deleted the feature branch.
 - Re-verified `WI-1128` on the delivery path and confirmed both `ci` (`22935717065`) and `vercel-production-deploy` (`22935717062`) stay green after the admin payroll queue subroute promotion.
 - Started `WI-1129` to promote the employee leave-calendar hash destination onto `/employee/leave/calendar` and keep the legacy hash entry as compatibility-only behavior.
+- Closed `WI-1129` through the full GitHub flow and merged it to `main` as `8bdc6a9013060f986b7b386c8156b24c7aa2c9b8`, then deleted the feature branch.
+- Re-verified `WI-1129` on the delivery path and confirmed both `ci` (`22936407717`) and `vercel-production-deploy` (`22936407714`) stay green after the employee leave-calendar subroute promotion.
+- Started `WI-1130` to promote the employee attendance and leave primary task surfaces onto stable subroutes and remove the remaining `#attendance` / `#leave` dependency from route-first employee IA.

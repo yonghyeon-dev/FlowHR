@@ -77,9 +77,12 @@ function run() {
   assert.match(scheduleBoard, /source=employee-schedule&attendanceSource=schedule/);
   assert.match(
     accountOverviewPanels,
-    /\/employee\/attendance\?source=employee-dashboard/
+    /\/employee\/attendance\/correction\?source=employee-dashboard/
   );
-  assert.match(accountOverviewPanels, /\/employee\/leave\?source=employee-dashboard/);
+  assert.match(
+    accountOverviewPanels,
+    /\/employee\/leave\/request\?source=employee-dashboard/
+  );
   assert.match(
     accountOverviewPanels,
     /\/employee\/requests\/monitoring\?source=employee-dashboard/
@@ -88,14 +91,20 @@ function run() {
     accountOverviewPanels,
     /\/employee\/requests\/resubmit\?source=employee-dashboard/
   );
-  assert.match(workspaceHubs, /\/employee\/attendance\?source=employee-dashboard/);
+  assert.match(
+    workspaceHubs,
+    /\/employee\/attendance\/correction\?source=employee-dashboard/
+  );
   assert.match(
     shortcuts,
     /\/employee\/requests\/monitoring\?source=employee-dashboard/
   );
   assert.match(guidePage, /\/employee\/requests\?source=employee-guide/);
   assert.match(guideCopy, /\/employee\/attendance\?source=employee-guide/);
-  assert.match(scheduleSummaryPanel, /\/employee\/attendance\?source=employee-dashboard/);
+  assert.match(
+    scheduleSummaryPanel,
+    /\/employee\/attendance\/correction\?source=employee-dashboard/
+  );
   assert.match(workItem, /source/i);
 }
 

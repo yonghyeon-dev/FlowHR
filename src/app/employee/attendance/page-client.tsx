@@ -7,13 +7,13 @@ import EmployeeAttendanceLeaveWorkspaceClient, {
   type EmployeeAttendanceLeaveWorkspaceSectionMode
 } from "@/app/employee/attendance-leave-workspace-client";
 
-type EmployeeLeaveWorkspacePageClientProps = {
+type EmployeeAttendanceWorkspacePageClientProps = {
   sectionMode?: EmployeeAttendanceLeaveWorkspaceSectionMode;
 };
 
-export default function EmployeeLeaveWorkspacePageClient({
+export default function EmployeeAttendanceWorkspacePageClient({
   sectionMode = "all"
-}: EmployeeLeaveWorkspacePageClientProps) {
+}: EmployeeAttendanceWorkspacePageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -21,25 +21,20 @@ export default function EmployeeLeaveWorkspacePageClient({
     if (sectionMode !== "all" || typeof window === "undefined") {
       return;
     }
-    if (
-      window.location.hash !== "#leave" &&
-      window.location.hash !== "#leave-calendar"
-    ) {
+    if (window.location.hash !== "#attendance") {
       return;
     }
     const nextQuery = searchParams.toString();
-    const nextPath =
-      window.location.hash === "#leave-calendar"
-        ? "/employee/leave/calendar"
-        : "/employee/leave/request";
     router.replace(
-      nextQuery.length > 0 ? `${nextPath}?${nextQuery}` : nextPath
+      nextQuery.length > 0
+        ? `/employee/attendance/correction?${nextQuery}`
+        : "/employee/attendance/correction"
     );
   }, [router, searchParams, sectionMode]);
 
   return (
     <EmployeeAttendanceLeaveWorkspaceClient
-      mode="leave"
+      mode="attendance"
       sectionMode={sectionMode}
     />
   );

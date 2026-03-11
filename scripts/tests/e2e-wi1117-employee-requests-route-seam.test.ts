@@ -42,8 +42,8 @@ function run() {
   assert.match(workspaceHubs, /\/employee\/attendance/);
   assert.match(workspaceHubs, /\/employee\/leave/);
 
-  assert.match(accountPanels, /href: "\/employee\/attendance\?source=employee-dashboard"/);
-  assert.match(accountPanels, /href: "\/employee\/leave\?source=employee-dashboard"/);
+  assert.match(accountPanels, /href: "\/employee\/attendance\/correction\?source=employee-dashboard"/);
+  assert.match(accountPanels, /href: "\/employee\/leave\/request\?source=employee-dashboard"/);
   assert.match(accountPanels, /href: "\/employee\/requests\/monitoring\?source=employee-dashboard"/);
   assert.match(accountPanels, /href: "\/employee\/requests\/resubmit\?source=employee-dashboard"/);
 

@@ -107,12 +107,12 @@ function resolvePriorityWorkspaceTarget(
   switch (sectionId) {
     case "attendance":
       return {
-        href: "/employee/attendance?source=employee-dashboard",
+        href: "/employee/attendance/correction?source=employee-dashboard",
         label: isKoLocale ? "근태 작업 열기" : "Open attendance workspace"
       };
     case "leave":
       return {
-        href: "/employee/leave?source=employee-dashboard",
+        href: "/employee/leave/request?source=employee-dashboard",
         label: isKoLocale ? "휴가 작업 열기" : "Open leave workspace"
       };
     case "request-feedback":

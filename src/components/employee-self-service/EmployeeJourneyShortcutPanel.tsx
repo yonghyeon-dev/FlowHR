@@ -41,13 +41,13 @@ const SHORTCUTS = {
       key: "attendance",
       label: "출퇴근 정정",
       detail: "오늘 근태 기록을 확인하고 정정 요청 폼으로 바로 이동합니다.",
-      href: "/employee/attendance?source=employee-dashboard"
+      href: "/employee/attendance/correction?source=employee-dashboard"
     },
     {
       key: "leave",
       label: "휴가 요청",
       detail: "휴가 유형과 기간을 입력하는 신청 폼으로 이동합니다.",
-      href: "/employee/leave?source=employee-dashboard"
+      href: "/employee/leave/request?source=employee-dashboard"
     },
     {
       key: "leave-calendar",
@@ -73,13 +73,13 @@ const SHORTCUTS = {
       key: "attendance",
       label: "Attendance correction",
       detail: "Review today's attendance and move into the correction form.",
-      href: "/employee/attendance?source=employee-dashboard"
+      href: "/employee/attendance/correction?source=employee-dashboard"
     },
     {
       key: "leave",
       label: "Leave request",
       detail: "Jump into the leave request form with the main input fields ready.",
-      href: "/employee/leave?source=employee-dashboard"
+      href: "/employee/leave/request?source=employee-dashboard"
     },
     {
       key: "leave-calendar",

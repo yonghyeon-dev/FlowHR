@@ -42,7 +42,7 @@ function run() {
 
   assert.match(
     requestsClient,
-    /candidate\.channel === "attendance"\s*\?\s*"\/employee\/attendance"\s*:\s*"\/employee\/leave"/
+    /candidate\.channel === "attendance"\s*\?\s*"\/employee\/attendance\/correction"\s*:\s*"\/employee\/leave\/request"/
   );
   assert.match(
     requestsClient,
@@ -54,7 +54,7 @@ function run() {
   );
   assert.match(
     attendancePage,
-    /EmployeeAttendanceLeaveWorkspaceClient mode="attendance"/
+    /EmployeeAttendanceWorkspacePageClient/
   );
   assert.match(leavePage, /EmployeeLeaveWorkspacePageClient/);
   assert.match(
