@@ -12,6 +12,12 @@ function run() {
   const employeeLayout = readUtf8("src", "app", "employee", "layout.tsx");
   const attendancePage = readUtf8("src", "app", "employee", "attendance", "page.tsx");
   const leavePage = readUtf8("src", "app", "employee", "leave", "page.tsx");
+  const workspaceClient = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "attendance-leave-workspace-client.tsx"
+  );
   const shortcuts = readUtf8(
     "src",
     "components",
@@ -41,8 +47,16 @@ function run() {
   assert.match(employeePage, /mode === "attendance"/);
   assert.match(employeePage, /mode === "leave"/);
   assert.doesNotMatch(employeePage, /<EmployeeAttendanceLeavePanels/);
-  assert.match(attendancePage, /EmployeeSelfServicePage mode="attendance"/);
-  assert.match(leavePage, /EmployeeSelfServicePage mode="leave"/);
+  assert.match(
+    attendancePage,
+    /EmployeeAttendanceLeaveWorkspaceClient mode="attendance"/
+  );
+  assert.match(
+    leavePage,
+    /EmployeeAttendanceLeaveWorkspaceClient mode="leave"/
+  );
+  assert.match(workspaceClient, /EmployeeAttendanceFormPanel/);
+  assert.match(workspaceClient, /EmployeeLeaveRequestPanel/);
   assert.match(employeeLayout, /\/employee\/attendance/);
   assert.match(employeeLayout, /\/employee\/leave/);
   assert.match(shortcuts, /\/employee\/attendance\?source=employee-dashboard/);
