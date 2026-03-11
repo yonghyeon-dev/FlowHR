@@ -28,17 +28,17 @@ function run() {
   );
 
   assert.match(layout, /href: "\/employee\/requests"/);
-  assert.match(guidePage, /href="\/employee\/requests"/);
-  assert.match(guidePage, /href: "\/employee\/attendance"/);
-  assert.match(guidePage, /href: "\/employee\/leave"/);
+  assert.match(guidePage, /href="\/employee\/requests\?source=employee-guide"/);
+  assert.match(guidePage, /href: "\/employee\/attendance\?source=employee-guide"/);
+  assert.match(guidePage, /href: "\/employee\/leave\?source=employee-guide"/);
 
   assert.match(workspaceHubs, /\/employee\/attendance/);
   assert.match(workspaceHubs, /\/employee\/leave/);
 
-  assert.match(accountPanels, /href: "\/employee\/attendance"/);
-  assert.match(accountPanels, /href: "\/employee\/leave"/);
-  assert.match(accountPanels, /href: "\/employee\/requests#request-monitoring"/);
-  assert.match(accountPanels, /href: "\/employee\/requests#resubmit-workbench"/);
+  assert.match(accountPanels, /href: "\/employee\/attendance\?source=employee-dashboard"/);
+  assert.match(accountPanels, /href: "\/employee\/leave\?source=employee-dashboard"/);
+  assert.match(accountPanels, /href: "\/employee\/requests\?source=employee-dashboard#request-monitoring"/);
+  assert.match(accountPanels, /href: "\/employee\/requests\?source=employee-dashboard#resubmit-workbench"/);
 
   assert.match(requestsPage, /id: "attendance-actions"/);
   assert.match(requestsPage, /id: "leave-actions"/);

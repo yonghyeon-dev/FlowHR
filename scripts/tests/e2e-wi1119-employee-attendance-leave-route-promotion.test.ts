@@ -45,11 +45,11 @@ function run() {
   assert.match(leavePage, /EmployeeSelfServicePage mode="leave"/);
   assert.match(employeeLayout, /\/employee\/attendance/);
   assert.match(employeeLayout, /\/employee\/leave/);
-  assert.match(shortcuts, /\/employee\/attendance/);
-  assert.match(shortcuts, /\/employee\/leave#leave-calendar/);
-  assert.match(workspaceHubs, /\/employee\/attendance/);
-  assert.match(workspaceHubs, /\/employee\/leave/);
-  assert.match(scheduleBoard, /\/employee\/attendance\?attendanceSource=schedule/);
+  assert.match(shortcuts, /\/employee\/attendance\?source=employee-dashboard/);
+  assert.match(shortcuts, /\/employee\/leave\?source=employee-dashboard#leave-calendar/);
+  assert.match(workspaceHubs, /\/employee\/attendance\?source=employee-dashboard/);
+  assert.match(workspaceHubs, /\/employee\/leave\?source=employee-dashboard/);
+  assert.match(scheduleBoard, /\/employee\/attendance\?source=employee-schedule&attendanceSource=schedule/);
   assert.match(workItem, /route/i);
 }
 

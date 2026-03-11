@@ -16,7 +16,7 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
         title: "출퇴근/근무",
         description: "오늘 출퇴근 기록과 개인 근무 일정을 확인합니다.",
         links: [
-          { href: "/employee/attendance", label: "출퇴근 정정 요청" },
+          { href: "/employee/attendance?source=employee-dashboard", label: "출퇴근 정정 요청" },
           { href: "/employee/schedule?source=employee-dashboard", label: "내 근무 일정" }
         ]
       },
@@ -25,7 +25,7 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
         title: "휴가",
         description: "휴가 요청 상태를 확인하고 잔여 연차를 관리합니다.",
         links: [
-          { href: "/employee/leave", label: "휴가 요청 센터" },
+          { href: "/employee/leave?source=employee-dashboard", label: "휴가 요청 센터" },
           { href: "/employee/year-end-input?source=employee-dashboard", label: "연말정산 입력" }
         ]
       },
@@ -83,7 +83,7 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
       title: "Attendance and schedule",
       description: "Review today's attendance logs and personal schedule.",
       links: [
-        { href: "/employee/attendance", label: "Attendance requests" },
+        { href: "/employee/attendance?source=employee-dashboard", label: "Attendance requests" },
         { href: "/employee/schedule?source=employee-dashboard", label: "My schedule" }
       ]
     },
@@ -92,7 +92,7 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
       title: "Leave",
       description: "Track leave requests and remaining balance.",
       links: [
-        { href: "/employee/leave", label: "Leave requests hub" },
+        { href: "/employee/leave?source=employee-dashboard", label: "Leave requests hub" },
         { href: "/employee/year-end-input?source=employee-dashboard", label: "Year-end input" }
       ]
     },

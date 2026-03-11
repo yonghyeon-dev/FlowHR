@@ -73,10 +73,10 @@ function run() {
   assert.match(requestsClient, /resubmitChannel=/);
   assert.match(requestsClient, /resubmitRecordId=/);
 
-  assert.match(shortcuts, /\/employee\/requests#request-feedback/);
+  assert.match(shortcuts, /\/employee\/requests\?source=employee-dashboard#request-feedback/);
   assert.match(accountPanels, /resolveChecklistActionTarget/);
-  assert.match(accountPanels, /\/employee\/requests#request-monitoring/);
-  assert.match(accountPanels, /\/employee\/requests#resubmit-workbench/);
+  assert.match(accountPanels, /\/employee\/requests\?source=employee-dashboard#request-monitoring/);
+  assert.match(accountPanels, /\/employee\/requests\?source=employee-dashboard#resubmit-workbench/);
 
   assert.match(workItem, /route-first/i);
 }

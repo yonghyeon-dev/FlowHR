@@ -107,29 +107,29 @@ function resolvePriorityWorkspaceTarget(
   switch (sectionId) {
     case "attendance":
       return {
-        href: "/employee/attendance",
+        href: "/employee/attendance?source=employee-dashboard",
         label: isKoLocale ? "근태 작업 열기" : "Open attendance workspace"
       };
     case "leave":
       return {
-        href: "/employee/leave",
+        href: "/employee/leave?source=employee-dashboard",
         label: isKoLocale ? "휴가 작업 열기" : "Open leave workspace"
       };
     case "request-feedback":
     case "request-search-sort":
     case "request-timeline":
       return {
-        href: "/employee/requests#request-monitoring",
+        href: "/employee/requests?source=employee-dashboard#request-monitoring",
         label: isKoLocale ? "요청 상태 센터 열기" : "Open request monitoring"
       };
     case "request-resubmit":
       return {
-        href: "/employee/requests#resubmit-workbench",
+        href: "/employee/requests?source=employee-dashboard#resubmit-workbench",
         label: isKoLocale ? "재제출 워크벤치 열기" : "Open resubmit workbench"
       };
     default:
       return {
-        href: "/employee/requests",
+        href: "/employee/requests?source=employee-dashboard",
         label: isKoLocale ? "요청 센터 열기" : "Open requests hub"
       };
   }
