@@ -11,7 +11,7 @@ manual preset mode and auto-resolution mode.
 
 ### In Scope
 
-- extend `/admin#payroll` statutory preview inputs with:
+- extend `/admin/payroll-close/preview-builder` statutory preview inputs with:
   - auto mode toggle for `incomeTaxLookupPresetAuto`
   - optional datetime-local input for `incomeTaxLookupAsOf`
 - update admin payload wiring:

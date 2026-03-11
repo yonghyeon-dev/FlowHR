@@ -15,7 +15,7 @@ faster handoff UX to copy payload snippets and share replay context without manu
   - server template sample
   - combined preview bundle
 - Add share action using Web Share API when available, with clipboard fallback.
-- Include deterministic share context payload (preset ID + split inputs + `/admin#payroll` replay href).
+- Include deterministic share context payload (preset ID + split inputs + `/admin/payroll-close/preview-builder` replay href).
 - Keep payroll API/server behavior unchanged.
 - Update roadmap/spec/tests and add WI-0231 e2e coverage.
 
