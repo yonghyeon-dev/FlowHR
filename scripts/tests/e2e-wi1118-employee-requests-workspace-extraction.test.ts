@@ -70,6 +70,7 @@ function run() {
   assert.match(requestsClient, /EmployeeRequestFeedbackPanels/);
   assert.match(requestsClient, /EmployeeRequestsResubmitWorkspacePanel/);
   assert.match(requestsClient, /refreshEmployeeSnapshotFromHelper/);
+  assert.doesNotMatch(requestsClient, /\/employee\?focus=/);
   assert.match(requestsClient, /resubmitChannel=/);
   assert.match(requestsClient, /resubmitRecordId=/);
 
