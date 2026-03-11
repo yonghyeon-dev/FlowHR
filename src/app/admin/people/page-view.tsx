@@ -85,7 +85,7 @@ export type AdminPeoplePageViewProps = {
   logs: ApiLog[];
   pendingLabel: string | null;
   showDevTools: boolean;
-  sourceContext: "admin-onboarding" | "admin-dashboard" | null;
+  sourceContext: "admin-onboarding" | "admin-dashboard" | "admin-hub" | null;
   focusPanel: "directory-filters" | "org-chart" | "employee-compare" | "employee-history" | null;
 };
 
@@ -114,16 +114,16 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
       ? isKoLocale
         ? "관리자 온보딩에서 이동했습니다."
         : "Opened from admin onboarding."
-      : sourceContext === "admin-dashboard"
+      : sourceContext === "admin-dashboard" || sourceContext === "admin-hub"
         ? isKoLocale
-          ? "관리자 대시보드에서 이동했습니다."
-          : "Opened from admin dashboard."
+          ? "관리자 허브에서 이동했습니다."
+          : "Opened from admin hub."
         : null;
 
   const sourceContextReturnHref =
     sourceContext === "admin-onboarding"
       ? "/admin/onboarding"
-      : sourceContext === "admin-dashboard"
+      : sourceContext === "admin-dashboard" || sourceContext === "admin-hub"
         ? "/admin"
         : null;
 
@@ -132,10 +132,10 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
       ? isKoLocale
         ? "온보딩으로 돌아가기"
         : "Back to onboarding"
-      : sourceContext === "admin-dashboard"
+      : sourceContext === "admin-dashboard" || sourceContext === "admin-hub"
         ? isKoLocale
-          ? "대시보드로 돌아가기"
-          : "Back to dashboard"
+          ? "허브로 돌아가기"
+          : "Back to hub"
         : null;
 
   const onJumpToFocusPanel = () => {

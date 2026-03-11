@@ -59,7 +59,7 @@ export function AdminContractsWorkspaceHeader({
               {analyticsSourceBanner} · {analyticsSourceFocusLabel}: {analyticsFocusLabel}
             </p>
           ) : null}
-          {analyticsSource === "admin-dashboard" ? (
+          {analyticsSource === "admin-hub" ? (
             <p className="small muted">
               {dashboardSourceBanner} · {dashboardSourceFocusLabel}: {dashboardFocusLabel}
             </p>

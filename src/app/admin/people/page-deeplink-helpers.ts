@@ -6,7 +6,7 @@ export type AdminPeopleFocusPanel =
   | "employee-compare"
   | "employee-history";
 
-export type AdminPeopleSourceContext = "admin-onboarding" | "admin-dashboard";
+export type AdminPeopleSourceContext = "admin-onboarding" | "admin-dashboard" | "admin-hub";
 
 export function normalizeAdminPeopleFocusPanel(value: string | null): AdminPeopleFocusPanel | null {
   const normalized = (value ?? "").trim().toLowerCase();
@@ -30,7 +30,11 @@ export function normalizeAdminPeopleFocusPanel(value: string | null): AdminPeopl
 
 export function normalizeAdminPeopleSourceContext(value: string | null): AdminPeopleSourceContext | null {
   const normalized = (value ?? "").trim().toLowerCase();
-  if (normalized === "admin-onboarding" || normalized === "admin-dashboard") {
+  if (
+    normalized === "admin-onboarding" ||
+    normalized === "admin-dashboard" ||
+    normalized === "admin-hub"
+  ) {
     return normalized;
   }
   return null;

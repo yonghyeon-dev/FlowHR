@@ -135,9 +135,9 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
               {sourceContextReturnLabel}
             </Link>
           ) : null}
-          {sourceContext !== "admin-dashboard" ? (
+          {sourceContext !== "admin-dashboard" && sourceContext !== "admin-hub" ? (
             <Link className="btn btn-secondary" href="/admin">
-              {isKoLocale ? "관리자 대시보드" : "Admin dashboard"}
+              {isKoLocale ? "관리자 허브" : "Admin hub"}
             </Link>
           ) : null}
         </div>

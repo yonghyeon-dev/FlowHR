@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { AdminApprovalExecutionsPageView } from "@/app/admin/approval-executions/page-view";
+import { isAdminHubSource } from "@/app/admin/source-context";
 import {
   runApproveExecutionAction,
   runEscalationAction,
@@ -164,7 +165,7 @@ export default function AdminApprovalExecutionsPage() {
 
   useEffect(() => {
     if (
-      source === "admin-dashboard" &&
+      isAdminHubSource(source) &&
       searchParams.get("stalledHoursMin") === null &&
       normalizeApprovalStateFilter(searchParams.get("state")) === "PENDING"
     ) {

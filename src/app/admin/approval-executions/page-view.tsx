@@ -19,6 +19,7 @@ import type {
   ApprovalStageHistoryDto,
   EscalationResultDto
 } from "@/app/admin/approval-executions/page-types";
+import { isAdminHubSource } from "@/app/admin/source-context";
 
 type AdminApprovalExecutionsPageViewProps = {
   isKoLocale: boolean;
@@ -146,9 +147,9 @@ export function AdminApprovalExecutionsPageView(props: AdminApprovalExecutionsPa
               : " Dev options are enabled so advanced logs are visible."
             : ""}
         </p>
-        {source === "admin-dashboard" ? (
+        {isAdminHubSource(source) ? (
           <p className="small muted">
-            {isKoLocale ? "관리자 대시보드에서 이동했습니다" : "Opened from admin dashboard"} ·{" "}
+            {isKoLocale ? "관리자 허브에서 이동했습니다" : "Opened from admin hub"} ·{" "}
             {isKoLocale ? "집중 대기함" : "Focused queue"}: {dashboardFocusLabel}
           </p>
         ) : null}

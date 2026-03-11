@@ -2,6 +2,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AdminContractsWorkspaceHeader } from "@/components/contracts/AdminContractsWorkspaceHeader";
+import { isAdminHubSource } from "@/app/admin/source-context";
 import {
   adminContractsCopyByLocale,
   contractApprovalStatusLabelByLocale,
@@ -33,11 +34,8 @@ import {
 import { resolveContractApprovalStatusLabel, resolveContractDocumentStatusLabel } from "@/components/contracts/status-label-helpers";
 import { formatEmployeeIdForLocaleDisplay, normalizeEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
-type AdminContractsWorkspaceProps = {
-  accessToken: string;
-};
 
-export default function AdminContractsWorkspace({ accessToken }: AdminContractsWorkspaceProps) {
+export default function AdminContractsWorkspace({ accessToken }: { accessToken: string }) {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
@@ -125,7 +123,7 @@ export default function AdminContractsWorkspace({ accessToken }: AdminContractsW
         heroEyebrow={copy.heroEyebrow}
         title={copy.title}
         description={copy.description}
-        analyticsSource={analyticsSource}
+        analyticsSource={isAdminHubSource(analyticsSource) ? "admin-hub" : analyticsSource}
         analyticsFocusLabel={analyticsFocusLabel}
         analyticsSourceBanner={copy.analyticsSourceBanner}
         analyticsSourceFocusLabel={copy.analyticsSourceFocusLabel}

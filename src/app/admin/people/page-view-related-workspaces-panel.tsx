@@ -16,7 +16,7 @@ export function AdminPeopleRelatedWorkspacesPanel({ isKoLocale }: AdminPeopleRel
           {isKoLocale ? "근태 워크스페이스" : "Attendance workspace"}
         </Link>
         <Link className="btn btn-secondary" href="/admin">
-          {isKoLocale ? "관리자 대시보드" : "Admin dashboard"}
+          {isKoLocale ? "관리자 허브" : "Admin hub"}
         </Link>
       </div>
     </article>

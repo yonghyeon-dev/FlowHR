@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 
 import { payrollCloseCopyByLocale } from "@/components/payroll-close/copy";
 import { isTruthyFlag } from "@/app/admin/page-helpers";
+import { isAdminHubSource } from "@/app/admin/source-context";
 import {
   normalizeAdminAnalyticsFocusMetric,
   resolveAdminAnalyticsBackHref
@@ -194,7 +195,7 @@ export default function PayrollClosePeriodConsole({
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
-        {source === "admin-dashboard" ? (
+        {isAdminHubSource(source) ? (
           <p className="small muted">
             {copy.dashboardSourceBanner} · {copy.dashboardSourceFocusLabel}: {focusLabel}
           </p>
