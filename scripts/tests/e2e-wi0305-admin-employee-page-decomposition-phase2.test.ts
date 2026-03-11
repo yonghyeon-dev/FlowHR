@@ -122,8 +122,9 @@ async function run() {
   assert.match(employeePage, /<EmployeeDashboardChrome/);
   assert.match(employeePage, /<EmployeeAccountOverviewPanels/);
   assert.match(employeePage, /resolveEmployeePromotedRouteForFocusSection/);
-  assert.match(employeePage, /resolveEmployeeResubmitDraftPrefill/);
-  assert.match(employeePage, /mode = "home"/);
+  assert.doesNotMatch(employeePage, /resolveEmployeeResubmitDraftPrefill/);
+  assert.doesNotMatch(employeePage, /mode = "home"/);
+  assert.match(employeePage, /<EmployeeScheduleSummaryPanel/);
   assert.doesNotMatch(employeePage, /<article className="panel panel-request-feedback" id="request-feedback">/);
   assert.doesNotMatch(employeePage, /<article className="panel panel-request-resubmit" id="request-resubmit">/);
   assert.doesNotMatch(employeePage, /<EmployeeRequestFeedbackPanels/);

@@ -1,5 +1,18 @@
 import type { EmployeeAttendanceLeavePanelsProps } from "@/components/employee-dashboard/EmployeeAttendanceLeavePanels";
 
+type EmployeeApiLogsPanelProps = Pick<
+  EmployeeAttendanceLeavePanelsProps,
+  | "sectionTitles"
+  | "apiLogsCopy"
+  | "callApiLabels"
+  | "listBadgeLabels"
+  | "pendingLabel"
+  | "logs"
+  | "stats"
+  | "latestPayload"
+  | "onClearLogs"
+>;
+
 export function EmployeeApiLogsPanel({
   sectionTitles,
   apiLogsCopy,
@@ -9,7 +22,7 @@ export function EmployeeApiLogsPanel({
   stats,
   latestPayload,
   onClearLogs
-}: EmployeeAttendanceLeavePanelsProps) {
+}: EmployeeApiLogsPanelProps) {
   return (
     <article className="panel panel-log">
       <h2>{sectionTitles.apiLogs}</h2>

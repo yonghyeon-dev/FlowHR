@@ -8,6 +8,12 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeAttendanceLeaveWorkspaceClient = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "attendance-leave-workspace-client.tsx"
+  );
   const employeeHelpers = readUtf8("src", "app", "employee", "page-helpers.ts");
   const employeeLocaleHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
   const employeeAttendanceLeavePanels = readUtf8(
@@ -62,21 +68,18 @@ async function run() {
 
   assert.match(employeePage, /from "@\/app\/employee\/page-locale-helpers"/);
   assert.match(
-    employeePage,
+    employeeAttendanceLeaveWorkspaceClient,
     /from "@\/components\/employee-dashboard\/EmployeeAttendanceFormPanel"/
   );
   assert.match(
-    employeePage,
+    employeeAttendanceLeaveWorkspaceClient,
     /from "@\/components\/employee-dashboard\/EmployeeLeaveRequestPanel"/
   );
   assert.match(
     employeePage,
     /from "@\/components\/employee-dashboard\/EmployeeScheduleSummaryPanel"/
   );
-  assert.match(
-    employeePage,
-    /const localeLabelBundle = useMemo\(\(\) => resolveEmployeeLocaleLabelBundle\(isKoLocale\), \[isKoLocale\]\);/
-  );
+  assert.match(employeePage, /resolveEmployeeLocaleLabelBundle\(isKoLocale\)/);
   assert.match(employeePage, /isDefaultEmployeeCancelReason\(previous\)/);
   assert.match(employeePage, /const supabaseUrl = process\.env\.NEXT_PUBLIC_SUPABASE_URL \?\? notConfiguredLabel;/);
   assert.match(employeeLocaleSources, /toLocaleString\(runtimeLocale\)/);
@@ -92,6 +95,8 @@ async function run() {
   assert.doesNotMatch(employeePage, /const LEAVE_CALENDAR_WEEKDAYS =/);
   assert.doesNotMatch(employeePage, /const ATTENDANCE_NOTE_PRESETS =/);
   assert.doesNotMatch(employeePage, /toLocaleString\("ko-KR"\)/);
+  assert.doesNotMatch(employeePage, /from "@\/components\/employee-dashboard\/EmployeeAttendanceFormPanel"/);
+  assert.doesNotMatch(employeePage, /from "@\/components\/employee-dashboard\/EmployeeLeaveRequestPanel"/);
 
   assert.match(employeeLocaleHelpers, /export function resolveEmployeeLocaleLabelBundle\(isKoLocale: boolean\)/);
   assert.match(employeeLocaleHelpers, /export function isDefaultEmployeeCancelReason\(reason: string\)/);

@@ -61,15 +61,11 @@ async function run() {
 
   assert.match(employeePage, /const \{ locale \} = useI18n\(\);/);
   assert.match(employeePage, /from "@\/app\/employee\/page-locale-helpers"/);
-  assert.match(
-    employeePage,
-    /const localeLabelBundle = useMemo\(\(\) => resolveEmployeeLocaleLabelBundle\(isKoLocale\), \[isKoLocale\]\);/
-  );
+  assert.match(employeePage, /resolveEmployeeLocaleLabelBundle\(isKoLocale\)/);
   assert.match(employeePage, /const supabaseUrl = process\.env\.NEXT_PUBLIC_SUPABASE_URL \?\? notConfiguredLabel;/);
-  assert.match(employeePage, /const toRequestStatusLabel = useCallback\(/);
   assert.match(employeePage, /const toLeaveTypeLabel = useCallback\(/);
-  assert.match(employeePage, /EmployeeAttendanceFormPanel/);
-  assert.match(employeePage, /EmployeeLeaveRequestPanel/);
+  assert.doesNotMatch(employeePage, /EmployeeAttendanceFormPanel/);
+  assert.doesNotMatch(employeePage, /EmployeeLeaveRequestPanel/);
   assert.match(employeePage, /EmployeeScheduleSummaryPanel/);
 
   assert.match(employeeRequestFeedbackPanels, /\{toRequestStatusLabel\(row\.status\)\}/);

@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Restore green deploy after the employee attendance / leave workspace extraction by removing invalid page-file named exports from the home route.
-2. Reduce the home-route monolith further now that attendance / leave workspaces can be extracted behind dedicated route clients.
-3. Start the next employee shell pass that removes the remaining request/leave hash-only entry dependence where a stable route or workspace destination is more appropriate.
+1. Close `WI-1126` by removing the remaining dead attendance / leave mode logic from the employee home route and restore a clean home-only shell.
+2. Start the next employee shell pass that removes the remaining request/leave hash-only entry dependence where a stable route or workspace destination is more appropriate.
+3. Begin the first admin route-first extraction slice once the employee home surface no longer carries route-only workspace responsibility.
 
 ## 5. Blockers Or Watch Items
 
@@ -296,3 +296,6 @@ Latest planning reset:
 - Closed `WI-1124` through the full GitHub flow and merged it to `main` as `c6b0b447c93d2dc1dc3d1ec16ced41bfbb7b90dc`, then deleted the feature branch.
 - Re-verified `WI-1124` locally with `npm run build`, but the first `main` production deploy failed because `src/app/employee/page.tsx` still exposed the invalid named export `EmployeeSelfServicePage` from a Next page file.
 - Started `WI-1125` to remove the invalid home-page named export and restore green production deploy after the attendance / leave workspace extraction.
+- Closed `WI-1125` through the full GitHub flow and merged it to `main` as `c3cba8f69f9814acc1a5c04cb6c9ffe1362077e7`, then deleted the feature branch.
+- Re-verified `WI-1125` on the delivery path and confirmed both `ci` (`22932415439`) and `vercel-production-deploy` (`22932415420`) stay green after the home-page export cleanup.
+- Started `WI-1126` to remove the remaining dead attendance / leave mode branches from `src/app/employee/page.tsx`, keep the employee home route home-only, and decouple `EmployeeApiLogsPanel` from attendance/leave workspace-only props.

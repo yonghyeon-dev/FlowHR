@@ -9,6 +9,12 @@ function readUtf8(...parts: string[]) {
 function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
   const requestsPage = readUtf8("src", "app", "employee", "requests", "page.tsx");
+  const attendanceLeaveWorkspaceClient = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "attendance-leave-workspace-client.tsx"
+  );
   const sourceContext = readUtf8(
     "src",
     "components",
@@ -52,8 +58,9 @@ function run() {
     "WI-1121-employee-workspace-hero-alignment.md"
   );
 
-  assert.match(employeePage, /EmployeeWorkspaceHero/);
+  assert.doesNotMatch(employeePage, /EmployeeWorkspaceHero/);
   assert.match(requestsPage, /EmployeeWorkspaceHero/);
+  assert.match(attendanceLeaveWorkspaceClient, /EmployeeWorkspaceHero/);
   assert.match(scheduleBoard, /EmployeeWorkspaceHero/);
   assert.match(sourceContext, /employee-dashboard/);
   assert.match(sourceContext, /employee-requests/);
