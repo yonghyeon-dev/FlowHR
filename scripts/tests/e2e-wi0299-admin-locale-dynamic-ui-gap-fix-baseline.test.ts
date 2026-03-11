@@ -9,7 +9,7 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
   const adminPanels = readUtf8("src", "app", "admin", "page-panels.tsx");
-  const adminSchedulingPanel = readUtf8("src", "components", "admin-dashboard", "AdminSchedulingPanel.tsx");
+  const schedulingCopy = readUtf8("src", "components", "scheduling", "copy.ts");
   const adminDebugLogsPanel = readUtf8("src", "components", "admin-dashboard", "AdminDebugLogsPanel.tsx");
   const queueHelpers = readUtf8("src", "app", "admin", "page-queue-helpers.ts");
   const workItem = readUtf8("work-items", "WI-0299-admin-locale-dynamic-ui-gap-fix-baseline.md");
@@ -17,14 +17,11 @@ async function run() {
 
   assert.match(adminPage, /const \{ locale(?:,\s*t)? \} = useI18n\(\);/);
   assert.doesNotMatch(adminPage, /from "@\/app\/admin\/page-locale-helpers"/);
-  assert.match(adminPanels, /from "@\/app\/admin\/page-locale-helpers"/);
-  assert.match(adminPanels, /localeLabelBundle: ReturnType<typeof resolveAdminLocaleLabelBundle>/);
-  assert.match(adminPanels, /workTypeLabels/);
-  assert.match(adminPanels, /logStatusLabels/);
-
-  assert.match(adminSchedulingPanel, /\{schedule\.isHoliday \? workTypeLabels\.holiday : workTypeLabels\.work\}/);
+  assert.match(adminPanels, /ADMIN_DASHBOARD_PANELS_RETIRED_WI_1136/);
+  assert.match(schedulingCopy, /holidayYes/);
+  assert.match(schedulingCopy, /holidayNo/);
   assert.match(adminDebugLogsPanel, /\{log\.ok \? logStatusLabels\.success : logStatusLabels\.fail\}/);
-  assert.doesNotMatch(adminSchedulingPanel, /schedule\.isHoliday \? "HOLIDAY" : "WORK"/);
+  assert.doesNotMatch(schedulingCopy, /schedule\.isHoliday \? "HOLIDAY" : "WORK"/);
   assert.doesNotMatch(adminDebugLogsPanel, /log\.ok \? "OK" : "FAIL"/);
 
   assert.match(queueHelpers, /queueLabels: \{/);

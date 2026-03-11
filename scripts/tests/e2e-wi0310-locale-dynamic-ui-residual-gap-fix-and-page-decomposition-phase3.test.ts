@@ -13,7 +13,6 @@ async function run() {
   const adminLocaleHelpers = readUtf8("src", "app", "admin", "page-locale-helpers.ts");
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
   const employeeLocaleHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
-  const adminChrome = readUtf8("src", "components", "admin-dashboard", "AdminDashboardChrome.tsx");
   const adminDebugLogsPanel = readUtf8(
     "src",
     "components",
@@ -26,12 +25,7 @@ async function run() {
     "admin-dashboard",
     "AdminOnboardingAccountPanels.tsx"
   );
-  const adminPeopleInvitePanels = readUtf8(
-    "src",
-    "components",
-    "admin-dashboard",
-    "AdminPeopleInvitePanels.tsx"
-  );
+  const adminOnboardingSections = readUtf8("src", "components", "admin-onboarding", "AdminOnboardingSections.tsx");
   const adminPayrollPanel = readUtf8("src", "components", "admin-dashboard", "AdminPayrollPanel.tsx");
   const employeeAccountOverviewPanels = readUtf8(
     "src",
@@ -72,10 +66,8 @@ async function run() {
     adminPage,
     /const \{ queueLabels, logStatusLabels \} = localeLabelBundle;/
   );
-  assert.match(adminPanels, /from "@\/app\/admin\/page-locale-helpers"/);
-  assert.match(adminPanels, /localeLabelBundle: ReturnType<typeof resolveAdminLocaleLabelBundle>/);
-  assert.match(adminPanels, /workTypeLabels/);
-  assert.match(adminPageState, /isDefaultDemoOrganizationName\(previous\)/);
+  assert.match(adminPanels, /ADMIN_DASHBOARD_PANELS_RETIRED_WI_1136/);
+  assert.match(adminPageState, /ADMIN_DASHBOARD_STATE_RETIRED_WI_1136/);
   assert.doesNotMatch(adminPage, /const updatedAtLabel = isKoLocale \?/);
 
   assert.match(adminLocaleHelpers, /export function isDefaultDemoOrganizationName\(/);
@@ -89,14 +81,10 @@ async function run() {
 
   assert.match(adminPayrollPanel, /Statutory deductions \(KR baseline\)/);
 
-  assert.match(adminChrome, /Admin Dashboard/);
-  assert.match(adminChrome, /Refresh Dashboard/);
-  assert.doesNotMatch(adminChrome, /\(production\)/);
-
   assert.match(adminDebugLogsPanel, /Debug Logs/);
   assert.match(adminOnboardingAccountPanels, /Dev and verification settings/);
-  assert.match(adminPeopleInvitePanels, /Employee Management/);
-  assert.match(adminPeopleInvitePanels, /Create invite link/);
+  assert.match(adminOnboardingSections, /copy\.inviteCoverageTitle/);
+  assert.match(adminOnboardingSections, /copy\.inviteCoverageIssueButton/);
 
   assert.match(employeeChrome, /Employee Portal/);
   assert.match(employeeChrome, /Pending Leave/);

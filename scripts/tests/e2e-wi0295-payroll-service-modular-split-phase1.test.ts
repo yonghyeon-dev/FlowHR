@@ -34,6 +34,14 @@ async function run() {
   );
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
   const adminPageState = readUtf8("src", "app", "admin", "page-state.ts");
+  const previewBuilderState = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "payroll-close",
+    "preview-builder",
+    "page-state.ts"
+  );
   const adminPageHelpers = readUtf8("src", "app", "admin", "page-helpers.ts");
   const adminPageTypes = readUtf8("src", "app", "admin", "page-types.ts");
   const workItem = readUtf8(
@@ -74,14 +82,15 @@ async function run() {
   );
 
   assert.match(adminPage, /from \"@\/app\/admin\/page-helpers\"/);
+  assert.match(adminPageState, /ADMIN_DASHBOARD_STATE_RETIRED_WI_1136/);
   assert.match(
-    `${adminPage}\n${adminPageState}`,
-    /from \"@\/app\/admin\/page-types\"/
+    previewBuilderState,
+    /const \[previewedPayroll, setPreviewedPayroll\] = useState<PayrollRunDto\[]>\(\[]\);/
   );
   assert.match(adminPage, /const showDevTools = isTruthyFlag/);
   assert.match(
-    `${adminPage}\n${adminPageState}`,
-    /const \[periodStart, setPeriodStart\] = useState\(firstDayOfMonthLocal\(\)\)/
+    adminPage,
+    /const periodStart = useMemo\(\(\) => firstDayOfMonthLocal\(\), \[]\)/
   );
 
   assert.match(adminPageHelpers, /export function buildQuery/);

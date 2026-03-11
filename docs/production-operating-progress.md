@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1135` by isolating payroll preview draft state into the preview-builder workspace seam.
-2. Re-verify `WI-1135` through PR CI, `main` CI, and `vercel-production-deploy`.
-3. Start the next admin route-first extraction after payroll preview draft ownership no longer lives in the shared dashboard state.
+1. Close `WI-1135` by confirming `main` CI and `vercel-production-deploy` stay green after payroll preview state isolation.
+2. Start `WI-1136` to remove unused admin dashboard scaffolding and refresh stale decomposition guards around the current route-first model.
+3. Continue the next admin route-first extraction only after the legacy scaffolding is retired.
 
 ## 5. Blockers Or Watch Items
 
@@ -326,3 +326,6 @@ Latest planning reset:
 - Closed `WI-1134` with merge `5c1bfb7af2c19100bc80e4f06b2b2cb0a3ec83be`.
 - Re-verified `WI-1134` on the delivery path and confirmed both `ci` (`22939485442`) and `vercel-production-deploy` (`22939485472`) stay green after pruning the admin dashboard payroll dead props.
 - Started `WI-1135` to move payroll preview draft state and preview wiring out of the shared admin dashboard state and into the dedicated preview-builder workspace seam.
+- Closed `WI-1135` with merge `3eef52d055970f85ea8203130877ef2d4252194a`.
+- Re-verified `WI-1135` on the delivery path and confirmed both `ci` (`22940359312`) and `vercel-production-deploy` (`22940359339`) stay green after the admin payroll preview state isolation.
+- Started `WI-1136` to retire unused admin dashboard panel/state/action scaffolding and rewrite stale decomposition guards around the current route-first admin model.
