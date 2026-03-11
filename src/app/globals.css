@@ -674,6 +674,84 @@ body {
   display: grid;
   gap: 10px;
 }
+.employee-guide-context-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.employee-guide-context-card,
+.employee-guide-action-item {
+  border: 1px solid rgba(176, 209, 195, 0.34);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 14px;
+}
+.employee-guide-context-card {
+  display: grid;
+  gap: 6px;
+}
+.employee-guide-context-card strong {
+  font-size: 1rem;
+  line-height: 1.35;
+}
+.employee-guide-context-card code {
+  color: var(--primary);
+}
+.employee-guide-context-actions {
+  margin-top: 16px;
+}
+.employee-guide-journey-card,
+.employee-guide-actions-card,
+.employee-guide-checklist-card,
+.employee-guide-summary-card,
+.employee-guide-logs-card {
+  border-color: rgba(176, 209, 195, 0.4);
+  background: linear-gradient(180deg, #ffffff 0%, #f7fffb 100%);
+}
+.employee-guide-journey-list,
+.employee-guide-checklist-list,
+.employee-guide-summary-list {
+  display: grid;
+  gap: 10px;
+}
+.employee-guide-journey-list li,
+.employee-guide-checklist-list li,
+.employee-guide-summary-list li {
+  border: 1px solid rgba(176, 209, 195, 0.28);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 12px 14px;
+}
+.employee-guide-journey-list li {
+  list-style-position: inside;
+}
+.employee-guide-action-grid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.employee-guide-action-item {
+  display: grid;
+  gap: 12px;
+}
+.employee-guide-action-item strong {
+  font-size: 0.96rem;
+}
+.employee-guide-action-item p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+  font-size: 0.82rem;
+}
+.employee-guide-action-item .btn {
+  justify-self: flex-start;
+}
+.employee-guide-summary-card strong {
+  font-size: 1.05rem;
+}
 .employee-home-panel-grid {
   align-items: start;
 }
@@ -4572,6 +4650,10 @@ button.queue-badge:hover {
     grid-template-columns: 1fr;
   }
   .employee-home-shortcuts-grid {
+    grid-template-columns: 1fr;
+  }
+  .employee-guide-context-grid,
+  .employee-guide-action-grid {
     grid-template-columns: 1fr;
   }
   .summary-grid {

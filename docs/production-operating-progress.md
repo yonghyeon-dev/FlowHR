@@ -9,6 +9,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 2. Completed In This Wave
 
+- Closed `WI-1162` through the full GitHub flow and merged it to `main` as `9673b4f133b4df60bb531d5e8975aed459acec58`, then deleted the feature branch.
+- Re-verified `WI-1162` on the delivery path and confirmed both `ci` (`22968706490`) and `vercel-production-deploy` (`22968706549`) stay green after the employee home visual-density tidy pass.
+- Started `WI-1163` to restore readable Korean guide copy and tighten employee guide context, quick-action, and checklist density with guide-specific visual grouping.
 - Closed `WI-1161` through the full GitHub flow and merged it to `main` as `477412f73bde9079449e18791b05440b9c6d4e3e`, then deleted the feature branch.
 - Re-verified `WI-1161` on the delivery path and confirmed both `ci` (`22967053564`) and `vercel-production-deploy` (`22967053511`) stay green after the employee guide route-first tidy pass.
 - Started `WI-1162` to reduce employee home visual density by rebuilding quick tasks into an employee-only launcher, lifting workspace hubs into primary-plus-secondary action cards, and tightening priority-action preview rhythm.
