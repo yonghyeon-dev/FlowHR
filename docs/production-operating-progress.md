@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1127` by promoting the remaining employee requests monitoring and resubmit entry points onto stable subroutes instead of hash-only destinations.
-2. Begin the first admin route-first extraction slice once the employee requests hub no longer depends on hidden subpage anchors for monitoring/resubmit work.
-3. Start the next employee requests follow-up pass that trims residual hash-only deep links inside route-first workspaces.
+1. Close `WI-1128` by promoting the admin payroll queue `focus` links onto stable subroutes instead of banner-only pseudo-state.
+2. Start the next employee requests follow-up pass that trims residual hash-only deep links inside route-first workspaces.
+3. Begin the next admin route-first slice after payroll queue route ownership is explicit.
 
 ## 5. Blockers Or Watch Items
 
@@ -302,3 +302,6 @@ Latest planning reset:
 - Closed `WI-1126` through the full GitHub flow and merged it to `main` as `5eec94cabb9a676ac055d108f9896586a46aa15e`, then deleted the feature branch.
 - Re-verified `WI-1126` on the delivery path and confirmed both `ci` (`22934173121`) and `vercel-production-deploy` (`22934173130`) stay green after the employee home dead-mode cleanup.
 - Started `WI-1127` to promote employee request monitoring and resubmit follow-up into stable subroutes so dashboard, guide, and shortcut entry points no longer depend on `/employee/requests` hash targets.
+- Closed `WI-1127` through the full GitHub flow and merged it to `main` as `4571ffcab8c101319ff49cf892a7f947b4cb9a9d`, then deleted the feature branch.
+- Re-verified `WI-1127` on the delivery path and confirmed both `ci` (`22934931479`) and `vercel-production-deploy` (`22934931488`) stay green after the employee requests subroute promotion.
+- Started `WI-1128` to promote admin payroll queue pseudo-focus links into stable subroutes and keep legacy `?focus=` entries on compatibility redirects only.

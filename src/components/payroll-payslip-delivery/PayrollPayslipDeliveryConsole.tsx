@@ -19,7 +19,15 @@ import {
   toSeoulStartIso
 } from "@/components/payroll-payslip-delivery/types";
 
-export default function PayrollPayslipDeliveryConsole() {
+export type PayrollPayslipDeliveryQueueMode = "all" | "undistributed";
+
+type PayrollPayslipDeliveryConsoleProps = {
+  queueMode?: PayrollPayslipDeliveryQueueMode;
+};
+
+export default function PayrollPayslipDeliveryConsole({
+  queueMode = "all"
+}: PayrollPayslipDeliveryConsoleProps) {
   const searchParams = useSearchParams();
   const range = defaultMonthRange();
   const [employeeId, setEmployeeId] = useState("");
@@ -42,8 +50,10 @@ export default function PayrollPayslipDeliveryConsole() {
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = payrollPayslipDeliveryCopyByLocale[locale];
   const source = searchParams.get("source");
-  const focus = searchParams.get("focus");
-  const focusLabel = focus === "undistributed" ? copy.focusUndistributedLabel : copy.focusAllLabel;
+  const focusLabel =
+    queueMode === "undistributed"
+      ? copy.focusUndistributedLabel
+      : copy.focusAllLabel;
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 

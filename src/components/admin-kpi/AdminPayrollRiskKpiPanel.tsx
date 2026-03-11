@@ -110,21 +110,21 @@ function resolvePrimaryPayrollRiskAction(
 ) {
   if (snapshot.previewedRunCount > 0) {
     return {
-      href: "/admin/payroll-close?focus=previewed",
+      href: "/admin/payroll-close/previewed",
       label: copy.payrollRiskPanel.actionOpenPayrollClose,
       reason: copy.payrollRiskPanel.priorityReasonPreviewed
     };
   }
   if (snapshot.confirmedUndistributedCount > 0) {
     return {
-      href: "/admin/payroll-payslip-delivery?focus=undistributed",
+      href: "/admin/payroll-payslip-delivery/undistributed",
       label: copy.payrollRiskPanel.actionOpenPayslipDelivery,
       reason: copy.payrollRiskPanel.priorityReasonUndistributed
     };
   }
   if (snapshot.distributedUnacknowledgedCount > 0) {
     return {
-      href: "/admin/payroll-payslip-delivery?focus=undistributed",
+      href: "/admin/payroll-payslip-delivery",
       label: copy.payrollRiskPanel.actionOpenPayslipDelivery,
       reason: copy.payrollRiskPanel.priorityReasonUnacknowledged
     };
