@@ -30,12 +30,28 @@ export function EmployeeDashboardChrome({
   variant = "workspace"
 }: EmployeeDashboardChromeProps) {
   const isHomeVariant = variant === "home";
+  const headerClassName = `page-header ${
+    isHomeVariant
+      ? "employee-home-hero"
+      : "workspace-page-header employee-workspace-status-header"
+  }`.trim();
+  const actionsClassName = `page-actions ${
+    isHomeVariant ? "employee-home-hero-actions" : ""
+  }`.trim();
+  const summaryStripClassName = `kpi-strip ${
+    isHomeVariant
+      ? "employee-home-status-strip"
+      : "workspace-summary-strip employee-workspace-status-strip"
+  }`.trim();
+  const summaryCardClassName = `kpi-card ${
+    isHomeVariant
+      ? "employee-home-status-card"
+      : "workspace-summary-card employee-workspace-status-card"
+  }`.trim();
 
   return (
     <>
-      <header
-        className={`page-header ${isHomeVariant ? "employee-home-hero" : ""}`.trim()}
-      >
+      <header className={headerClassName}>
         <div className={isHomeVariant ? "employee-home-hero-copy" : undefined}>
           {isHomeVariant ? <p className="eyebrow">employee today</p> : null}
           <h1 className="page-title">{isKoLocale ? "직원 포털" : "Employee Portal"}</h1>
@@ -61,9 +77,7 @@ export function EmployeeDashboardChrome({
             </div>
           ) : null}
         </div>
-        <div
-          className={`page-actions ${isHomeVariant ? "employee-home-hero-actions" : ""}`.trim()}
-        >
+        <div className={actionsClassName}>
           <Link className="btn btn-secondary" href="/employee/payslips?source=employee-dashboard">
             {isKoLocale ? "급여 명세서" : "Payslips"}
           </Link>
@@ -87,29 +101,29 @@ export function EmployeeDashboardChrome({
       </header>
 
       {requiresLoginSession ? (
-        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
+        <p className="small fail workspace-inline-status">
           {productionSessionRequiredNotice} <Link href="/login">/login</Link>
         </p>
       ) : null}
 
-      <section className={`kpi-strip ${isHomeVariant ? "employee-home-status-strip" : ""}`.trim()}>
-        <article className={`kpi-card ${isHomeVariant ? "employee-home-status-card" : ""}`.trim()}>
+      <section className={summaryStripClassName}>
+        <article className={summaryCardClassName}>
           <p>{isKoLocale ? "오늘 출퇴근" : "Today Attendance"}</p>
           <strong>{attendanceSummary}</strong>
         </article>
-        <article className={`kpi-card ${isHomeVariant ? "employee-home-status-card" : ""}`.trim()}>
+        <article className={summaryCardClassName}>
           <p>{isKoLocale ? "잔여 휴가" : "Leave Balance"}</p>
           <strong>{leaveBalanceLabel}</strong>
         </article>
-        <article className={`kpi-card ${isHomeVariant ? "employee-home-status-card" : ""}`.trim()}>
+        <article className={summaryCardClassName}>
           <p>{isKoLocale ? "휴가 대기" : "Pending Leave"}</p>
           <strong>{pendingLeaveCount}</strong>
         </article>
-        <article className={`kpi-card ${isHomeVariant ? "employee-home-status-card" : ""}`.trim()}>
+        <article className={summaryCardClassName}>
           <p>{isKoLocale ? "요청 처리 성공률" : "Request success rate"}</p>
           <strong>{stats.successRate}%</strong>
         </article>
-        <article className={`kpi-card ${isHomeVariant ? "employee-home-status-card" : ""}`.trim()}>
+        <article className={summaryCardClassName}>
           <p>{isKoLocale ? "최근 처리 작업" : "Latest activity"}</p>
           <strong>{pendingLabel ?? "-"}</strong>
         </article>

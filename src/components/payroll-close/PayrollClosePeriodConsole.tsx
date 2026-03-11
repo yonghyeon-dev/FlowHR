@@ -190,18 +190,18 @@ export default function PayrollClosePeriodConsole({
   }
 
   return (
-    <main className="saas-content">
-      <header className="hero">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
         {isAdminHubSource(source) ? (
-          <p className="small muted">
+          <p className="small muted workspace-source-banner">
             {copy.dashboardSourceBanner} · {copy.dashboardSourceFocusLabel}: {focusLabel}
           </p>
         ) : null}
         {source === "admin-analytics" ? (
-          <p className="small muted">
+          <p className="small muted workspace-source-banner">
             {locale === "ko" ? "관리자 분석에서 이동했습니다" : "Opened from admin analytics"} ·{" "}
             {locale === "ko" ? "집중 큐" : "Focus queue"}: {analyticsFocusLabel}
           </p>
@@ -215,8 +215,8 @@ export default function PayrollClosePeriodConsole({
         ) : null}
       </header>
 
-      <section className="panel-grid">
-        <article className="panel">
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card">
           <h2>{copy.inputTitle}</h2>
           {showDevTools ? (
             <p className="small muted">
@@ -256,15 +256,15 @@ export default function PayrollClosePeriodConsole({
               {copy.applyAction}
             </button>
           </div>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
+          {statusMessage ? <p className="small workspace-inline-status">{statusMessage}</p> : null}
           {normalizedSupabaseSessionError ? (
-            <p className="small fail">
+            <p className="small fail workspace-inline-status">
               {copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}
             </p>
           ) : null}
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.runStatesTitle}</h2>
           {!result ? (
             <p className="small">{copy.noCloseSummaryYet}</p>
@@ -278,7 +278,7 @@ export default function PayrollClosePeriodConsole({
           )}
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.totalsDeltaTitle}</h2>
           {!result ? (
             <p className="small">{copy.noTotalsYet}</p>
@@ -302,7 +302,7 @@ export default function PayrollClosePeriodConsole({
         </article>
 
         {showDevTools ? (
-          <article className="panel">
+          <article className="panel workspace-side-panel">
             <h2>{copy.apiLogsTitle}</h2>
             <p className="small">
               {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
