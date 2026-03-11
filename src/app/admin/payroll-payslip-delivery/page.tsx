@@ -1,12 +1,31 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import PayrollPayslipDeliveryConsole from "@/components/payroll-payslip-delivery/PayrollPayslipDeliveryConsole";
-import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
+import {
+  buildRedirectHref,
+  getFirstSearchParamValue
+} from "@/app/admin/payroll-route-query";
 
-export default function AdminPayrollPayslipDeliveryPage() {
-  const { loading } = useSupabaseSession();
+import AdminPayrollPayslipDeliveryPageClient from "./page-client";
 
-  if (loading) return null;
+type AdminPayrollPayslipDeliveryPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
-  return <PayrollPayslipDeliveryConsole />;
+export default async function AdminPayrollPayslipDeliveryPage({
+  searchParams
+}: AdminPayrollPayslipDeliveryPageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const focus = getFirstSearchParamValue(resolvedSearchParams, "focus");
+
+  if (focus === "undistributed") {
+    redirect(
+      buildRedirectHref(
+        "/admin/payroll-payslip-delivery/undistributed",
+        resolvedSearchParams,
+        ["focus"]
+      )
+    );
+  }
+
+  return <AdminPayrollPayslipDeliveryPageClient queueMode="all" />;
 }

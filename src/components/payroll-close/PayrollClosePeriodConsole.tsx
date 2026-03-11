@@ -25,6 +25,8 @@ import {
 } from "@/components/payroll-close/types";
 import { normalizePayrollYearEndRuntimeMessage } from "@/components/payroll-year-end/runtime-copy-helpers";
 
+export type PayrollCloseQueueMode = "all" | "previewed";
+
 function parseRequiredInt(value: string, fieldLabel: string, nonNegativeIntegerLabel: string) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) {
@@ -33,7 +35,13 @@ function parseRequiredInt(value: string, fieldLabel: string, nonNegativeIntegerL
   return parsed;
 }
 
-export default function PayrollClosePeriodConsole() {
+type PayrollClosePeriodConsoleProps = {
+  queueMode?: PayrollCloseQueueMode;
+};
+
+export default function PayrollClosePeriodConsole({
+  queueMode = "all"
+}: PayrollClosePeriodConsoleProps) {
   const searchParams = useSearchParams();
   const range = defaultMonthRange();
   const [periodStartDate, setPeriodStartDate] = useState(range.periodStartDate);
@@ -57,17 +65,14 @@ export default function PayrollClosePeriodConsole() {
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = payrollCloseCopyByLocale[locale];
   const source = searchParams.get("source");
-  const focus = searchParams.get("focus");
   const analyticsFocusMetric = normalizeAdminAnalyticsFocusMetric(
     searchParams.get("analyticsFocus")
   );
   const analyticsBackHref = resolveAdminAnalyticsBackHref(source, analyticsFocusMetric);
   const focusLabel =
-    focus === "previewed"
+    queueMode === "previewed"
       ? copy.focusPreviewedLabel
-      : focus === "undistributed"
-        ? copy.focusUndistributedLabel
-        : copy.focusAllLabel;
+      : copy.focusAllLabel;
   const analyticsFocusLabel =
     searchParams.get("focusMetric") === "payrollConfirmedRate"
       ? locale === "ko"

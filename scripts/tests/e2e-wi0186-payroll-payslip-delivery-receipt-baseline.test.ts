@@ -59,6 +59,13 @@ async function run() {
   const adminNavSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
   const employeeLayoutSource = readUtf8("src", "app", "employee", "layout.tsx");
   const adminPageSource = readUtf8("src", "app", "admin", "payroll-payslip-delivery", "page.tsx");
+  const adminPageClientSource = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "payroll-payslip-delivery",
+    "page-client.tsx"
+  );
   const employeePageSource = readUtf8("src", "app", "employee", "payslip-receipts", "page.tsx");
   const adminConsoleSource = readUtf8(
     "src",
@@ -78,7 +85,8 @@ async function run() {
 
   assert.match(adminNavSource, /\/admin\/payroll-payslip-delivery/, "admin nav should include payslip delivery route");
   assert.match(employeeLayoutSource, /\/employee\/payslip-receipts/, "employee nav should include payslip receipt route");
-  assert.match(adminPageSource, /PayrollPayslipDeliveryConsole/, "admin page should render payslip delivery console");
+  assert.match(adminPageSource, /AdminPayrollPayslipDeliveryPageClient/, "admin page should route through payslip delivery page client");
+  assert.match(adminPageClientSource, /PayrollPayslipDeliveryConsole/, "admin page client should render payslip delivery console");
   assert.match(employeePageSource, /PayslipReceiptConsole/, "employee page should render payslip receipt console");
   assert.match(adminConsoleSource, /payrollPayslipDeliveryCopyByLocale/, "admin console should wire locale copy map");
   assert.match(adminConsoleSource, /const copy = payrollPayslipDeliveryCopyByLocale\[locale\];/, "admin console should resolve runtime copy bundle");

@@ -1,12 +1,41 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import PayrollClosePeriodConsole from "@/components/payroll-close/PayrollClosePeriodConsole";
-import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
+import {
+  buildRedirectHref,
+  getFirstSearchParamValue
+} from "@/app/admin/payroll-route-query";
 
-export default function AdminPayrollClosePage() {
-  const { loading } = useSupabaseSession();
+import AdminPayrollClosePageClient from "./page-client";
 
-  if (loading) return null;
+type AdminPayrollClosePageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
-  return <PayrollClosePeriodConsole />;
+export default async function AdminPayrollClosePage({
+  searchParams
+}: AdminPayrollClosePageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const focus = getFirstSearchParamValue(resolvedSearchParams, "focus");
+
+  if (focus === "previewed") {
+    redirect(
+      buildRedirectHref(
+        "/admin/payroll-close/previewed",
+        resolvedSearchParams,
+        ["focus"]
+      )
+    );
+  }
+
+  if (focus === "undistributed") {
+    redirect(
+      buildRedirectHref(
+        "/admin/payroll-payslip-delivery/undistributed",
+        resolvedSearchParams,
+        ["focus"]
+      )
+    );
+  }
+
+  return <AdminPayrollClosePageClient queueMode="all" />;
 }

@@ -53,19 +53,19 @@ export function buildAdminQueueBadges(summary: AdminSummary, isKoLocale: boolean
           label: isKoLocale
             ? `미확정 ${summary.previewedPayrollCount}`
             : `Previewed ${summary.previewedPayrollCount}`,
-          href: "/admin/payroll-close?focus=previewed&source=admin-dashboard"
+          href: "/admin/payroll-close/previewed?source=admin-dashboard"
         },
         {
           label: isKoLocale
             ? `미배포 ${summary.undistributedPayrollCount}`
             : `Undistributed ${summary.undistributedPayrollCount}`,
-          href: "/admin/payroll-close?focus=undistributed&source=admin-dashboard"
+          href: "/admin/payroll-payslip-delivery/undistributed?source=admin-dashboard"
         },
         {
           label: isKoLocale
             ? `배포 처리 ${summary.undistributedPayrollCount}`
             : `Deliver ${summary.undistributedPayrollCount}`,
-          href: "/admin/payroll-payslip-delivery?focus=undistributed&source=admin-dashboard"
+          href: "/admin/payroll-payslip-delivery?source=admin-dashboard"
         }
       ]
     },
