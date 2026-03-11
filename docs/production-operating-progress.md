@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1139` by aligning the remaining `/admin`, landing, and onboarding top-level copy from `admin dashboard` to `admin hub`.
-2. Continue the next grouped-shell copy/IA prune only after the top-level admin hub title baseline is stable.
-3. Start the first visual shell redesign slice only after the remaining admin root copy drift is removed.
+1. Close `WI-1140` by landing the first admin hub visual shell baseline on the grouped route-first model.
+2. Continue the next admin visual wave only after the hub-specific hero, metric, and workspace grid baseline is stable.
+3. Start the employee visual shell baseline only after the admin visual language proves stable on `main`.
 
 ## 5. Blockers Or Watch Items
 
@@ -338,3 +338,6 @@ Latest planning reset:
 - Closed `WI-1138` with merge `5ff21bb0bb8e6daf4af892e8768956be9f1447a5`.
 - Re-verified `WI-1138` on the delivery path and confirmed both `ci` (`22943132793`) and `vercel-production-deploy` (`22943132787`) stay green after the admin hub source-context alignment.
 - Started `WI-1139` to align the remaining top-level `/admin`, landing, and onboarding admin copy from `admin dashboard` wording to the active `admin hub` product language.
+- Closed `WI-1139` with merge `c38c96d5ee28029e3a4c154f350b980d469ff0fc`.
+- Re-verified `WI-1139` on the delivery path and confirmed both `ci` (`22943681560`) and `vercel-production-deploy` (`22943681558`) stay green after the admin hub top-level title alignment.
+- Started `WI-1140` to land the first visual shell baseline for the admin hub without changing route semantics or role boundaries.
