@@ -20,19 +20,11 @@ async function run() {
     "people",
     "page-directory-actions.ts"
   );
-  const adminNotificationsPage = readUtf8(
+  const notificationsWorkspace = readUtf8(
     "src",
-    "app",
-    "admin",
+    "components",
     "notifications",
-    "page.tsx"
-  );
-  const employeeNotificationsPage = readUtf8(
-    "src",
-    "app",
-    "employee",
-    "notifications",
-    "page.tsx"
+    "NotificationsWorkspace.tsx"
   );
   const employeePayslipsPage = readUtf8(
     "src",
@@ -65,13 +57,16 @@ async function run() {
     "admin people confirmation message must remain in place"
   );
 
-  assert.match(adminNotificationsPage, /const \[statusMessage, setStatusMessage\] = useState<string \| null>\(null\);/);
-  assert.match(adminNotificationsPage, /setStatusMessage\("읽음 처리되었습니다\."\);/);
-  assert.match(adminNotificationsPage, /\{statusMessage \? \(/, "admin notifications should render success feedback");
-
-  assert.match(employeeNotificationsPage, /const \[statusMessage, setStatusMessage\] = useState<string \| null>\(null\);/);
-  assert.match(employeeNotificationsPage, /setStatusMessage\("읽음 처리되었습니다\."\);/);
-  assert.match(employeeNotificationsPage, /\{statusMessage \? \(/, "employee notifications should render success feedback");
+  assert.match(
+    notificationsWorkspace,
+    /const \[statusMessage, setStatusMessage\] = useState<string \| null>\(null\);/
+  );
+  assert.match(notificationsWorkspace, /setStatusMessage\("읽음 처리했습니다\."\);/);
+  assert.match(
+    notificationsWorkspace,
+    /className="small ok workspace-inline-status"/,
+    "notifications workspace should render success feedback"
+  );
 
   assert.match(employeePayslipsPage, /async function copyCompareSnapshot\(\)/);
   assert.match(employeePayslipsPage, /const summary = \[/, "payslip compare copy should build a user summary");
