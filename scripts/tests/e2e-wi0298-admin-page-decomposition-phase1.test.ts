@@ -16,8 +16,7 @@ async function run() {
 
   assert.doesNotMatch(adminPage, /from "@\/app\/admin\/page-queue-helpers"/);
   assert.doesNotMatch(adminPage, /buildAdminQueueDerivedState\(\{/);
-  assert.match(adminPanels, /from "@\/app\/admin\/page-queue-helpers"/);
-  assert.match(adminPanels, /queueDerivedState: ReturnType<typeof buildAdminQueueDerivedState>/);
+  assert.match(adminPanels, /ADMIN_DASHBOARD_PANELS_RETIRED_WI_1136/);
   assert.match(adminQueueSources, /filterPendingAttendanceQueue\(\{/);
   assert.match(adminQueueSources, /filterPendingLeaveQueue\(\{/);
   assert.match(adminQueueSources, /filterPreviewedPayrollQueue\(\{/);

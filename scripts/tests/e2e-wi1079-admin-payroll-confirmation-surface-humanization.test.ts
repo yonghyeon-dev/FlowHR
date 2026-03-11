@@ -7,7 +7,7 @@ const panelSource = readFileSync(
   "utf8"
 );
 const stateSource = readFileSync(
-  path.join(process.cwd(), "src/app/admin/page-state.ts"),
+  path.join(process.cwd(), "src/app/admin/payroll-close/preview-builder/page-state.ts"),
   "utf8"
 );
 
@@ -29,12 +29,12 @@ assert.match(
 assert.match(
   stateSource,
   /if \(previewedPayroll\.length === 0\) \{[\s\S]*setLastPayrollRunId\(\"\"\)/,
-  "page state should clear the selected confirmation target when no preview remains"
+  "preview-builder state should clear the selected confirmation target when no preview remains"
 );
 assert.match(
   stateSource,
   /previewedPayroll\.some\(\(run\) => run\.id === lastPayrollRunId\)/,
-  "page state should keep confirmation target selection aligned with available preview entries"
+  "preview-builder state should keep confirmation target selection aligned with available preview entries"
 );
 
 console.log("e2e-wi1079-admin-payroll-confirmation-surface-humanization.test passed");

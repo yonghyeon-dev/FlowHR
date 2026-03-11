@@ -7,30 +7,19 @@ function readUtf8(...parts: string[]) {
 }
 
 async function run() {
+  const adminWorkspaceHubs = readUtf8("src", "app", "admin", "page-workspace-hubs.ts");
   const compensationPanels = readUtf8("src", "app", "admin", "page-compensation-panels.tsx");
-  const payrollCard = readUtf8(
-    "src",
-    "components",
-    "admin-dashboard",
-    "AdminPayrollWorkspaceCard.tsx"
-  );
   const progress = readUtf8("docs", "production-operating-progress.md");
   const workItem = readUtf8(
     "work-items",
     "WI-1133-admin-payroll-dashboard-panel-route-first-card.md"
   );
 
-  assert.match(
-    compensationPanels,
-    /from "@\/components\/admin-dashboard\/AdminPayrollWorkspaceCard";/
-  );
-  assert.match(compensationPanels, /<AdminPayrollWorkspaceCard/);
-  assert.doesNotMatch(compensationPanels, /<AdminPayrollPanel/);
-
-  assert.match(payrollCard, /id="payroll-workspace-card"/);
-  assert.match(payrollCard, /\/admin\/payroll-close\?source=admin-dashboard/);
-  assert.match(payrollCard, /\/admin\/payroll-close\/preview-builder\?source=admin-dashboard/);
-  assert.match(payrollCard, /\/admin\/payroll-close\/previewed\?source=admin-dashboard/);
+  assert.match(compensationPanels, /ADMIN_COMPENSATION_PANELS_RETIRED_WI_1136/);
+  assert.match(adminWorkspaceHubs, /\/admin\/payroll-close/);
+  assert.match(adminWorkspaceHubs, /\/admin\/payroll-payslip-delivery/);
+  assert.match(adminWorkspaceHubs, /\/admin\/payroll-year-end/);
+  assert.match(adminWorkspaceHubs, /\/admin\/payroll-year-end-filing/);
 
   assert.match(workItem, /WI-1133/i);
   assert.match(workItem, /route-first/i);

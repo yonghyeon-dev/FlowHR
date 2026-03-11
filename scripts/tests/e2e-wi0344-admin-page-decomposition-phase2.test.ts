@@ -10,14 +10,13 @@ async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
   const adminPanels = readUtf8("src", "app", "admin", "page-panels.tsx");
   const queueHelpers = readUtf8("src", "app", "admin", "page-queue-helpers.ts");
-  const adminQueueSources = `${adminPanels}\n${queueHelpers}`;
+  const adminQueueSources = `${adminPage}\n${queueHelpers}`;
   const workItem = readUtf8("work-items", "WI-0344-admin-page-decomposition-phase2.md");
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.doesNotMatch(adminPage, /summarizeAdminApiLogs\(logs\)/);
   assert.doesNotMatch(adminPage, /buildAdminQueueDerivedState\(\{/);
-  assert.match(adminPanels, /from "@\/app\/admin\/page-queue-helpers"/);
-  assert.match(adminPanels, /queueDerivedState: ReturnType<typeof buildAdminQueueDerivedState>/);
+  assert.match(adminPanels, /ADMIN_DASHBOARD_PANELS_RETIRED_WI_1136/);
   assert.match(adminQueueSources, /buildQueueBadgeSummaries\(\{/);
   assert.match(adminQueueSources, /summarizeQueueAlertOverview\(queueBadgeSummaries\)/);
   assert.doesNotMatch(adminPage, /const total = logs\.length;\s*const success = logs\.filter/);

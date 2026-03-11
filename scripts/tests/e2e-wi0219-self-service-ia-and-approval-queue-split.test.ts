@@ -12,7 +12,7 @@ function countLines(source: string) {
 
 function run() {
   const adminPageSource = readUtf8("src", "app", "admin", "page.tsx");
-  const adminPanelsSource = readUtf8("src", "app", "admin", "page-panels.tsx");
+  const retiredPanelsSource = readUtf8("src", "app", "admin", "page-panels.tsx");
   const employeePageSource = readUtf8("src", "app", "employee", "page.tsx");
   const employeeAccountOverviewPanelsSource = readUtf8(
     "src",
@@ -40,7 +40,11 @@ function run() {
       /href="\/admin\/approval-executions"/.test(adminPageSource),
     "admin page should expose approval queue directly, via panel orchestrator, or via dedicated approval workspace shortcut"
   );
-  assert.match(adminPanelsSource, /ApprovalQueuePanel/, "admin panel orchestrator should render approval queue");
+  assert.match(
+    retiredPanelsSource,
+    /ADMIN_DASHBOARD_PANELS_RETIRED_WI_1136/,
+    "legacy admin panel orchestrator should be retired after the route-first admin shell migration"
+  );
   assert.doesNotMatch(
     adminPageSource,
     /<article className="panel" id="approvals">/,

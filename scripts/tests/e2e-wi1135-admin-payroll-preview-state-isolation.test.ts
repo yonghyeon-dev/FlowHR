@@ -38,13 +38,9 @@ async function run() {
     "WI-1135-admin-payroll-preview-state-isolation.md"
   );
 
-  assert.doesNotMatch(dashboardState, /payrollPreviewMode/);
-  assert.doesNotMatch(dashboardState, /payrollHourlyRateKrw/);
-  assert.doesNotMatch(dashboardState, /resetPayrollPresetShareContext/);
-  assert.doesNotMatch(dashboardState, /reapplyPayrollPresetShareContext/);
+  assert.match(dashboardState, /ADMIN_DASHBOARD_STATE_RETIRED_WI_1136/);
 
-  assert.doesNotMatch(dashboardActions, /async function previewPayroll/);
-  assert.doesNotMatch(dashboardActions, /payrollTaxableItems:/);
+  assert.match(dashboardActions, /ADMIN_DASHBOARD_ACTIONS_RETIRED_WI_1136/);
 
   assert.match(previewBuilderClient, /useAdminPayrollPreviewBuilderState/);
   assert.match(previewBuilderClient, /buildAdminPayrollPreviewWorkspaceActions/);

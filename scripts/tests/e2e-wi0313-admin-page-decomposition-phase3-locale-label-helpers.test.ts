@@ -22,9 +22,8 @@ async function run() {
     adminPage,
     /const localeLabelBundle = useMemo\(\(\) => resolveAdminLocaleLabelBundle\(isKoLocale\), \[isKoLocale\]\);/
   );
-  assert.match(adminPanels, /from "@\/app\/admin\/page-locale-helpers"/);
-  assert.match(adminPanels, /localeLabelBundle: ReturnType<typeof resolveAdminLocaleLabelBundle>/);
-  assert.match(adminPageState, /isDefaultDemoOrganizationName\(previous\)/);
+  assert.match(adminPanels, /ADMIN_DASHBOARD_PANELS_RETIRED_WI_1136/);
+  assert.match(adminPageState, /ADMIN_DASHBOARD_STATE_RETIRED_WI_1136/);
 
   assert.doesNotMatch(adminPage, /const queueLabels = useMemo\(/);
   assert.doesNotMatch(adminPage, /const inviteRoleLabels = useMemo\(/);

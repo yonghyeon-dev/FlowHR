@@ -21,41 +21,14 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(
-    adminPanels,
-    /import \{ buildAdminDashboardActions \} from "@\/app\/admin\/page-dashboard-actions";/
-  );
-  assert.match(adminPanels, /dashboardActions: ReturnType<typeof buildAdminDashboardActions>;/);
-  assert.match(adminPanels, /<AdminCompensationPanels/);
-  assert.match(
-    adminPanels,
-    /import \{ AdminCompensationPanels \} from "@\/app\/admin\/page-compensation-panels";/
-  );
-  assert.match(adminPanels, /onRefreshInbox=\{\(\) => void dashboardActions\.refreshInbox\(\)\}/);
-  assert.match(adminPanels, /onLoadLeavePolicy=\{\(\) => void dashboardActions\.loadLeavePolicy\(\)\}/);
-  assert.match(adminPanels, /onClearLogs=\{dashboardActions\.clearLogs\}/);
-  assert.doesNotMatch(adminPanels, /onPreviewPayroll=\{\(\) => void dashboardActions\.previewPayroll\(\)\}/);
-  assert.doesNotMatch(adminPanels, /onConfirmPayroll=\{\(\) => void dashboardActions\.confirmPayroll\(/);
+  assert.match(adminPanels, /ADMIN_DASHBOARD_PANELS_RETIRED_WI_1136/);
 
   assert.doesNotMatch(adminPage, /import \{ buildAdminDashboardActions \} from "@\/app\/admin\/page-dashboard-actions";/);
   assert.doesNotMatch(adminPage, /const dashboardActions = buildAdminDashboardActions\(/);
 
-  assert.match(dashboardActions, /export type BuildAdminDashboardActionsInput = \{/);
-  assert.match(dashboardActions, /export function buildAdminDashboardActions\(/);
-  assert.match(dashboardActions, /async function refreshInbox\(\)/);
-  assert.match(dashboardActions, /async function previewPayroll\(\)/);
-  assert.match(dashboardActions, /async function confirmPayroll\(runId: string\)/);
-  assert.match(dashboardActions, /function clearLogs\(\)/);
-  assert.match(dashboardActions, /return \{/);
+  assert.match(dashboardActions, /ADMIN_DASHBOARD_ACTIONS_RETIRED_WI_1136/);
 
-  assert.match(compensationPanels, /export function AdminCompensationPanels\(/);
-  assert.match(compensationPanels, /<AdminAggregateLeavePanels/);
-  assert.match(compensationPanels, /<AdminPayrollWorkspaceCard/);
-  assert.doesNotMatch(compensationPanels, /<AdminPayrollPanel/);
-  assert.doesNotMatch(compensationPanels, /onPreviewPayroll:/);
-  assert.doesNotMatch(compensationPanels, /onConfirmPayroll:/);
-  assert.match(compensationPanels, /<AdminDebugLogsPanel/);
-  assert.match(compensationPanels, /logStatusLabels: \{\s*success: string;\s*fail: string;\s*\}/);
+  assert.match(compensationPanels, /ADMIN_COMPENSATION_PANELS_RETIRED_WI_1136/);
 
 
   assert.ok(

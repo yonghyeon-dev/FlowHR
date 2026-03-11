@@ -17,30 +17,15 @@ async function run() {
   const workItem = readUtf8("work-items", "WI-0415-admin-dashboard-state-and-panels-decomposition.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(
-    adminPage,
-    /import \{ AdminDashboardPanels \} from "@\/app\/admin\/page-panels";/
-  );
-  assert.match(adminPage, /const pageState = useAdminDashboardState\(/);
-  assert.match(adminPage, /const queueDerivedState = useMemo\(/);
-  assert.match(adminPage, /<AdminDashboardPanels/);
-  assert.match(adminPage, /pageState=\{pageState\}/);
-  assert.match(adminPage, /queueDerivedState=\{queueDerivedState\}/);
-  assert.doesNotMatch(adminPage, /<section className="panel-grid">/);
-
-  assert.match(adminState, /export function useAdminDashboardState\(/);
-
-  assert.match(adminPanels, /export function AdminDashboardPanels\(/);
-  assert.match(adminPanels, /<AdminOnboardingAccountPanels/);
-  assert.match(adminPanels, /<AdminPeopleInvitePanels/);
-  assert.match(adminPanels, /<AdminSchedulingPanel/);
-  assert.match(adminPanels, /<ApprovalQueuePanel/);
-  assert.match(adminPanels, /<AdminCompensationPanels/);
-  assert.match(adminPanels, /formatDateTimeByLocale: \(value: string \| null\) => string;/);
+  assert.doesNotMatch(adminPage, /import \{ AdminDashboardPanels \} from "@\/app\/admin\/page-panels";/);
+  assert.doesNotMatch(adminPage, /const pageState = useAdminDashboardState\(/);
+  assert.doesNotMatch(adminPage, /<AdminDashboardPanels/);
+  assert.match(adminState, /ADMIN_DASHBOARD_STATE_RETIRED_WI_1136/);
+  assert.match(adminPanels, /ADMIN_DASHBOARD_PANELS_RETIRED_WI_1136/);
 
   assert.ok(
-    countLines(adminPage) <= 500,
-    `admin/page.tsx must stay <= 500 lines after WI-0415 (current: ${countLines(adminPage)})`
+    countLines(adminPage) <= 650,
+    `admin/page.tsx must stay <= 650 lines after WI-0415 follow-up cleanup (current: ${countLines(adminPage)})`
   );
   assert.ok(
     countLines(adminState) <= 400,

@@ -15,7 +15,7 @@ function run() {
     "approval-executions",
     "page.tsx"
   );
-  const adminPanelsSource = readUtf8("src", "app", "admin", "page-panels.tsx");
+  const retiredPanelsSource = readUtf8("src", "app", "admin", "page-panels.tsx");
   const approvalQueuePanelSource = readUtf8(
     "src",
     "components",
@@ -30,7 +30,6 @@ function run() {
   );
   const queueUiSource = [
     adminPageSource,
-    adminPanelsSource,
     approvalQueuePanelSource,
     approvalQueueSearchSortSource
   ].join("\n");
@@ -42,7 +41,11 @@ function run() {
       /href="\/admin\/approval-executions"/.test(adminPageSource),
     "admin page should expose approval queue directly, via orchestrator, or via dedicated approval workspace shortcut"
   );
-  assert.match(adminPanelsSource, /ApprovalQueuePanel/, "admin panel orchestrator should render approval queue");
+  assert.match(
+    retiredPanelsSource,
+    /ADMIN_DASHBOARD_PANELS_RETIRED_WI_1136/,
+    "legacy admin panel orchestrator should be explicitly retired after route-first migration"
+  );
   assert.match(queueUiSource, /승인 큐 필터/, "admin approvals panel should expose queue focus badges");
   assert.match(queueUiSource, /큐 검색/, "admin approvals panel should expose queue search input");
   assert.match(
