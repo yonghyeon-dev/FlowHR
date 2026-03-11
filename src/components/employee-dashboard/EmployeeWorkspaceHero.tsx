@@ -28,13 +28,13 @@ export function EmployeeWorkspaceHero({
   metaLabel
 }: EmployeeWorkspaceHeroProps) {
   return (
-    <section className="hero-panel">
+    <section className="hero-panel workspace-hero-panel">
       <p className="eyebrow">{eyebrow}</p>
       <h1>{title}</h1>
-      <p className="hero-copy">{description}</p>
+      <p className="hero-copy workspace-hero-copy">{description}</p>
       {sourceHint ? <p className="small muted">{sourceHint}</p> : null}
-      <div className="hero-meta">
-        {metaLabel ? <span>{metaLabel}</span> : null}
+      <div className="hero-meta workspace-hero-meta">
+        {metaLabel ? <span className="workspace-hero-chip">{metaLabel}</span> : null}
         <Link className="btn btn-primary" href={returnHref}>
           {returnLabel}
         </Link>

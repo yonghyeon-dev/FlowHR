@@ -111,8 +111,8 @@ export default function AdminPayrollPreviewBuilderPageClient() {
   const openedFromShareLink = source === "payroll-preview-share";
 
   return (
-    <main className="saas-content">
-      <header className="page-header">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <div>
           <h1 className="page-title">
             {isKoLocale ? "급여 프리뷰 작업면" : "Payroll preview workspace"}
@@ -153,7 +153,7 @@ export default function AdminPayrollPreviewBuilderPageClient() {
         </p>
       ) : null}
 
-      <section className="panel-grid">
+      <section className="panel-grid workspace-panel-grid">
         <AdminPayrollPanel
           isKoLocale={isKoLocale}
           payrollPreviewMode={pageState.payrollPreviewMode}
