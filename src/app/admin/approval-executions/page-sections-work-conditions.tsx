@@ -1,18 +1,17 @@
 "use client";
 
-import {
-  formatAdminSessionConnectionState,
-  formatNotificationChannelLabel,
-  formatUserFacingErrorMessage,
-  formatWorkspaceConnectionState
-} from "@/lib/product-language";
-
 import type {
   ApprovalDomain,
   ApprovalExecutionSort,
   ApprovalExecutionState
 } from "@/app/admin/approval-executions/page-types";
 import { domainOptions, stateOptions } from "@/app/admin/approval-executions/page-types";
+import {
+  formatAdminSessionConnectionState,
+  formatNotificationChannelLabel,
+  formatUserFacingErrorMessage,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 
 type WorkConditionsPanelProps = {
   isKoLocale: boolean;
@@ -90,8 +89,17 @@ export function ApprovalExecutionWorkConditionsPanel(props: WorkConditionsPanelP
   const adminSessionStatusLabel = isKoLocale ? "관리자 세션 상태" : "Admin session status";
 
   return (
-    <article className="panel">
-      <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
+    <article className="panel workspace-section-card workspace-toolbar-card">
+      <div className="section-heading">
+        <div>
+          <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
+          <p className="small muted">
+            {isKoLocale
+              ? "정렬, 정체 기준, 요청 분류, 에스컬레이션 채널 조건으로 실행 대기열을 좁혀봅니다."
+              : "Filter the execution queue by sort, stall threshold, request type, and escalation channel."}
+          </p>
+        </div>
+      </div>
       {showDevTools ? (
         <p className="small muted">
           {workspaceStatusLabel}:{" "}
@@ -163,7 +171,7 @@ export function ApprovalExecutionWorkConditionsPanel(props: WorkConditionsPanelP
             <input
               value={targetEntityId}
               onChange={(event) => setTargetEntityId(event.target.value)}
-              placeholder={isKoLocale ? "특정 요청만 확인할 때만 입력" : "Optional request reference"}
+              placeholder={isKoLocale ? "특정 요청만 확인할 때 입력" : "Optional request reference"}
             />
           </label>
           <label>

@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDateTime } from "@/app/admin/approval-executions/page-helpers";
-import type { EscalationResultDto, ApprovalExecutionSummary } from "@/app/admin/approval-executions/page-types";
+import type { ApprovalExecutionSummary, EscalationResultDto } from "@/app/admin/approval-executions/page-types";
 import {
   formatApprovalDomainLabel,
   formatApprovalEntityTypeLabel,
@@ -24,8 +24,17 @@ export function ApprovalExecutionSummaryPanel({
   stalledHoursMin
 }: SummaryPanelProps) {
   return (
-    <article className="panel">
-      <h2>{isKoLocale ? "실행 요약" : "Execution summary"}</h2>
+    <article className="panel workspace-section-card workspace-note-card">
+      <div className="section-heading">
+        <div>
+          <h2>{isKoLocale ? "실행 요약" : "Execution summary"}</h2>
+          <p className="small muted">
+            {isKoLocale
+              ? "현재 정체 위험도와 도메인별 대기 규모를 한 번에 파악합니다."
+              : "Review current stall risk and domain-level queue volume at a glance."}
+          </p>
+        </div>
+      </div>
       <div className="summary-grid">
         <div className="summary-card">
           <p>{isKoLocale ? "전체" : "Total"}</p>
@@ -96,8 +105,17 @@ export function ApprovalExecutionEscalationResultPanel({
   const locale = isKoLocale ? "ko-KR" : "en-US";
 
   return (
-    <article className="panel">
-      <h2>{isKoLocale ? "에스컬레이션 결과" : "Escalation result"}</h2>
+    <article className="panel workspace-section-card workspace-note-card">
+      <div className="section-heading">
+        <div>
+          <h2>{isKoLocale ? "에스컬레이션 결과" : "Escalation result"}</h2>
+          <p className="small muted">
+            {isKoLocale
+              ? "최근 드라이런 또는 실제 에스컬레이션 결과를 검토합니다."
+              : "Review the latest dry-run or live escalation result."}
+          </p>
+        </div>
+      </div>
       {!escalationResult ? (
         <p className="small">{isKoLocale ? "아직 에스컬레이션 실행 이력이 없습니다." : "No escalation run yet."}</p>
       ) : (
@@ -112,7 +130,7 @@ export function ApprovalExecutionEscalationResultPanel({
               <strong>{escalationResult.dryRun ? (isKoLocale ? "미리보기" : "Dry run") : isKoLocale ? "실행" : "Dispatch"}</strong>
             </li>
             <li>
-              <span>{isKoLocale ? "후보 / 요청됨" : "Candidates / requested"}</span>
+              <span>{isKoLocale ? "후보 / 요청" : "Candidates / requested"}</span>
               <strong>
                 {escalationResult.counts.candidates} / {escalationResult.counts.requested}
               </strong>
@@ -137,7 +155,7 @@ export function ApprovalExecutionEscalationResultPanel({
               {escalationResult.items.map((item) => (
                 <li key={item.executionId}>
                   <span>
-                    <strong>{formatApprovalDomainLabel(item.domain, locale)}</strong> ·{" "}
+                    <strong>{formatApprovalDomainLabel(item.domain, locale)}</strong> /{" "}
                     {formatApprovalEntityTypeLabel(item.targetEntityType, locale)}
                     <br />
                     <span className="small">
