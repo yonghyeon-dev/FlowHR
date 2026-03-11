@@ -53,6 +53,12 @@ function run() {
     "EmployeeJourneyShortcutPanel.tsx"
   );
   const guidePage = readUtf8("src", "app", "employee", "guide", "page.tsx");
+  const guideDashboard = readUtf8(
+    "src",
+    "components",
+    "employee-guide",
+    "EmployeeGuideDashboard.tsx"
+  );
   const guideCopy = readUtf8("src", "components", "employee-guide", "copy.ts");
   const scheduleSummaryPanel = readUtf8(
     "src",
@@ -99,7 +105,8 @@ function run() {
     shortcuts,
     /\/employee\/requests\/monitoring\?source=employee-dashboard/
   );
-  assert.match(guidePage, /\/employee\/requests\?source=employee-guide/);
+  assert.match(guidePage, /EmployeeGuideDashboard/);
+  assert.match(guideDashboard, /\/employee\/requests\?source=employee-guide/);
   assert.match(guideCopy, /\/employee\/attendance\/correction\?source=employee-guide/);
   assert.match(guideCopy, /\/employee\/leave\/request\?source=employee-guide/);
   assert.match(

@@ -9,6 +9,18 @@ function readUtf8(...parts: string[]) {
 function run() {
   const layout = readUtf8("src", "app", "employee", "layout.tsx");
   const guidePage = readUtf8("src", "app", "employee", "guide", "page.tsx");
+  const guideDashboard = readUtf8(
+    "src",
+    "components",
+    "employee-guide",
+    "EmployeeGuideDashboard.tsx"
+  );
+  const guideCopy = readUtf8(
+    "src",
+    "components",
+    "employee-guide",
+    "copy.ts"
+  );
   const requestsPage = readUtf8("src", "app", "employee", "requests", "page.tsx");
   const requestsWorkspaceContent = readUtf8(
     "src",
@@ -35,9 +47,10 @@ function run() {
   );
 
   assert.match(layout, /href: "\/employee\/requests(?:\?source=employee-mobile-menu)?"/);
-  assert.match(guidePage, /href="\/employee\/requests\?source=employee-guide"/);
-  assert.match(guidePage, /href: "\/employee\/attendance\/correction\?source=employee-guide"/);
-  assert.match(guidePage, /href: "\/employee\/leave\/request\?source=employee-guide"/);
+  assert.match(guidePage, /EmployeeGuideDashboard/);
+  assert.match(guideDashboard, /href="\/employee\/requests\?source=employee-guide"/);
+  assert.match(guideCopy, /href: "\/employee\/attendance\/correction\?source=employee-guide"/);
+  assert.match(guideCopy, /href: "\/employee\/leave\/request\?source=employee-guide"/);
 
   assert.match(workspaceHubs, /\/employee\/attendance/);
   assert.match(workspaceHubs, /\/employee\/leave/);

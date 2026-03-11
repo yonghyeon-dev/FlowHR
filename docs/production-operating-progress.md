@@ -404,3 +404,6 @@ Latest planning reset:
 - Closed `WI-1159` with merge `80704bc538df08fd74507d3caf8acfd8d15dc733`.
 - Re-verified `WI-1159` on the delivery path and confirmed both `ci` (`22965178583`) and `vercel-production-deploy` (`22965178633`) stay green after the eighteenth shared workspace visual wave.
 - Started `WI-1160` to extend the same route-first workspace shell onto employee document consoles covering payslip receipts and year-end input.
+- Closed `WI-1160` with merge `fa002e3ec84987801c5a194f54ea601304ad24fb`.
+- Re-verified `WI-1160` on the delivery path and confirmed both `ci` (`22965846039`) and `vercel-production-deploy` (`22965846016`) stay green after the nineteenth shared workspace visual wave.
+- Started `WI-1161` to replace the legacy employee guide landing with the route-first employee workspace shell and align guide entry copy with the current home/request model.
