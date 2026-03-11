@@ -107,6 +107,14 @@ export default function AdminApprovalHistoryPage() {
     return { total, success, fail: total - success };
   }, [logs]);
 
+  const filterSummary = useMemo(() => {
+    return [
+      domain ? formatApprovalDomainLabel(domain, runtimeLocale) : copy.filters.all,
+      allowed ? (allowed === "true" ? (isKoLocale ? "허용만" : "Allowed only") : (isKoLocale ? "차단만" : "Blocked only")) : copy.filters.all,
+      resolution ? formatApprovalStageResolutionLabel(resolution, runtimeLocale) : copy.filters.all
+    ].join(" / ");
+  }, [allowed, copy.filters.all, domain, isKoLocale, resolution, runtimeLocale]);
+
   async function callApi(label: string, path: string) {
     setPendingLabel(label);
     setError(null);
@@ -136,7 +144,7 @@ export default function AdminApprovalHistoryPage() {
 
       const body = await parseApiResponseBody(response);
       if (!response.ok) {
-        throw new Error(typeof body === "string" ? body : "결재 단계 이력을 불러오지 못했습니다.");
+        throw new Error(typeof body === "string" ? body : "Failed to load approval stage history.");
       }
       return { response, body };
     } catch (err) {
@@ -182,27 +190,63 @@ export default function AdminApprovalHistoryPage() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="hero">
-        <p className="eyebrow">{copy.hero.eyebrow}</p>
-        <h1>{copy.hero.title}</h1>
-        <p>
-          {copy.hero.description}
-          {showDevTools ? ` ${copy.hero.devActorNotice}` : ""}
-        </p>
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
+        <div>
+          <p className="eyebrow">{copy.hero.eyebrow}</p>
+          <h1 className="page-title">{copy.hero.title}</h1>
+          <p className="page-subtitle">
+            {copy.hero.description}
+            {showDevTools ? ` ${copy.hero.devActorNotice}` : ""}
+          </p>
+          <p className="small muted workspace-source-banner">
+            {isKoLocale
+              ? "결재 단계 이력은 승인 정책, 템플릿, 실행 현황과 함께 검토하는 운영 인사이트 흐름입니다."
+              : "Approval stage history sits alongside policy, templates, and execution review in the admin insight lane."}
+          </p>
+        </div>
+        <div className="page-actions">
+          <Link href="/admin" className="btn btn-secondary">
+            {isKoLocale ? "관리자 허브" : "Admin hub"}
+          </Link>
+        </div>
       </header>
 
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.hero.title}>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.results.title}</p>
+          <strong>{history.length}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.logs.title}</p>
+          <strong>{stats.total}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{isKoLocale ? "현재 필터" : "Current filters"}</p>
+          <strong>{filterSummary}</strong>
+        </article>
+      </section>
+
       {requiresLoginSession ? (
-        <p className="small fail">
+        <p className="small fail workspace-inline-status">
           {isKoLocale ? "운영 환경에서는 로그인 세션이 필요합니다. " : "Login session is required in production. "}
           <Link href="/login">/login</Link>
         </p>
       ) : null}
-      {error ? <p className="small fail">{error}</p> : null}
+      {error ? <p className="small fail workspace-inline-status">{error}</p> : null}
 
-      <section className="panel-grid">
-        <article className="panel">
-          <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
+          <div className="section-heading">
+            <div>
+              <h2>{copy.filters.title}</h2>
+              <p className="small muted">
+                {isKoLocale
+                  ? "도메인, 요청 분류, 허용 여부 기준으로 단계 이력을 좁혀 검토합니다."
+                  : "Filter the stage history by domain, request subtype, and approval outcome."}
+              </p>
+            </div>
+          </div>
           {showDevTools ? (
             <p className="small muted">
               {copy.filters.organizationId}:{" "}
@@ -231,7 +275,7 @@ export default function AdminApprovalHistoryPage() {
             </select>
           </label>
           <details className="details">
-            <summary>{isKoLocale ? "세부 조건" : "Advanced options"}</summary>
+            <summary>{isKoLocale ? "고급 조건" : "Advanced options"}</summary>
             <div className="input-grid" style={{ marginTop: 12 }}>
               <label>
                 {copy.filters.targetEntityType}
@@ -277,7 +321,7 @@ export default function AdminApprovalHistoryPage() {
           </details>
           <div className="panel-actions">
             <button
-              className="btn btn-secondary"
+              className="btn btn-primary"
               onClick={() => void loadHistory()}
               disabled={supabaseSessionLoading || requiresLoginSession || !organizationId.trim()}
             >
@@ -289,17 +333,53 @@ export default function AdminApprovalHistoryPage() {
           ) : null}
         </article>
 
-        <article className="panel">
-          <h2>
-            {copy.results.title} ({history.length})
-          </h2>
+        <article className="panel workspace-section-card workspace-note-card">
+          <div className="section-heading">
+            <div>
+              <h2>{isKoLocale ? "요약" : "Summary"}</h2>
+              <p className="small muted">
+                {isKoLocale
+                  ? "현재 조회 범위와 반환 결과를 빠르게 확인합니다."
+                  : "Review the current query scope and returned result size at a glance."}
+              </p>
+            </div>
+          </div>
+          <dl className="definition-grid">
+            <div>
+              <dt>{copy.results.title}</dt>
+              <dd>{history.length}</dd>
+            </div>
+            <div>
+              <dt>{copy.logs.title}</dt>
+              <dd>{stats.total}</dd>
+            </div>
+            <div>
+              <dt>{isKoLocale ? "현재 필터" : "Current filters"}</dt>
+              <dd>{filterSummary}</dd>
+            </div>
+          </dl>
+        </article>
+
+        <article className="panel workspace-section-card">
+          <div className="section-heading">
+            <div>
+              <h2>
+                {copy.results.title} ({history.length})
+              </h2>
+              <p className="small muted">
+                {isKoLocale
+                  ? "각 단계에서 어떤 역할, 위임, 기본 정책이 적용됐는지 확인합니다."
+                  : "Inspect which roles, delegations, and fallback policy were applied at each stage."}
+              </p>
+            </div>
+          </div>
           {history.length === 0 ? (
             <p className="small">{copy.results.empty}</p>
           ) : (
             <ul className="simple-list">
               {history.map((entry) => (
                 <li key={entry.id}>
-                  <strong>{formatApprovalDomainLabel(entry.domain, runtimeLocale)}</strong> ·{" "}
+                  <strong>{formatApprovalDomainLabel(entry.domain, runtimeLocale)}</strong> /{" "}
                   {formatApprovalEntityTypeLabel(entry.targetEntityType, runtimeLocale)}
                   <br />
                   <span className={entry.allowed ? "ok" : "fail"}>
@@ -331,8 +411,17 @@ export default function AdminApprovalHistoryPage() {
         </article>
 
         {showDevTools ? (
-          <article className="panel">
-            <h2>{copy.logs.title}</h2>
+          <article className="panel workspace-section-card">
+            <div className="section-heading">
+              <div>
+                <h2>{copy.logs.title}</h2>
+                <p className="small muted">
+                  {isKoLocale
+                    ? "개발 모드에서만 이력 조회 요청과 응답 상태를 확인합니다."
+                    : "Inspect stage-history request and response outcomes in dev mode only."}
+                </p>
+              </div>
+            </div>
             <p className="small">
               {copy.logs.total} {stats.total} / {copy.logs.success} {stats.success} / {copy.logs.fail} {stats.fail}
               {pendingLabel ? ` / ${copy.logs.inProgress} ${pendingLabel}` : ""}
@@ -362,8 +451,17 @@ export default function AdminApprovalHistoryPage() {
             </div>
           </article>
         ) : (
-          <article className="panel">
-            <h2>{isKoLocale ? "관련 화면 이동" : "Related workspaces"}</h2>
+          <article className="panel workspace-section-card workspace-note-card">
+            <div className="section-heading">
+              <div>
+                <h2>{isKoLocale ? "관련 화면 이동" : "Related workspaces"}</h2>
+                <p className="small muted">
+                  {isKoLocale
+                    ? "정책, 템플릿, 실행 현황으로 이어지는 승인 운영 흐름을 바로 엽니다."
+                    : "Open the connected approval policy, templates, and execution workspaces."}
+                </p>
+              </div>
+            </div>
             <div className="panel-actions">
               <Link href="/admin/approval-executions" className="btn btn-secondary">
                 {copy.logs.goToExecutions}
