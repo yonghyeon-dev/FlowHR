@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1131` by aligning guide and mobile-menu primary attendance/leave entry points to the new stable subroutes instead of the compatibility base routes.
-2. Continue the next employee route-first pass by trimming the remaining compatibility-only base-route entry points from non-legacy shortcuts and copy surfaces.
-3. Begin the next admin route-first slice after employee primary-entry parity is explicit.
+1. Close `WI-1132` by landing the dedicated admin payroll preview workspace and switching preset-share replay away from `/admin?...#payroll`.
+2. Continue the next admin payroll route-first pass by reducing remaining dashboard dependence on embedded preview/confirm work now that a stable workspace exists.
+3. Begin the next admin route-first extraction after the payroll preview-builder seam is live.
 
 ## 5. Blockers Or Watch Items
 
@@ -314,3 +314,6 @@ Latest planning reset:
 - Closed `WI-1130` through the full GitHub flow and merged it to `main` as `12d6aee821ba69e04b70082b51695fa91c59a5a5`, then deleted the feature branch.
 - Re-verified `WI-1130` on the delivery path and confirmed both `ci` (`22937377911`) and `vercel-production-deploy` (`22937377906`) stay green after the employee attendance and leave primary subroute promotion.
 - Started `WI-1131` to align guide and mobile-menu primary attendance/leave entry points with the new stable employee subroutes and keep the base routes compatibility-only.
+- Closed `WI-1131` through the full GitHub flow and merged it to `main` as `f02b460b6b3c7efef40c1a3acb646faf06b0ee34`, then deleted the feature branch.
+- Re-verified `WI-1131` on the delivery path and confirmed both `ci` (`22937825077`) and `vercel-production-deploy` (`22937824984`) stay green after the employee primary-entry alignment.
+- Started `WI-1132` to promote payroll preset share replay from the admin dashboard hash surface onto a dedicated `/admin/payroll-close/preview-builder` workspace route.

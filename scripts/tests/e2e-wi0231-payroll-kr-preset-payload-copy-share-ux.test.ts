@@ -12,7 +12,12 @@ async function run() {
   const payrollTestCases = readUtf8("specs", "payroll", "test-cases.md");
   const payrollRfc = readUtf8("specs", "payroll", "rfc.md");
   const roadmap = readUtf8("ROADMAP.md");
-  const adminPage = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPayrollPanel = readUtf8(
+    "src",
+    "components",
+    "admin-dashboard",
+    "AdminPayrollPanel.tsx"
+  );
   const previewPanel = readUtf8(
     "src",
     "components",
@@ -29,12 +34,12 @@ async function run() {
   assert.match(payrollTestCases, /Preset Payload Copy\/Share UX Gate/i);
   assert.match(payrollRfc, /WI-0231/);
   assert.match(roadmap, /WI-0231/);
-  assert.match(adminPage, /PayrollKrIncomeSplitPresetPayloadPreviewPanel/);
+  assert.match(adminPayrollPanel, /PayrollKrIncomeSplitPresetPayloadPreviewPanel/);
   assert.match(previewPanel, /navigator\.clipboard\.writeText/);
   assert.match(previewPanel, /navigator\.share/);
   assert.match(previewPanel, /Copy request payload/);
   assert.match(previewPanel, /Share preview/);
-  assert.match(previewPanel, /\/admin\?\$\{search\.toString\(\)\}#payroll/);
+  assert.match(previewPanel, /\/admin\/payroll-close\/preview-builder\?\$\{search\.toString\(\)\}/);
   assert.match(workItem, /copy\/share UX/i);
 
   const { getPayrollKrIncomeSplitItemPreset } = await import(

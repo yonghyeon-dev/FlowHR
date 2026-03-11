@@ -96,12 +96,13 @@ function buildPreviewShareHref(params: {
   nonTaxableIncomeKrw: number;
 }) {
   const search = new URLSearchParams();
+  search.set("source", "payroll-preview-share");
   search.set("incomeSplitItemPresetId", params.presetId);
   if (params.taxableIncomeKrw !== null) {
     search.set("taxableIncomeKrw", String(params.taxableIncomeKrw));
   }
   search.set("nonTaxableIncomeKrw", String(params.nonTaxableIncomeKrw));
-  return `/admin?${search.toString()}#payroll`;
+  return `/admin/payroll-close/preview-builder?${search.toString()}`;
 }
 
 export function PayrollKrIncomeSplitPresetPayloadPreviewPanel({
