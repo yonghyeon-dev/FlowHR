@@ -99,12 +99,17 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
         navSections={navSections}
         footerLinks={footerLinks}
       />
-      <div className="saas-shell">
-        <aside className="saas-sidebar">
+      <div className="saas-shell employee-shell">
+        <aside className="saas-sidebar employee-sidebar">
           <div className="saas-brand">
             <Link href="/">FlowHR</Link>
             <span className="saas-badge">{t("employee.badge")}</span>
           </div>
+          <p className="employee-sidebar-copy">
+            {locale === "ko"
+              ? "오늘 처리할 요청, 문서, 개인 상태를 한곳에서 확인하는 업무 홈입니다."
+              : "A personal work home for today's requests, documents, and account status."}
+          </p>
 
           <nav className="saas-nav" aria-label={t("employee.nav.aria")}>
             {navSections.map((section) => (
@@ -121,7 +126,7 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
             ))}
           </nav>
 
-          <div className="saas-sidebar-footer">
+          <div className="saas-sidebar-footer employee-sidebar-footer">
             <NotificationBell href="/employee/notifications" />
             <SessionMenu />
             {showDevTools ? <Link href="/admin">{t("employee.nav.admin")}</Link> : null}
