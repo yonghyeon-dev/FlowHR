@@ -186,7 +186,7 @@ export function EmployeeContractsResponsePanel({
     }
   }
   return (
-    <article className="panel panel-contract-template-detail">
+    <article className="panel panel-contract-template-detail workspace-section-card workspace-detail-card">
       <h2>{copy.responseTitle}</h2>
       <p className="small muted">{copy.nextActionTitle}</p>
       <p className="small">{nextActionHint}</p>

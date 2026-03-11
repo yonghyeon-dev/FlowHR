@@ -32,6 +32,7 @@ import {
   normalizeContractsEntityTitle
 } from "@/components/contracts/runtime-copy-helpers";
 import { resolveContractApprovalStatusLabel, resolveContractDocumentStatusLabel } from "@/components/contracts/status-label-helpers";
+import { resolveContractsWorkspaceMessageToneClass } from "@/components/contracts/workspace-visual-helpers";
 import { formatEmployeeIdForLocaleDisplay, normalizeEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -111,6 +112,7 @@ export default function AdminContractsWorkspace({ accessToken }: { accessToken: 
     }
   });
   const dashboardFocusLabel = decisionQueueOnly ? copy.decisionQueueCountLabel : documentStatusFilter === "SENT" ? copy.pendingResponseQueueLabel : slaRiskFilter === "OVERDUE" ? copy.overdueSlaCountLabel : copy.documentsKpiLabel;
+  const messageToneClass = resolveContractsWorkspaceMessageToneClass(message, error);
   useEffect(() => {
     setContractsRuntimeLocale(locale);
     return () => {
@@ -118,7 +120,7 @@ export default function AdminContractsWorkspace({ accessToken }: { accessToken: 
     };
   }, [locale]);
   return (
-    <main className="saas-content">
+    <main className="saas-content workspace-shell admin-workspace-shell">
       <AdminContractsWorkspaceHeader
         heroEyebrow={copy.heroEyebrow}
         title={copy.title}
@@ -142,9 +144,9 @@ export default function AdminContractsWorkspace({ accessToken }: { accessToken: 
         pendingApprovalCount={documents.filter((item) => item.approvalStatus === "PENDING").length}
       />
       {error ? <p className="inline-error">{error}</p> : null}
-      {message ? <p className="small">{message}</p> : null}
-      <section className="panel-grid">
-        <article id="contract-template-library" className="panel panel-contract-template-library">
+      {message ? <p className={messageToneClass}>{message}</p> : null}
+      <section className="panel-grid workspace-panel-grid">
+        <article id="contract-template-library" className="panel panel-contract-template-library workspace-section-card workspace-toolbar-card">
           <h2>{copy.templateLibraryTitle}</h2>
           <div className="contract-form-grid">
             <label>
@@ -197,7 +199,7 @@ export default function AdminContractsWorkspace({ accessToken }: { accessToken: 
             ))}
           </ul>
         </article>
-        <article id="contract-signature-readiness" className="panel panel-contract-signature-readiness">
+        <article id="contract-signature-readiness" className="panel panel-contract-signature-readiness workspace-section-card workspace-note-card">
           <h2>{copy.documentLifecycleTitle}</h2>
           <div className="contract-form-grid">
             <label>

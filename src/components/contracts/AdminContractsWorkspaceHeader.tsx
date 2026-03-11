@@ -49,18 +49,18 @@ export function AdminContractsWorkspaceHeader({
 }: AdminContractsWorkspaceHeaderProps) {
   return (
     <>
-      <header className="page-header">
+      <header className="page-header workspace-page-header">
         <div>
           <p className="page-eyebrow">{heroEyebrow}</p>
           <h1 className="page-title">{title}</h1>
           <p className="page-subtitle">{description}</p>
           {analyticsSource === "admin-analytics" ? (
-            <p className="small muted">
+            <p className="small muted workspace-source-banner">
               {analyticsSourceBanner} · {analyticsSourceFocusLabel}: {analyticsFocusLabel}
             </p>
           ) : null}
           {analyticsSource === "admin-hub" ? (
-            <p className="small muted">
+            <p className="small muted workspace-source-banner">
               {dashboardSourceBanner} · {dashboardSourceFocusLabel}: {dashboardFocusLabel}
             </p>
           ) : null}
@@ -76,7 +76,7 @@ export function AdminContractsWorkspaceHeader({
           </div>
         </div>
       </header>
-      <section className="kpi-strip" aria-label={summaryKpiAria}>
+      <section className="kpi-strip workspace-summary-strip" aria-label={summaryKpiAria}>
         <article className="kpi-card">
           <span>{templatesKpiLabel}</span>
           <strong>{templatesCount}</strong>

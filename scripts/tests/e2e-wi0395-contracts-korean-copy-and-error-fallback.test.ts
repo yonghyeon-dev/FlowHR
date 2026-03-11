@@ -35,6 +35,12 @@ async function run() {
     "useAdminContractsWorkspaceActions.ts"
   );
   const employeeInbox = readUtf8("src", "components", "contracts", "EmployeeContractsInbox.tsx");
+  const contractsEvidenceActions = readUtf8(
+    "src",
+    "components",
+    "contracts",
+    "evidence-actions.ts"
+  );
   const templateBuilder = readUtf8("src", "components", "contracts", "ContractTemplateBuilder.tsx");
   const workItem = readUtf8("work-items", "WI-0395-contracts-korean-copy-and-error-fallback.md");
   const roadmap = readUtf8("ROADMAP.md");
@@ -69,7 +75,7 @@ async function run() {
 
   assert.match(employeeInbox, /readJson\(response,\s*copy\.loadError\)/);
   assert.match(employeeInbox, /readJson\(response,\s*copy\.respondError\)/);
-  assert.match(employeeInbox, /readJson\(response,\s*copy\.evidenceLoadError\)/);
+  assert.match(contractsEvidenceActions, /readJson\(response,\s*evidenceLoadError\)/);
 
   assert.match(templateBuilder, /import \{[^}]*readJson[^}]*\} from "@\/components\/contracts\/http";/);
   assert.match(templateBuilder, /readJson\(response,\s*copy\.templateCreateError\)/);

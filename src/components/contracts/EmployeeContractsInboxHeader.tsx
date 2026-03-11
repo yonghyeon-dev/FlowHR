@@ -16,11 +16,11 @@ export function EmployeeContractsInboxHeader({
   returnLabel
 }: EmployeeContractsInboxHeaderProps) {
   return (
-    <header className="page-header">
+    <header className="page-header workspace-page-header employee-workspace-status-header">
       <div>
         <h1 className="page-title">{title}</h1>
         <p className="page-subtitle">{description}</p>
-        {sourceHint ? <p className="small muted">{sourceHint}</p> : null}
+        {sourceHint ? <p className="small muted workspace-source-banner">{sourceHint}</p> : null}
       </div>
       <div className="page-actions">
         {returnLabel ? (
