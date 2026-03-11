@@ -35,7 +35,7 @@ async function run() {
 
   assert.match(adminNavSource, /\/admin\/scheduling/);
   assert.match(adminNavSource, /admin\.nav\.scheduling/);
-  assert.match(employeeLayout, /href: "\/employee\/schedule"/);
+  assert.match(employeeLayout, /href: "\/employee\/schedule(?:\?source=employee-mobile-menu)?"/);
   assert.match(employeeLayout, /t\("employee\.nav\.scheduleBoard"\)/);
 
   assert.match(messages, /"admin\.nav\.scheduling": "근무 스케줄"/);

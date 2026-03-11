@@ -27,7 +27,7 @@ function run() {
     "employee requests route must exist"
   );
 
-  assert.match(layout, /href: "\/employee\/requests"/);
+  assert.match(layout, /href: "\/employee\/requests(?:\?source=employee-mobile-menu)?"/);
   assert.match(guidePage, /href="\/employee\/requests\?source=employee-guide"/);
   assert.match(guidePage, /href: "\/employee\/attendance\?source=employee-guide"/);
   assert.match(guidePage, /href: "\/employee\/leave\?source=employee-guide"/);

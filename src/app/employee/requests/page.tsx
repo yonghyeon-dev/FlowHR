@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { EmployeeWorkspaceHero } from "@/components/employee-dashboard/EmployeeWorkspaceHero";
+import { resolveEmployeeWorkspaceSourceEntry } from "@/components/scheduling/employee-source-context";
 import { createTranslator } from "@/lib/i18n/messages";
 import { getRequestLocale } from "@/lib/i18n/server";
 
@@ -17,23 +18,27 @@ type RequestActionCard = {
   }[];
 };
 
+type EmployeeRequestsPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
 function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
   if (locale === "ko") {
     return [
       {
         id: "attendance-actions",
-        title: "출퇴근 요청 시작",
+        title: "근태 요청 시작",
         description:
-          "출퇴근 정정 초안은 홈의 근태 작업면에서 이어지고, 이곳에서는 요청 상태와 후속 조치를 관리합니다.",
+          "근태 정정 초안은 전용 근태 작업면에서 이어가고, 이 화면에서는 요청 상태와 후속 조치를 한 번에 관리합니다.",
         actions: [
           {
             href: "/employee/attendance?source=employee-requests",
-            label: "출퇴근 정정 열기",
+            label: "근태 작업 열기",
             tone: "primary"
           },
           {
             href: "/employee/schedule?source=employee-requests",
-            label: "내 근무 일정 보기",
+            label: "내 일정 보기",
             tone: "secondary"
           }
         ]
@@ -42,11 +47,11 @@ function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
         id: "leave-actions",
         title: "휴가 요청 시작",
         description:
-          "휴가 신청 초안은 홈의 휴가 작업면에서 이어지고, 이곳에서는 요청 상태와 재제출 준비를 모읍니다.",
+          "휴가 초안은 전용 휴가 작업면에서 이어가고, 이 화면에서는 승인 상태와 재제출 준비를 모읍니다.",
         actions: [
           {
             href: "/employee/leave?source=employee-requests",
-            label: "휴가 신청 열기",
+            label: "휴가 작업 열기",
             tone: "primary"
           },
           {
@@ -60,7 +65,7 @@ function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
         id: "request-monitoring",
         title: "요청 상태와 후속 조치",
         description:
-          "요청 피드백, 통합 검색, 타임라인을 한곳에서 보며 대기 건과 실패 원인을 추적합니다.",
+          "요청 피드백, 통합 검색, 타임라인을 한 화면에서 확인하며 대기 중인 항목을 추적합니다.",
         actions: [
           {
             href: "/employee/requests#request-feedback",
@@ -81,16 +86,20 @@ function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
       },
       {
         id: "resubmit-workbench",
-        title: "재제출 워크벤치",
+        title: "재제출 작업대",
         description:
-          "반려되거나 취소된 요청을 다시 선택하고, 적절한 초안으로 이어서 작업합니다.",
+          "반려되거나 취소된 요청을 다시 고르고, 올바른 초안 경로로 이어서 작업합니다.",
         actions: [
           {
             href: "/employee/requests#resubmit-workbench",
-            label: "재제출 워크벤치 열기",
+            label: "재제출 작업대 열기",
             tone: "primary"
           },
-          { href: "/employee", label: "Today로 돌아가기", tone: "secondary" }
+          {
+            href: "/employee",
+            label: "Today로 돌아가기",
+            tone: "secondary"
+          }
         ]
       }
     ];
@@ -101,11 +110,11 @@ function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
       id: "attendance-actions",
       title: "Start attendance work",
       description:
-        "Attendance correction drafts stay on the Today work surface, while this route handles request status and follow-up.",
+        "Continue attendance correction from the dedicated attendance route while using this workspace for monitoring and follow-up.",
       actions: [
         {
           href: "/employee/attendance?source=employee-requests",
-          label: "Open attendance correction",
+          label: "Open attendance workspace",
           tone: "primary"
         },
         {
@@ -119,15 +128,15 @@ function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
       id: "leave-actions",
       title: "Start leave work",
       description:
-        "Leave drafts continue on the Today work surface, while this route gathers request state and resubmit follow-up.",
+        "Continue leave drafts from the dedicated leave route while keeping request state and resubmit follow-up here.",
       actions: [
         {
           href: "/employee/leave?source=employee-requests",
-          label: "Open leave request",
+          label: "Open leave workspace",
           tone: "primary"
         },
         {
-            href: "/employee/leave?source=employee-requests#leave-calendar",
+          href: "/employee/leave?source=employee-requests#leave-calendar",
           label: "Open leave calendar",
           tone: "secondary"
         }
@@ -160,23 +169,41 @@ function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
       id: "resubmit-workbench",
       title: "Resubmit workbench",
       description:
-        "Review rejected or canceled requests, then continue in the right draft flow from one stable route.",
+        "Review rejected or canceled requests, then continue in the correct draft route.",
       actions: [
         {
           href: "/employee/requests#resubmit-workbench",
           label: "Open resubmit workbench",
           tone: "primary"
         },
-        { href: "/employee", label: "Return to Today", tone: "secondary" }
+        {
+          href: "/employee",
+          label: "Return to Today",
+          tone: "secondary"
+        }
       ]
     }
   ];
 }
 
-export default async function EmployeeRequestsPage() {
+export default async function EmployeeRequestsPage({
+  searchParams
+}: EmployeeRequestsPageProps) {
   const locale = await getRequestLocale();
   const t = createTranslator(locale);
   const requestCards = buildRequestActionCards(locale);
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const sourceParam = resolvedSearchParams.source;
+  const source =
+    typeof sourceParam === "string"
+      ? sourceParam
+      : Array.isArray(sourceParam)
+        ? (sourceParam[0] ?? null)
+        : null;
+  const workspaceSourceEntry = resolveEmployeeWorkspaceSourceEntry(
+    source,
+    locale === "ko"
+  );
 
   return (
     <main className="saas-content">
@@ -185,11 +212,15 @@ export default async function EmployeeRequestsPage() {
         title={locale === "ko" ? "요청 워크스페이스" : "Requests workspace"}
         description={
           locale === "ko"
-            ? "Today 홈은 요약과 우선순위에 집중하고, 요청 상태 확인과 재제출 후속 조치는 이 전용 경로에서 이어갑니다."
+            ? "Today 화면은 요약과 우선순위에 집중하고, 요청 상태 확인과 재제출 후속 조치는 이 전용 경로에서 이어갑니다."
             : "Keep the Today home focused on summary and priorities, then continue request monitoring and resubmit follow-up from this dedicated route."
         }
-        returnHref="/employee"
-        returnLabel={locale === "ko" ? "Today로 이동" : "Go to Today"}
+        sourceHint={workspaceSourceEntry?.hint ?? null}
+        returnHref={workspaceSourceEntry?.returnHref ?? "/employee"}
+        returnLabel={
+          workspaceSourceEntry?.returnLabel ??
+          (locale === "ko" ? "Today로 이동" : "Go to Today")
+        }
         metaLabel={
           locale === "ko"
             ? "요청 상태와 재제출 후속 조치 전용"
@@ -238,8 +269,8 @@ export default async function EmployeeRequestsPage() {
         </h2>
         <p className="small">
           {locale === "ko"
-            ? "Today 홈에 숨겨진 섹션으로 섞여 있던 요청 피드백·검색·재제출 흐름을 별도 route로 승격한 첫 구현입니다. 다음 단계에서는 홈은 요약과 우선 처리만 남기고, 요청 관련 작업면을 더 명확히 분리합니다."
-            : "This is the first route-first extraction of request feedback, search, timeline, and resubmit follow-up from the hidden Today sections. The next step keeps Today focused on summary and priority while request-heavy work moves fully into dedicated workspaces."}
+            ? "Today 화면에 숨겨져 있던 요청 피드백, 검색, 타임라인, 재제출 흐름을 별도 route로 분리하는 단계입니다. 다음 단계에서는 모바일과 나머지 entry도 같은 route-first 규칙으로 정렬합니다."
+            : "This is the route-first extraction of request feedback, search, timeline, and resubmit follow-up from the hidden Today sections. The next step aligns mobile and remaining entry points to the same route-first model."}
         </p>
         <div className="actions">
           <Link className="btn btn-secondary" href="/employee/notices">
