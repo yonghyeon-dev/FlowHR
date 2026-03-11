@@ -32,13 +32,13 @@ assert.match(
 );
 assert.match(
   onboardingSource,
-  /selectedOrganizationLabel = formatOrganizationDisplayName\(organizationName, runtimeLocale\)/,
-  "onboarding panel should use a humanized organization fallback label"
+  /ADMIN_ONBOARDING_ACCOUNT_PANELS_RETIRED_WI_1137/,
+  "onboarding dashboard legacy fragment should be retired after the grouped admin hub migration"
 );
 assert.doesNotMatch(
   onboardingSource,
   /organizationName\.trim\(\) \|\| organizationId\.trim\(\)/,
-  "onboarding panel should not fall back to raw organization IDs"
+  "retired onboarding fragment should not fall back to raw organization IDs"
 );
 assert.match(
   peopleHelpersSource,
