@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1138` by shipping the admin hub source-context transition through `main` CI and `vercel-production-deploy`.
-2. Continue the next admin hub cleanup only after the active `admin-dashboard` source banners are retired from route-first surfaces.
-3. Start the next grouped-shell copy/IA prune only after the hub source baseline is stable.
+1. Close `WI-1139` by aligning the remaining `/admin`, landing, and onboarding top-level copy from `admin dashboard` to `admin hub`.
+2. Continue the next grouped-shell copy/IA prune only after the top-level admin hub title baseline is stable.
+3. Start the first visual shell redesign slice only after the remaining admin root copy drift is removed.
 
 ## 5. Blockers Or Watch Items
 
@@ -335,3 +335,6 @@ Latest planning reset:
 - Closed `WI-1137` with merge `8a05f4175021f2e9b5bcbac771dde6a786018b58`.
 - Re-verified `WI-1137` on the delivery path and confirmed both `ci` (`22942107451`) and `vercel-production-deploy` (`22942107461`) stay green after the admin hub legacy fragment retirement.
 - Started `WI-1138` to move active admin hub source-context links and banners from `admin-dashboard` wording to a backward-compatible `admin-hub` baseline.
+- Closed `WI-1138` with merge `5ff21bb0bb8e6daf4af892e8768956be9f1447a5`.
+- Re-verified `WI-1138` on the delivery path and confirmed both `ci` (`22943132793`) and `vercel-production-deploy` (`22943132787`) stay green after the admin hub source-context alignment.
+- Started `WI-1139` to align the remaining top-level `/admin`, landing, and onboarding admin copy from `admin dashboard` wording to the active `admin hub` product language.
