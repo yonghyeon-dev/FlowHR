@@ -95,8 +95,8 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
   } = props;
 
   return (
-    <main className="saas-content">
-      <header className="page-header">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <div>
           <h1 className="page-title">{isKoLocale ? "조직도·인사 이력" : "Organization chart and HR history"}</h1>
           <p className="page-subtitle">
@@ -104,9 +104,9 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
               ? "조직도, 직원 비교, 인사 이력 카드를 한 화면에서 관리합니다."
               : "Manage org tree, employee comparison, and HR history cards in one screen."}
           </p>
-          {sourceContextLabel ? <p className="small muted">{sourceContextLabel}</p> : null}
+          {sourceContextLabel ? <p className="small muted workspace-source-banner">{sourceContextLabel}</p> : null}
           {focusPanelLabel ? (
-            <p className="small muted">
+            <p className="small muted workspace-source-banner">
               {isKoLocale ? "집중 섹션" : "Focused section"}: {focusPanelLabel}
             </p>
           ) : null}
@@ -142,7 +142,7 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
           ) : null}
         </div>
       </header>
-      <section className="kpi-strip">
+      <section className="kpi-strip workspace-summary-strip">
         <article className="kpi-card">
           <p>{isKoLocale ? "조직" : "Organizations"}</p>
           <strong>{organizations.length}</strong>
@@ -168,8 +168,8 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
           </strong>
         </article>
       </section>
-      <section className="panel-grid">
-        <section id="bulk-import">
+      <section className="panel-grid workspace-panel-grid">
+        <section id="bulk-import" className="workspace-section-card">
           <BulkImportPanel
             isKoLocale={isKoLocale}
             usesBearerToken={usesBearerToken}
@@ -183,7 +183,7 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
 
         <section
           id="directory-filters"
-          className={focusPanel === "directory-filters" ? "panel-focus-target" : undefined}
+          className={`workspace-section-card${focusPanel === "directory-filters" ? " panel-focus-target" : ""}`}
         >
           <AdminPeopleDirectoryFiltersPanel
             isKoLocale={isKoLocale}
@@ -215,7 +215,10 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
           />
         </section>
 
-        <section id="org-chart" className={focusPanel === "org-chart" ? "panel-focus-target" : undefined}>
+        <section
+          id="org-chart"
+          className={`workspace-section-card${focusPanel === "org-chart" ? " panel-focus-target" : ""}`}
+        >
           <AdminPeopleOrgChartPanel
             isKoLocale={isKoLocale}
             tree={tree}
@@ -226,7 +229,7 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
 
         <section
           id="employee-compare"
-          className={focusPanel === "employee-compare" ? "panel-focus-target" : undefined}
+          className={`workspace-section-card${focusPanel === "employee-compare" ? " panel-focus-target" : ""}`}
         >
           <AdminPeopleComparePanel
             isKoLocale={isKoLocale}
@@ -243,7 +246,7 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
 
         <section
           id="employee-history"
-          className={focusPanel === "employee-history" ? "panel-focus-target" : undefined}
+          className={`workspace-section-card${focusPanel === "employee-history" ? " panel-focus-target" : ""}`}
         >
           <AdminPeopleHistoryPanel
             isKoLocale={isKoLocale}
@@ -271,11 +274,11 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
           />
         </section>
         {showDevTools ? (
-          <section aria-label={isKoLocale ? "요청 로그" : "Request logs"}>
+          <section className="workspace-side-panel" aria-label={isKoLocale ? "요청 로그" : "Request logs"}>
             <AdminPeopleLogsPanel isKoLocale={isKoLocale} stats={stats} pendingLabel={pendingLabel} logs={logs} />
           </section>
         ) : (
-          <section aria-label={isKoLocale ? "관련 화면 이동" : "Related workspaces"}>
+          <section className="workspace-side-panel" aria-label={isKoLocale ? "관련 화면 이동" : "Related workspaces"}>
             <AdminPeopleRelatedWorkspacesPanel isKoLocale={isKoLocale} />
           </section>
         )}
