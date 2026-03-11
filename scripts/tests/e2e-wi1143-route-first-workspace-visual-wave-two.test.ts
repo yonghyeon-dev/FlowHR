@@ -49,7 +49,7 @@ async function run() {
   );
   assert.match(
     payrollCloseConsole,
-    /className="panel workspace-side-panel"/
+    /className="panel workspace-section-card workspace-note-card workspace-side-panel"/
   );
   assert.match(
     payrollCloseConsole,

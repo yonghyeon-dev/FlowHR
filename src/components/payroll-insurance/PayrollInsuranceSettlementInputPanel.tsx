@@ -107,7 +107,7 @@ export function PayrollInsuranceInputPanel({
   supabaseSessionError
 }: InputPanelProps) {
   return (
-    <article className="panel">
+    <article className="panel workspace-section-card workspace-toolbar-card">
       <h2>{copy.inputTitle}</h2>
       {showDevTools ? (
         <p className="small">
@@ -224,9 +224,9 @@ export function PayrollInsuranceInputPanel({
           {copy.previewAction}
         </button>
       </div>
-      {statusMessage ? <p className="small">{statusMessage}</p> : null}
+      {statusMessage ? <p className="small workspace-inline-status">{statusMessage}</p> : null}
       {supabaseSessionError ? (
-        <p className="small fail">
+        <p className="small fail workspace-inline-status">
           {copy.sessionErrorPrefix}: {supabaseSessionError}
         </p>
       ) : null}

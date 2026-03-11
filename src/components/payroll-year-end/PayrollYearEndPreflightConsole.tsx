@@ -3,23 +3,21 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { isTruthyFlag } from "@/app/admin/page-helpers";
 import { payrollYearEndPreflightCopyByLocale } from "@/components/payroll-year-end/copy";
 import { buildPayrollYearEndFailureMessage } from "@/components/payroll-year-end/request-failure-guidance";
-import {
-  normalizePayrollYearEndRuntimeMessage
-} from "@/components/payroll-year-end/runtime-copy-helpers";
-import { isTruthyFlag } from "@/app/admin/page-helpers";
+import { normalizePayrollYearEndRuntimeMessage } from "@/components/payroll-year-end/runtime-copy-helpers";
+import type {
+  ApiLog,
+  PayrollYearEndPreflightChecklistResponse
+} from "@/components/payroll-year-end/types";
+import { currentYear, formatKrw } from "@/components/payroll-year-end/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import {
   formatAdminSessionConnectionState,
   formatWorkspaceConnectionState
 } from "@/lib/product-language";
-import type {
-  ApiLog,
-  PayrollYearEndPreflightChecklistResponse
-} from "@/components/payroll-year-end/types";
-import { currentYear, formatKrw } from "@/components/payroll-year-end/types";
 
 function parseRequiredInt(value: string, fieldName: string, nonNegativeIntegerLabel: string) {
   const parsed = Number(value);
@@ -61,9 +59,16 @@ export default function PayrollYearEndPreflightConsole() {
     return normalizePayrollYearEndRuntimeMessage(
       supabaseSessionError,
       locale,
-      "인증 세션 상태를 확인하지 못했습니다."
+      locale === "ko"
+        ? "현재 세션 상태를 확인하지 못했습니다."
+        : "Could not verify the current session state."
     );
   }, [locale, supabaseSessionError]);
+  const checklistSummaryLabel = checklist
+    ? checklist.checklist.summary.readyToFinalize
+      ? copy.statusLoadedChecklistReady
+      : copy.statusLoadedChecklistNotReady
+    : pendingLabel ?? copy.noChecklistLoadedYet;
 
   function buildHeaders() {
     const headers: Record<string, string> = {
@@ -103,7 +108,9 @@ export default function PayrollYearEndPreflightConsole() {
           headers: buildHeaders()
         }
       );
-      const body = (await response.json()) as PayrollYearEndPreflightChecklistResponse | { error: string };
+      const body = (await response.json()) as
+        | PayrollYearEndPreflightChecklistResponse
+        | { error: string };
       setLogs((prev) => [
         {
           id: Date.now(),
@@ -144,55 +151,152 @@ export default function PayrollYearEndPreflightConsole() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="hero">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
+        <p className="small muted workspace-source-banner">
+          {locale === "ko"
+            ? "연말정산 확정 전에 사전 점검 항목을 빠르게 검토하는 운영 작업 화면입니다."
+            : "Review preflight checks before finalizing year-end settlement."}
+        </p>
+        <div className="page-actions" style={{ marginTop: 8 }}>
+          <Link href="/admin/payroll-year-end" className="btn btn-secondary btn-small">
+            {copy.backToYearEndAction}
+          </Link>
+          <Link href="/admin" className="btn btn-secondary btn-small">
+            {copy.backToAdminAction}
+          </Link>
+        </div>
       </header>
-      <section className="panel-grid">
-        <article className="panel">
+
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.title}>
+        <article className="kpi">
+          <span>{copy.yearLabel}</span>
+          <strong>{year}</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.employeeIdLabel}</span>
+          <strong>{employeeId.trim() || "-"}</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.apiLogsTotalLabel}</span>
+          <strong>
+            {stats.total} / {copy.apiLogsSuccessLabel} {stats.success}
+          </strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.readyToFinalizeLabel}</span>
+          <strong>{checklistSummaryLabel}</strong>
+        </article>
+      </section>
+
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.inputTitle}</h2>
           {showDevTools ? (
             <p className="small muted">
+              {locale === "ko" ? "세션 조직" : "Session organization"}:{" "}
               <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong> /{" "}
+              {locale === "ko" ? "세션 관리자" : "Session admin"}:{" "}
               <strong>{formatAdminSessionConnectionState(Boolean(adminActorId.trim()), runtimeLocale)}</strong>
             </p>
           ) : null}
           <div className="input-grid">
-            <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
-            <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
-            <label>{copy.nonTaxableAnnualIncomeLabel}<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
+            <label>
+              {copy.yearLabel}
+              <input value={year} onChange={(event) => setYear(event.target.value)} />
+            </label>
+            <label>
+              {copy.employeeIdLabel}
+              <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
+            </label>
+            <label>
+              {copy.nonTaxableAnnualIncomeLabel}
+              <input
+                value={nonTaxableAnnualIncomeKrw}
+                onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)}
+              />
+            </label>
           </div>
           <div className="panel-actions">
-            <button className="btn btn-primary" onClick={() => void runLoadChecklist()} disabled={pendingLabel !== null}>{copy.loadPreflightChecklistAction}</button>
+            <button
+              className="btn btn-primary"
+              onClick={() => void runLoadChecklist()}
+              disabled={pendingLabel !== null}
+            >
+              {copy.loadPreflightChecklistAction}
+            </button>
           </div>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
+          {statusMessage ? <p className="small workspace-inline-status">{statusMessage}</p> : null}
           {normalizedSupabaseSessionError ? (
-            <p className="small fail">
+            <p className="small fail workspace-inline-status">
               {copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}
             </p>
           ) : null}
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.checklistSummaryTitle}</h2>
-          {!checklist ? <p className="small">{copy.noChecklistLoadedYet}</p> : (
+          {!checklist ? (
+            <p className="small">{copy.noChecklistLoadedYet}</p>
+          ) : (
             <ul className="simple-list">
-              <li><span>{copy.readyToFinalizeLabel}</span><strong>{checklist.checklist.summary.readyToFinalize ? copy.yesLabel : copy.noLabel}</strong></li>
-              <li><span>{copy.passFailWarnLabel}</span><strong>{checklist.checklist.summary.passCount} / {checklist.checklist.summary.failCount} / {checklist.checklist.summary.warnCount}</strong></li>
-              <li><span>{copy.annualGrossPayLabel}</span><strong>{formatKrw(checklist.checklist.metrics.annualGrossPayKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.nonTaxableAnnualIncomeLabel}</span><strong>{formatKrw(checklist.checklist.metrics.nonTaxableAnnualIncomeKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.runStatesLabel}</span><strong>{copy.totalLabel} {checklist.checklist.metrics.totalRuns} / {copy.confirmedLabel} {checklist.checklist.metrics.confirmedRuns} / {copy.previewedLabel} {checklist.checklist.metrics.previewedRuns}</strong></li>
-              <li><span>{copy.distributionStatesLabel}</span><strong>{copy.undistributedLabel} {checklist.checklist.metrics.undistributedRuns} / {copy.pendingReceiptLabel} {checklist.checklist.metrics.pendingReceiptRuns}</strong></li>
-              <li><span>{copy.submissionStatesLabel}</span><strong>{copy.pendingLabel} {checklist.checklist.metrics.pendingSubmissionCount} / {copy.rejectedLabel} {checklist.checklist.metrics.rejectedSubmissionCount}</strong></li>
+              <li>
+                <span>{copy.readyToFinalizeLabel}</span>
+                <strong>
+                  {checklist.checklist.summary.readyToFinalize ? copy.yesLabel : copy.noLabel}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.passFailWarnLabel}</span>
+                <strong>
+                  {checklist.checklist.summary.passCount} / {checklist.checklist.summary.failCount} /{" "}
+                  {checklist.checklist.summary.warnCount}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.annualGrossPayLabel}</span>
+                <strong>{formatKrw(checklist.checklist.metrics.annualGrossPayKrw, runtimeLocale)}</strong>
+              </li>
+              <li>
+                <span>{copy.nonTaxableAnnualIncomeLabel}</span>
+                <strong>
+                  {formatKrw(checklist.checklist.metrics.nonTaxableAnnualIncomeKrw, runtimeLocale)}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.runStatesLabel}</span>
+                <strong>
+                  {copy.totalLabel} {checklist.checklist.metrics.totalRuns} / {copy.confirmedLabel}{" "}
+                  {checklist.checklist.metrics.confirmedRuns} / {copy.previewedLabel}{" "}
+                  {checklist.checklist.metrics.previewedRuns}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.distributionStatesLabel}</span>
+                <strong>
+                  {copy.undistributedLabel} {checklist.checklist.metrics.undistributedRuns} /{" "}
+                  {copy.pendingReceiptLabel} {checklist.checklist.metrics.pendingReceiptRuns}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.submissionStatesLabel}</span>
+                <strong>
+                  {copy.pendingLabel} {checklist.checklist.metrics.pendingSubmissionCount} /{" "}
+                  {copy.rejectedLabel} {checklist.checklist.metrics.rejectedSubmissionCount}
+                </strong>
+              </li>
             </ul>
           )}
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.checksTitle}</h2>
-          {!checklist ? <p className="small">{copy.noCheckEntriesYet}</p> : (
+          {!checklist ? (
+            <p className="small">{copy.noCheckEntriesYet}</p>
+          ) : (
             <ul className="log-list">
               {checklist.checklist.checks.map((check) => (
                 <li key={check.key}>
@@ -219,22 +323,33 @@ export default function PayrollYearEndPreflightConsole() {
         </article>
 
         {showDevTools ? (
-          <article className="panel">
+          <article className="panel workspace-section-card workspace-note-card">
             <h2>{copy.apiLogsTitle}</h2>
-            <p className="small">{copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}{pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}</p>
-            {logs.length === 0 ? <p className="small">{copy.noApiCallYet}</p> : (
+            <p className="small">
+              {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} /{" "}
+              {copy.apiLogsFailLabel} {stats.fail}
+              {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
+            </p>
+            {logs.length === 0 ? (
+              <p className="small">{copy.noApiCallYet}</p>
+            ) : (
               <ul className="log-list">
                 {logs.map((log) => (
                   <li key={log.id}>
-                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span>{" "}
+                    {log.label} / {log.status}
                     <time>{log.at}</time>
                   </li>
                 ))}
               </ul>
             )}
             <div className="panel-actions">
-              <Link href="/admin/payroll-year-end" className="btn btn-secondary">{copy.backToYearEndAction}</Link>
-              <Link href="/admin" className="btn btn-secondary">{copy.backToAdminAction}</Link>
+              <Link href="/admin/payroll-year-end" className="btn btn-secondary">
+                {copy.backToYearEndAction}
+              </Link>
+              <Link href="/admin" className="btn btn-secondary">
+                {copy.backToAdminAction}
+              </Link>
             </div>
           </article>
         ) : null}

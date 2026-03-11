@@ -4,19 +4,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { payrollCloseCopyByLocale } from "@/components/payroll-close/copy";
 import { isTruthyFlag } from "@/app/admin/page-helpers";
 import { isAdminHubSource } from "@/app/admin/source-context";
 import {
   normalizeAdminAnalyticsFocusMetric,
   resolveAdminAnalyticsBackHref
 } from "@/components/admin-kpi/admin-analytics-context";
-import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useI18n } from "@/lib/i18n/provider";
-import {
-  formatAdminSessionConnectionState,
-  formatWorkspaceConnectionState
-} from "@/lib/product-language";
+import { payrollCloseCopyByLocale } from "@/components/payroll-close/copy";
 import type { ApiLog, PayrollClosePeriodResponse } from "@/components/payroll-close/types";
 import {
   defaultMonthRange,
@@ -25,6 +19,12 @@ import {
   toSeoulStartIso
 } from "@/components/payroll-close/types";
 import { normalizePayrollYearEndRuntimeMessage } from "@/components/payroll-year-end/runtime-copy-helpers";
+import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
+import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatAdminSessionConnectionState,
+  formatWorkspaceConnectionState
+} from "@/lib/product-language";
 
 export type PayrollCloseQueueMode = "all" | "previewed";
 
@@ -70,10 +70,7 @@ export default function PayrollClosePeriodConsole({
     searchParams.get("analyticsFocus")
   );
   const analyticsBackHref = resolveAdminAnalyticsBackHref(source, analyticsFocusMetric);
-  const focusLabel =
-    queueMode === "previewed"
-      ? copy.focusPreviewedLabel
-      : copy.focusAllLabel;
+  const focusLabel = queueMode === "previewed" ? copy.focusPreviewedLabel : copy.focusAllLabel;
   const analyticsFocusLabel =
     searchParams.get("focusMetric") === "payrollConfirmedRate"
       ? locale === "ko"
@@ -98,6 +95,11 @@ export default function PayrollClosePeriodConsole({
       copy.statusRequestFailed
     );
   }, [copy.statusRequestFailed, locale, supabaseSessionError]);
+  const summaryStatusLabel = result
+    ? result.summary.canClose
+      ? copy.statusLoadedCloseSummaryPrefix
+      : copy.statusLoadedCloseSummaryBlocked
+    : pendingLabel ?? copy.noCloseSummaryYet;
 
   async function runClosePeriod(apply: boolean) {
     try {
@@ -174,7 +176,10 @@ export default function PayrollClosePeriodConsole({
       setResult(parsed);
       setStatusMessage(
         parsed.summary.canClose
-          ? `${copy.statusLoadedCloseSummaryPrefix} ${formatKrw(parsed.summary.settlementKrw.remittanceDeltaKrw, runtimeLocale)}`
+          ? `${copy.statusLoadedCloseSummaryPrefix} ${formatKrw(
+              parsed.summary.settlementKrw.remittanceDeltaKrw,
+              runtimeLocale
+            )}`
           : copy.statusLoadedCloseSummaryBlocked
       );
       setTimeout(() => setStatusMessage(""), 3000);
@@ -206,17 +211,43 @@ export default function PayrollClosePeriodConsole({
             {locale === "ko" ? "집중 큐" : "Focus queue"}: {analyticsFocusLabel}
           </p>
         ) : null}
-        {analyticsBackHref ? (
-          <div className="actions" style={{ marginTop: 8 }}>
+        <div className="page-actions" style={{ marginTop: 8 }}>
+          {analyticsBackHref ? (
             <Link href={analyticsBackHref} className="btn btn-secondary btn-small">
               {locale === "ko" ? "분석으로 돌아가기" : "Back to analytics"}
             </Link>
-          </div>
-        ) : null}
+          ) : null}
+          <Link href="/admin" className="btn btn-secondary btn-small">
+            {copy.backToAdmin}
+          </Link>
+        </div>
       </header>
 
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.title}>
+        <article className="kpi">
+          <span>{copy.dashboardSourceFocusLabel}</span>
+          <strong>{focusLabel}</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.periodStartLabel}</span>
+          <strong>
+            {periodStartDate} ~ {periodEndDate}
+          </strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.apiLogsTotalLabel}</span>
+          <strong>
+            {stats.total} / {copy.apiLogsSuccessLabel} {stats.success}
+          </strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.statusLoadedCloseSummaryPrefix}</span>
+          <strong>{summaryStatusLabel}</strong>
+        </article>
+      </section>
+
       <section className="panel-grid workspace-panel-grid">
-        <article className="panel workspace-section-card">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.inputTitle}</h2>
           {showDevTools ? (
             <p className="small muted">
@@ -229,30 +260,55 @@ export default function PayrollClosePeriodConsole({
           <div className="input-grid">
             <label>
               {copy.periodStartLabel}
-              <input type="date" value={periodStartDate} onChange={(event) => setPeriodStartDate(event.target.value)} />
+              <input
+                type="date"
+                value={periodStartDate}
+                onChange={(event) => setPeriodStartDate(event.target.value)}
+              />
             </label>
             <label>
               {copy.periodEndLabel}
-              <input type="date" value={periodEndDate} onChange={(event) => setPeriodEndDate(event.target.value)} />
+              <input
+                type="date"
+                value={periodEndDate}
+                onChange={(event) => setPeriodEndDate(event.target.value)}
+              />
             </label>
             <label>
               {copy.priorPaidWithholdingLabel}
-              <input value={priorPaidWithholdingTaxKrw} onChange={(event) => setPriorPaidWithholdingTaxKrw(event.target.value)} />
+              <input
+                value={priorPaidWithholdingTaxKrw}
+                onChange={(event) => setPriorPaidWithholdingTaxKrw(event.target.value)}
+              />
             </label>
             <label>
               {copy.priorPaidSocialInsuranceLabel}
-              <input value={priorPaidSocialInsuranceKrw} onChange={(event) => setPriorPaidSocialInsuranceKrw(event.target.value)} />
+              <input
+                value={priorPaidSocialInsuranceKrw}
+                onChange={(event) => setPriorPaidSocialInsuranceKrw(event.target.value)}
+              />
             </label>
             <label>
               {copy.priorPaidNetPayoutLabel}
-              <input value={priorPaidNetPayKrw} onChange={(event) => setPriorPaidNetPayKrw(event.target.value)} />
+              <input
+                value={priorPaidNetPayKrw}
+                onChange={(event) => setPriorPaidNetPayKrw(event.target.value)}
+              />
             </label>
           </div>
           <div className="panel-actions">
-            <button className="btn btn-secondary" onClick={() => void runClosePeriod(false)} disabled={pendingLabel !== null}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => void runClosePeriod(false)}
+              disabled={pendingLabel !== null}
+            >
               {copy.previewAction}
             </button>
-            <button className="btn btn-primary" onClick={() => void runClosePeriod(true)} disabled={pendingLabel !== null}>
+            <button
+              className="btn btn-primary"
+              onClick={() => void runClosePeriod(true)}
+              disabled={pendingLabel !== null}
+            >
               {copy.applyAction}
             </button>
           </div>
@@ -270,10 +326,25 @@ export default function PayrollClosePeriodConsole({
             <p className="small">{copy.noCloseSummaryYet}</p>
           ) : (
             <ul className="simple-list">
-              <li><span>{copy.canCloseLabel}</span><strong>{result.summary.canClose ? copy.yes : copy.no}</strong></li>
-              <li><span>{copy.totalConfirmedPreviewedLabel}</span><strong>{result.summary.runStates.totalRuns} / {result.summary.runStates.confirmedRuns} / {result.summary.runStates.previewedRuns}</strong></li>
-              <li><span>{copy.blockingRunIdsLabel}</span><strong>{result.summary.runStates.blockingRunIds.join(", ") || "-"}</strong></li>
-              <li><span>{copy.blockingReasonsLabel}</span><strong>{result.summary.runStates.blockingReasons.join(" | ") || "-"}</strong></li>
+              <li>
+                <span>{copy.canCloseLabel}</span>
+                <strong>{result.summary.canClose ? copy.yes : copy.no}</strong>
+              </li>
+              <li>
+                <span>{copy.totalConfirmedPreviewedLabel}</span>
+                <strong>
+                  {result.summary.runStates.totalRuns} / {result.summary.runStates.confirmedRuns} /{" "}
+                  {result.summary.runStates.previewedRuns}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.blockingRunIdsLabel}</span>
+                <strong>{result.summary.runStates.blockingRunIds.join(", ") || "-"}</strong>
+              </li>
+              <li>
+                <span>{copy.blockingReasonsLabel}</span>
+                <strong>{result.summary.runStates.blockingReasons.join(" | ") || "-"}</strong>
+              </li>
             </ul>
           )}
         </article>
@@ -284,28 +355,107 @@ export default function PayrollClosePeriodConsole({
             <p className="small">{copy.noTotalsYet}</p>
           ) : (
             <ul className="simple-list">
-              <li><span>{copy.grossNetLabel}</span><strong>{formatKrw(result.summary.totalsKrw.grossPayKrw, runtimeLocale)} / {formatKrw(result.summary.totalsKrw.netPayKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.withholdingSocialInsuranceLabel}</span><strong>{formatKrw(result.summary.totalsKrw.withholdingTaxKrw, runtimeLocale)} / {formatKrw(result.summary.totalsKrw.socialInsuranceKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.incomeTaxLabel}</span><strong>{formatKrw(result.summary.totalsKrw.withholdingBreakdownKrw.incomeTaxKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.residentTaxLabel}</span><strong>{formatKrw(result.summary.totalsKrw.withholdingBreakdownKrw.residentTaxKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.nationalPensionLabel}</span><strong>{formatKrw(result.summary.totalsKrw.socialInsuranceBreakdownKrw.nationalPensionKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.healthInsuranceLabel}</span><strong>{formatKrw(result.summary.totalsKrw.socialInsuranceBreakdownKrw.healthInsuranceKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.employmentInsuranceLabel}</span><strong>{formatKrw(result.summary.totalsKrw.socialInsuranceBreakdownKrw.employmentInsuranceKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.industrialAccidentLabel}</span><strong>{formatKrw(result.summary.totalsKrw.socialInsuranceBreakdownKrw.industrialAccidentKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.deductionsOtherLabel}</span><strong>{formatKrw(result.summary.totalsKrw.totalDeductionsKrw, runtimeLocale)} / {formatKrw(result.summary.totalsKrw.otherDeductionsKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.withholdingDeltaLabel}</span><strong>{formatKrw(result.summary.settlementKrw.withholdingTaxDeltaKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.socialInsuranceDeltaLabel}</span><strong>{formatKrw(result.summary.settlementKrw.socialInsuranceDeltaKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.netPayDeltaLabel}</span><strong>{formatKrw(result.summary.settlementKrw.netPayDeltaKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.remittanceDeltaLabel}</span><strong>{formatKrw(result.summary.settlementKrw.remittanceDeltaKrw, runtimeLocale)}</strong></li>
+              <li>
+                <span>{copy.grossNetLabel}</span>
+                <strong>
+                  {formatKrw(result.summary.totalsKrw.grossPayKrw, runtimeLocale)} /{" "}
+                  {formatKrw(result.summary.totalsKrw.netPayKrw, runtimeLocale)}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.withholdingSocialInsuranceLabel}</span>
+                <strong>
+                  {formatKrw(result.summary.totalsKrw.withholdingTaxKrw, runtimeLocale)} /{" "}
+                  {formatKrw(result.summary.totalsKrw.socialInsuranceKrw, runtimeLocale)}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.incomeTaxLabel}</span>
+                <strong>
+                  {formatKrw(
+                    result.summary.totalsKrw.withholdingBreakdownKrw.incomeTaxKrw,
+                    runtimeLocale
+                  )}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.residentTaxLabel}</span>
+                <strong>
+                  {formatKrw(
+                    result.summary.totalsKrw.withholdingBreakdownKrw.residentTaxKrw,
+                    runtimeLocale
+                  )}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.nationalPensionLabel}</span>
+                <strong>
+                  {formatKrw(
+                    result.summary.totalsKrw.socialInsuranceBreakdownKrw.nationalPensionKrw,
+                    runtimeLocale
+                  )}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.healthInsuranceLabel}</span>
+                <strong>
+                  {formatKrw(
+                    result.summary.totalsKrw.socialInsuranceBreakdownKrw.healthInsuranceKrw,
+                    runtimeLocale
+                  )}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.employmentInsuranceLabel}</span>
+                <strong>
+                  {formatKrw(
+                    result.summary.totalsKrw.socialInsuranceBreakdownKrw.employmentInsuranceKrw,
+                    runtimeLocale
+                  )}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.industrialAccidentLabel}</span>
+                <strong>
+                  {formatKrw(
+                    result.summary.totalsKrw.socialInsuranceBreakdownKrw.industrialAccidentKrw,
+                    runtimeLocale
+                  )}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.deductionsOtherLabel}</span>
+                <strong>
+                  {formatKrw(result.summary.totalsKrw.totalDeductionsKrw, runtimeLocale)} /{" "}
+                  {formatKrw(result.summary.totalsKrw.otherDeductionsKrw, runtimeLocale)}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.withholdingDeltaLabel}</span>
+                <strong>{formatKrw(result.summary.settlementKrw.withholdingTaxDeltaKrw, runtimeLocale)}</strong>
+              </li>
+              <li>
+                <span>{copy.socialInsuranceDeltaLabel}</span>
+                <strong>{formatKrw(result.summary.settlementKrw.socialInsuranceDeltaKrw, runtimeLocale)}</strong>
+              </li>
+              <li>
+                <span>{copy.netPayDeltaLabel}</span>
+                <strong>{formatKrw(result.summary.settlementKrw.netPayDeltaKrw, runtimeLocale)}</strong>
+              </li>
+              <li>
+                <span>{copy.remittanceDeltaLabel}</span>
+                <strong>{formatKrw(result.summary.settlementKrw.remittanceDeltaKrw, runtimeLocale)}</strong>
+              </li>
             </ul>
           )}
         </article>
 
         {showDevTools ? (
-          <article className="panel workspace-side-panel">
+          <article className="panel workspace-section-card workspace-note-card workspace-side-panel">
             <h2>{copy.apiLogsTitle}</h2>
             <p className="small">
-              {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
+              {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} /{" "}
+              {copy.apiLogsFailLabel} {stats.fail}
               {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
             </p>
             {logs.length === 0 ? (
@@ -314,14 +464,17 @@ export default function PayrollClosePeriodConsole({
               <ul className="log-list">
                 {logs.map((log) => (
                   <li key={log.id}>
-                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span>{" "}
+                    {log.label} / {log.status}
                     <time>{log.at}</time>
                   </li>
                 ))}
               </ul>
             )}
             <div className="panel-actions">
-              <Link href="/admin" className="btn btn-secondary">{copy.backToAdmin}</Link>
+              <Link href="/admin" className="btn btn-secondary">
+                {copy.backToAdmin}
+              </Link>
             </div>
           </article>
         ) : null}

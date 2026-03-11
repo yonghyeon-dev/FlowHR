@@ -32,7 +32,7 @@ function formatRate(value: number) {
 
 export function PayrollInsuranceSummaryPanel({ copy, result, runtimeLocale }: SummaryPanelProps) {
   return (
-    <article className="panel">
+    <article className="panel workspace-section-card">
       <h2>{copy.summaryTitle}</h2>
       {!result ? (
         <p className="small">{copy.noResultYet}</p>
@@ -115,7 +115,7 @@ export function PayrollInsuranceComponentsPanel({
   runtimeLocale
 }: ComponentsPanelProps) {
   return (
-    <article className="panel">
+    <article className="panel workspace-section-card">
       <h2>{copy.componentsTitle}</h2>
       {!result ? (
         <p className="small">{copy.noContributionBreakdownYet}</p>
@@ -183,7 +183,7 @@ export function PayrollInsuranceComponentsPanel({
 
 export function PayrollInsuranceLogsPanel({ copy, stats, pendingLabel, logs }: LogsPanelProps) {
   return (
-    <article className="panel">
+    <article className="panel workspace-section-card workspace-note-card">
       <h2>{copy.apiLogsTitle}</h2>
       <p className="small">
         {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel}{" "}
