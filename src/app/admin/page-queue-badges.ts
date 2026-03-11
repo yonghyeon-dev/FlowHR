@@ -1,4 +1,5 @@
 import type { AdminSummary } from "@/app/admin/page-dashboard-types";
+import { ADMIN_HUB_SOURCE } from "@/app/admin/source-context";
 
 export type AdminQueueBadge = {
   key: string;
@@ -22,19 +23,19 @@ export function buildAdminQueueBadges(summary: AdminSummary, isKoLocale: boolean
       breakdown: isKoLocale
         ? `대기 ${summary.pendingApprovalExecutionCount} · 정체 ${summary.stalledApprovalExecutionCount}`
         : `Pending ${summary.pendingApprovalExecutionCount} · Stalled ${summary.stalledApprovalExecutionCount}`,
-      href: "/admin/approval-executions?source=admin-dashboard",
+      href: `/admin/approval-executions?source=${ADMIN_HUB_SOURCE}`,
       actions: [
         {
           label: isKoLocale
             ? `대기 ${summary.pendingApprovalExecutionCount}`
             : `Pending ${summary.pendingApprovalExecutionCount}`,
-          href: "/admin/approval-executions?state=PENDING&source=admin-dashboard"
+          href: `/admin/approval-executions?state=PENDING&source=${ADMIN_HUB_SOURCE}`
         },
         {
           label: isKoLocale
             ? `정체 ${summary.stalledApprovalExecutionCount}`
             : `Stalled ${summary.stalledApprovalExecutionCount}`,
-          href: "/admin/approval-executions?state=PENDING&stalledHoursMin=24&source=admin-dashboard"
+          href: `/admin/approval-executions?state=PENDING&stalledHoursMin=24&source=${ADMIN_HUB_SOURCE}`
         }
       ]
     },
@@ -47,25 +48,25 @@ export function buildAdminQueueBadges(summary: AdminSummary, isKoLocale: boolean
       breakdown: isKoLocale
         ? `미확정 ${summary.previewedPayrollCount} · 미배포 ${summary.undistributedPayrollCount}`
         : `Previewed ${summary.previewedPayrollCount} · Undistributed ${summary.undistributedPayrollCount}`,
-      href: "/admin/payroll-close?source=admin-dashboard",
+      href: `/admin/payroll-close?source=${ADMIN_HUB_SOURCE}`,
       actions: [
         {
           label: isKoLocale
             ? `미확정 ${summary.previewedPayrollCount}`
             : `Previewed ${summary.previewedPayrollCount}`,
-          href: "/admin/payroll-close/previewed?source=admin-dashboard"
+          href: `/admin/payroll-close/previewed?source=${ADMIN_HUB_SOURCE}`
         },
         {
           label: isKoLocale
             ? `미배포 ${summary.undistributedPayrollCount}`
             : `Undistributed ${summary.undistributedPayrollCount}`,
-          href: "/admin/payroll-payslip-delivery/undistributed?source=admin-dashboard"
+          href: `/admin/payroll-payslip-delivery/undistributed?source=${ADMIN_HUB_SOURCE}`
         },
         {
           label: isKoLocale
             ? `배포 처리 ${summary.undistributedPayrollCount}`
             : `Deliver ${summary.undistributedPayrollCount}`,
-          href: "/admin/payroll-payslip-delivery?source=admin-dashboard"
+          href: `/admin/payroll-payslip-delivery?source=${ADMIN_HUB_SOURCE}`
         }
       ]
     },
@@ -83,25 +84,25 @@ export function buildAdminQueueBadges(summary: AdminSummary, isKoLocale: boolean
       breakdown: isKoLocale
         ? `의사결정 ${summary.contractDecisionQueueCount} · 응답 대기 ${summary.contractPendingResponseCount} · SLA 초과 ${summary.contractSlaOverdueCount}`
         : `Decision ${summary.contractDecisionQueueCount} · Pending response ${summary.contractPendingResponseCount} · SLA overdue ${summary.contractSlaOverdueCount}`,
-      href: "/admin/contracts?source=admin-dashboard",
+      href: `/admin/contracts?source=${ADMIN_HUB_SOURCE}`,
       actions: [
         {
           label: isKoLocale
             ? `의사결정 ${summary.contractDecisionQueueCount}`
             : `Decision ${summary.contractDecisionQueueCount}`,
-          href: "/admin/contracts?decisionQueueOnly=true&source=admin-dashboard"
+          href: `/admin/contracts?decisionQueueOnly=true&source=${ADMIN_HUB_SOURCE}`
         },
         {
           label: isKoLocale
             ? `응답 대기 ${summary.contractPendingResponseCount}`
             : `Pending response ${summary.contractPendingResponseCount}`,
-          href: "/admin/contracts?status=SENT&source=admin-dashboard"
+          href: `/admin/contracts?status=SENT&source=${ADMIN_HUB_SOURCE}`
         },
         {
           label: isKoLocale
             ? `SLA 초과 ${summary.contractSlaOverdueCount}`
             : `SLA overdue ${summary.contractSlaOverdueCount}`,
-          href: "/admin/contracts?slaRisk=OVERDUE&source=admin-dashboard"
+          href: `/admin/contracts?slaRisk=OVERDUE&source=${ADMIN_HUB_SOURCE}`
         }
       ]
     }

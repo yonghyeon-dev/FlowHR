@@ -72,7 +72,7 @@ const copyEn: PayrollCloseCopy = {
   title: "Payroll Close Period",
   description:
     "Preview or apply period close workflow with settlement deltas from confirmed payroll runs.",
-  dashboardSourceBanner: "Opened from admin dashboard",
+  dashboardSourceBanner: "Opened from admin hub",
   dashboardSourceFocusLabel: "Focused queue",
   focusPreviewedLabel: "Previewed runs",
   focusUndistributedLabel: "Undistributed runs",
@@ -139,7 +139,7 @@ const copyKo: PayrollCloseCopy = {
   heroEyebrow: "FlowHR 관리자",
   title: "급여 마감",
   description: "확정 급여 실행 기준으로 정산 차이를 미리 보고 마감 적용 여부를 확인합니다.",
-  dashboardSourceBanner: "관리자 대시보드에서 이동했습니다",
+  dashboardSourceBanner: "관리자 허브에서 이동했습니다",
   dashboardSourceFocusLabel: "집중 대기함",
   focusPreviewedLabel: "미확정 실행",
   focusUndistributedLabel: "미배포 실행",

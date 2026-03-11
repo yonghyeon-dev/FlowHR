@@ -64,11 +64,11 @@ function run() {
 
   assert.match(
     queueBadges,
-    /href: "\/admin\/payroll-close\/previewed\?source=admin-dashboard"/
+    /href: `\/admin\/payroll-close\/previewed\?source=\$\{ADMIN_HUB_SOURCE\}`/
   );
   assert.match(
     queueBadges,
-    /href: "\/admin\/payroll-payslip-delivery\/undistributed\?source=admin-dashboard"/
+    /href: `\/admin\/payroll-payslip-delivery\/undistributed\?source=\$\{ADMIN_HUB_SOURCE\}`/
   );
   assert.doesNotMatch(queueBadges, /\?focus=previewed/);
   assert.doesNotMatch(queueBadges, /\?focus=undistributed/);

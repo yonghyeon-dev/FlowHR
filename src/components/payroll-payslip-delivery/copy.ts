@@ -61,7 +61,7 @@ const copyEn: PayrollPayslipDeliveryCopy = {
   title: "Payroll Payslip Delivery",
   description:
     "Distribute confirmed payroll payslips and track delivery baseline before employee receipt confirmation.",
-  dashboardSourceBanner: "Opened from admin dashboard",
+  dashboardSourceBanner: "Opened from admin hub",
   dashboardSourceFocusLabel: "Focused queue",
   focusUndistributedLabel: "Undistributed runs",
   focusAllLabel: "Payslip delivery queue",
@@ -117,7 +117,7 @@ const copyKo: PayrollPayslipDeliveryCopy = {
   heroEyebrow: "FlowHR 관리자",
   title: "급여명세 배포",
   description: "확정된 급여명세서를 배포하고 직원 수신확인 전 상태를 점검합니다.",
-  dashboardSourceBanner: "관리자 대시보드에서 이동했습니다",
+  dashboardSourceBanner: "관리자 허브에서 이동했습니다",
   dashboardSourceFocusLabel: "집중 대기함",
   focusUndistributedLabel: "미배포 실행",
   focusAllLabel: "명세 배포 대기함",

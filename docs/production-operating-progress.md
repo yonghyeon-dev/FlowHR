@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1135` by confirming `main` CI and `vercel-production-deploy` stay green after payroll preview state isolation.
-2. Start `WI-1136` to remove unused admin dashboard scaffolding and refresh stale decomposition guards around the current route-first model.
-3. Continue the next admin route-first extraction only after the legacy scaffolding is retired.
+1. Close `WI-1138` by shipping the admin hub source-context transition through `main` CI and `vercel-production-deploy`.
+2. Continue the next admin hub cleanup only after the active `admin-dashboard` source banners are retired from route-first surfaces.
+3. Start the next grouped-shell copy/IA prune only after the hub source baseline is stable.
 
 ## 5. Blockers Or Watch Items
 
@@ -332,3 +332,6 @@ Latest planning reset:
 - Closed `WI-1136` with merge `0f63d6fa2255dc414a72ebe867c1edb64b93bbfd`.
 - Re-verified `WI-1136` on the delivery path and confirmed both `ci` (`22941341706`) and `vercel-production-deploy` (`22941341732`) stay green after the admin legacy dashboard scaffolding retirement.
 - Started `WI-1137` to retire the remaining unused admin dashboard fragment components and rewrite stale guard expectations around the grouped admin hub shell.
+- Closed `WI-1137` with merge `8a05f4175021f2e9b5bcbac771dde6a786018b58`.
+- Re-verified `WI-1137` on the delivery path and confirmed both `ci` (`22942107451`) and `vercel-production-deploy` (`22942107461`) stay green after the admin hub legacy fragment retirement.
+- Started `WI-1138` to move active admin hub source-context links and banners from `admin-dashboard` wording to a backward-compatible `admin-hub` baseline.

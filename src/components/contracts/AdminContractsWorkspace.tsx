@@ -2,6 +2,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AdminContractsWorkspaceHeader } from "@/components/contracts/AdminContractsWorkspaceHeader";
+import { isAdminHubSource } from "@/app/admin/source-context";
 import {
   adminContractsCopyByLocale,
   contractApprovalStatusLabelByLocale,
@@ -113,6 +114,7 @@ export default function AdminContractsWorkspace({ accessToken }: AdminContractsW
     }
   });
   const dashboardFocusLabel = decisionQueueOnly ? copy.decisionQueueCountLabel : documentStatusFilter === "SENT" ? copy.pendingResponseQueueLabel : slaRiskFilter === "OVERDUE" ? copy.overdueSlaCountLabel : copy.documentsKpiLabel;
+  const adminSource = isAdminHubSource(analyticsSource) ? "admin-hub" : analyticsSource;
   useEffect(() => {
     setContractsRuntimeLocale(locale);
     return () => {
@@ -125,7 +127,7 @@ export default function AdminContractsWorkspace({ accessToken }: AdminContractsW
         heroEyebrow={copy.heroEyebrow}
         title={copy.title}
         description={copy.description}
-        analyticsSource={analyticsSource}
+        analyticsSource={adminSource}
         analyticsFocusLabel={analyticsFocusLabel}
         analyticsSourceBanner={copy.analyticsSourceBanner}
         analyticsSourceFocusLabel={copy.analyticsSourceFocusLabel}

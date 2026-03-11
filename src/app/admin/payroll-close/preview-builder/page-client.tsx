@@ -12,6 +12,7 @@ import { useAdminPayrollPreviewBuilderState } from "@/app/admin/payroll-close/pr
 import { AdminDebugLogsPanel } from "@/components/admin-dashboard/AdminDebugLogsPanel";
 import { AdminPayrollPanel } from "@/components/admin-dashboard/AdminPayrollPanel";
 import { createEmptyPayrollKrIncomeSplitItemDraft } from "@/components/payroll/PayrollKrIncomeSplitItemsTable";
+import { isAdminHubSource } from "@/app/admin/source-context";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -121,11 +122,11 @@ export default function AdminPayrollPreviewBuilderPageClient() {
               ? "급여 프리뷰/확정과 프리셋 공유 재생을 전용 작업면에서 처리하세요."
               : "Handle payroll preview, confirmation, and preset-share replay in a dedicated workspace."}
           </p>
-          {source === "admin-dashboard" ? (
+          {isAdminHubSource(source) ? (
             <p className="small muted">
               {isKoLocale
-                ? "관리자 대시보드 급여 lane에서 이동했습니다."
-                : "Opened from the admin dashboard payroll lane."}
+                ? "관리자 허브 급여 lane에서 이동했습니다."
+                : "Opened from the admin hub payroll lane."}
             </p>
           ) : null}
           {openedFromShareLink ? (

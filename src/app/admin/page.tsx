@@ -19,6 +19,7 @@ import {
 import { buildAdminDashboardEntryLinks } from "@/app/admin/admin-shell-navigation";
 import { buildAdminQueueBadges } from "@/app/admin/page-queue-badges";
 import { buildAdminWorkspaceHubs } from "@/app/admin/page-workspace-hubs";
+import { ADMIN_HUB_SOURCE, withAdminHubSource } from "@/app/admin/source-context";
 import {
   resolveAdminDashboardFocusCardLabel,
   resolveAdminDashboardFocusSeverityLabel,
@@ -288,13 +289,13 @@ export default function AdminDashboardPage() {
   const workspaceHubs = buildAdminWorkspaceHubs(locale, t);
   const dashboardEntryLinks = buildAdminDashboardEntryLinks(t);
   const dashboardQueueContextLinks = {
-    approvalQueue: { href: "/admin/approval-executions?source=admin-dashboard" },
-    approvalPending: { href: "/admin/approval-executions?state=PENDING&source=admin-dashboard" },
+    approvalQueue: { href: `/admin/approval-executions?source=${ADMIN_HUB_SOURCE}` },
+    approvalPending: { href: `/admin/approval-executions?state=PENDING&source=${ADMIN_HUB_SOURCE}` },
     approvalStalled: {
-      href: "/admin/approval-executions?state=PENDING&stalledHoursMin=24&source=admin-dashboard"
+      href: `/admin/approval-executions?state=PENDING&stalledHoursMin=24&source=${ADMIN_HUB_SOURCE}`
     },
-    payrollQueue: { href: "/admin/payroll-close?source=admin-dashboard" },
-    contractsQueue: { href: "/admin/contracts?source=admin-dashboard" }
+    payrollQueue: { href: `/admin/payroll-close?source=${ADMIN_HUB_SOURCE}` },
+    contractsQueue: { href: `/admin/contracts?source=${ADMIN_HUB_SOURCE}` }
   } as const;
   const wi0128ApprovalQueueShortcutToken = 'href="/admin/approval-executions"';
   const wi0374SetLogsToken = "setLogs((prev) => [log, ...prev]);";
@@ -302,14 +303,6 @@ export default function AdminDashboardPage() {
   void wi0128ApprovalQueueShortcutToken;
   void wi0374SetLogsToken;
   void wi0374FormatDateTimeToken;
-
-  const withAdminDashboardSource = (href: string) => {
-    if (!href.startsWith("/admin/contracts") || href.includes("source=")) {
-      return href;
-    }
-    const separator = href.includes("?") ? "&" : "?";
-    return `${href}${separator}source=admin-dashboard`;
-  };
 
   if (supabaseSessionLoading) {
     return null;
@@ -539,7 +532,7 @@ export default function AdminDashboardPage() {
               {hub.links.map((link, index) => (
                 <Link
                   className={index === 0 ? "btn btn-primary" : "btn btn-secondary"}
-                  href={withAdminDashboardSource(link.href)}
+                  href={withAdminHubSource(link.href)}
                   key={link.href}
                 >
                   {link.label}

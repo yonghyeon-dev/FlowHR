@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 
 import { payrollPayslipDeliveryCopyByLocale } from "@/components/payroll-payslip-delivery/copy";
 import { isTruthyFlag } from "@/app/admin/page-helpers";
+import { isAdminHubSource } from "@/app/admin/source-context";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import {
@@ -140,7 +141,7 @@ export default function PayrollPayslipDeliveryConsole({
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
-        {source === "admin-dashboard" ? (
+        {isAdminHubSource(source) ? (
           <p className="small muted">
             {copy.dashboardSourceBanner} · {copy.dashboardSourceFocusLabel}: {focusLabel}
           </p>

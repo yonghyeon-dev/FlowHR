@@ -2,6 +2,7 @@ import {
   ADMIN_SHELL_SECTION_DEFINITIONS,
   type AdminShellSectionKey,
 } from "@/app/admin/admin-shell-navigation";
+import { ADMIN_HUB_SOURCE } from "@/app/admin/source-context";
 import type { MessageKey } from "@/lib/i18n/messages";
 
 type Translator = (key: MessageKey) => string;
@@ -64,15 +65,15 @@ const ADMIN_WORKSPACE_HUB_DEFINITIONS: Record<AdminShellSectionKey, AdminWorkspa
       { href: "/admin/leave-calendar", label: { ko: "휴가 캘린더", en: "Leave calendar" } },
       { href: "/admin/scheduling", label: { ko: "근무 일정", en: "Scheduling" } },
       {
-        href: "/admin/notices?status=PUBLISHED&risk=no-read&source=admin-dashboard",
+        href: `/admin/notices?status=PUBLISHED&risk=no-read&source=${ADMIN_HUB_SOURCE}`,
         label: { ko: "공지 읽음 위험", en: "Notice read risk" },
       },
       {
-        href: "/admin/benefits?status=SUBMITTED&risk=pending_3d&source=admin-dashboard",
+        href: `/admin/benefits?status=SUBMITTED&risk=pending_3d&source=${ADMIN_HUB_SOURCE}`,
         label: { ko: "복리후생 요청 지연", en: "Benefit backlog" },
       },
       {
-        href: "/admin/recruitment?risk=stalled_7d&source=admin-dashboard",
+        href: `/admin/recruitment?risk=stalled_7d&source=${ADMIN_HUB_SOURCE}`,
         label: { ko: "채용 진행 지연", en: "Recruitment stalled" },
       },
       {

@@ -13,6 +13,7 @@ import type { ApiLog, LeaveCalendarResponse } from "@/components/leave-calendar/
 import { addDays, defaultCalendarRange, toDateInputValue, toSeoulIsoStart } from "@/components/leave-calendar/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import { isAdminHubSource } from "@/app/admin/source-context";
 import {
   formatAdminSessionConnectionState,
   formatEmployeeDisplayName,
@@ -178,9 +179,9 @@ export default function LeaveCalendarConsole() {
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
-        {source === "admin-dashboard" ? (
+        {isAdminHubSource(source) ? (
           <p className="small muted">
-            {locale === "ko" ? "관리자 대시보드에서 이동했습니다" : "Opened from admin dashboard"}
+            {locale === "ko" ? "관리자 허브에서 이동했습니다" : "Opened from admin hub"}
           </p>
         ) : null}
         {source === "admin-analytics" ? (

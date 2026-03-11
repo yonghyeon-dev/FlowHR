@@ -5,6 +5,7 @@ import type { NoticeItem, NoticeReadReceipt, NoticeStatus } from "@/features/not
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import { type AdminKpiFocusMetric } from "@/components/admin-kpi/AdminKpiSections";
+import { isAdminHubSource } from "@/app/admin/source-context";
 import { resolveNoticeWorkspaceCopy } from "@/components/notices/copy";
 import AdminNoticeWorkspaceView from "@/components/notices/AdminNoticeWorkspaceView";
 
@@ -159,10 +160,10 @@ export default function AdminNoticeWorkspace() {
     searchParams.get("risk")
   );
   const sourceHint =
-    source === "admin-dashboard"
+    isAdminHubSource(source)
       ? locale === "ko"
-        ? "관리자 대시보드에서 이동했습니다."
-        : "Opened from admin dashboard."
+        ? "관리자 허브에서 이동했습니다."
+        : "Opened from admin hub."
       : source === "admin-analytics"
         ? locale === "ko"
           ? `관리자 분석 대시보드에서 이동했습니다.${analyticsFocusLabel ? ` · 집중 큐: ${analyticsFocusLabel}` : ""}`
