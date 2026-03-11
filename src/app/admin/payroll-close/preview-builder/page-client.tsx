@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 
-import { buildAdminDashboardActions } from "@/app/admin/page-dashboard-actions";
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
 import { buildQuery, formatDateTime, isTruthyFlag, toIso } from "@/app/admin/page-helpers";
 import { resolveAdminLocaleLabelBundle } from "@/app/admin/page-locale-helpers";
-import { useAdminDashboardState } from "@/app/admin/page-state";
+import { buildAdminPayrollPreviewWorkspaceActions } from "@/app/admin/payroll-close/preview-builder/page-actions";
+import { useAdminPayrollPreviewBuilderState } from "@/app/admin/payroll-close/preview-builder/page-state";
 import { AdminDebugLogsPanel } from "@/components/admin-dashboard/AdminDebugLogsPanel";
 import { AdminPayrollPanel } from "@/components/admin-dashboard/AdminPayrollPanel";
 import { createEmptyPayrollKrIncomeSplitItemDraft } from "@/components/payroll/PayrollKrIncomeSplitItemsTable";
@@ -24,11 +24,7 @@ export default function AdminPayrollPreviewBuilderPageClient() {
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, loading: supabaseSessionLoading } = useSupabaseSession();
   const localeLabelBundle = resolveAdminLocaleLabelBundle(isKoLocale);
-  const pageState = useAdminDashboardState({
-    demoOrganizationName: localeLabelBundle.demoOrganizationName,
-    isProductionRuntime,
-    supabaseOrganizationId: supabaseSession?.organizationId
-  });
+  const pageState = useAdminPayrollPreviewBuilderState();
   const initialRefreshDoneRef = useRef(false);
 
   const bearerToken = useMemo(
@@ -67,42 +63,15 @@ export default function AdminPayrollPreviewBuilderPageClient() {
     [pageState, runtimeLocale]
   );
 
-  const dashboardActions = buildAdminDashboardActions({
+  const workspaceActions = buildAdminPayrollPreviewWorkspaceActions({
     callApi,
     buildQuery,
     toIso,
     runtimeLocale,
     periodStart: pageState.periodStart,
     periodEnd: pageState.periodEnd,
-    organizationId: pageState.organizationId,
-    setPendingAttendance: pageState.setPendingAttendance,
-    setPendingLeave: pageState.setPendingLeave,
-    setPreviewedPayroll: pageState.setPreviewedPayroll,
-    setLastPayrollRunId: pageState.setLastPayrollRunId,
-    setLogs: pageState.setLogs,
-    setAccrualResult: pageState.setAccrualResult,
-    setLeaveAllowHalfDay: pageState.setLeaveAllowHalfDay,
-    setLeaveAllowHourly: pageState.setLeaveAllowHourly,
-    setAccrualGrantDays: pageState.setAccrualGrantDays,
-    setAccrualCarryCapDays: pageState.setAccrualCarryCapDays,
-    setLeaveHourlyIncrementMinutes: pageState.setLeaveHourlyIncrementMinutes,
-    setLeaveMaxHoursPerRequest: pageState.setLeaveMaxHoursPerRequest,
-    setLeaveMinNoticeDays: pageState.setLeaveMinNoticeDays,
-    setLeaveMaxConsecutiveDays: pageState.setLeaveMaxConsecutiveDays,
-    aggregateEmployeeId: pageState.aggregateEmployeeId,
-    setAggregates: pageState.setAggregates,
-    accrualEmployeeId: pageState.accrualEmployeeId,
-    accrualYear: pageState.accrualYear,
-    accrualGrantDays: pageState.accrualGrantDays,
-    accrualCarryCapDays: pageState.accrualCarryCapDays,
-    leaveAllowHalfDay: pageState.leaveAllowHalfDay,
-    leaveAllowHourly: pageState.leaveAllowHourly,
-    leaveHourlyIncrementMinutes: pageState.leaveHourlyIncrementMinutes,
-    leaveMaxHoursPerRequest: pageState.leaveMaxHoursPerRequest,
-    leaveMinNoticeDays: pageState.leaveMinNoticeDays,
-    leaveMaxConsecutiveDays: pageState.leaveMaxConsecutiveDays,
-    payrollPreviewMode: pageState.payrollPreviewMode,
     employeeId: pageState.employeeId,
+    payrollPreviewMode: pageState.payrollPreviewMode,
     payrollHourlyRateKrw: pageState.payrollHourlyRateKrw,
     payrollNonTaxableIncomeKrw: pageState.payrollNonTaxableIncomeKrw,
     payrollTaxableIncomeKrw: pageState.payrollTaxableIncomeKrw,
@@ -120,8 +89,9 @@ export default function AdminPayrollPreviewBuilderPageClient() {
     payrollNationalPensionCapKrw: pageState.payrollNationalPensionCapKrw,
     payrollHealthInsuranceCapKrw: pageState.payrollHealthInsuranceCapKrw,
     payrollEmploymentInsuranceCapKrw: pageState.payrollEmploymentInsuranceCapKrw,
-    setApprovalActivities: pageState.setApprovalActivities,
-    setMobileApprovalFeedback: pageState.setMobileApprovalFeedback
+    setPreviewedPayroll: pageState.setPreviewedPayroll,
+    setLastPayrollRunId: pageState.setLastPayrollRunId,
+    setLogs: pageState.setLogs
   });
 
   useEffect(() => {
@@ -129,8 +99,8 @@ export default function AdminPayrollPreviewBuilderPageClient() {
       return;
     }
     initialRefreshDoneRef.current = true;
-    void dashboardActions.refreshInbox();
-  }, [dashboardActions, requiresLoginSession]);
+    void workspaceActions.refreshPreviewedPayroll();
+  }, [requiresLoginSession, workspaceActions]);
 
   if (supabaseSessionLoading) {
     return null;
@@ -235,8 +205,8 @@ export default function AdminPayrollPreviewBuilderPageClient() {
           onPayrollHealthInsuranceCapKrwChange={pageState.setPayrollHealthInsuranceCapKrw}
           onPayrollEmploymentInsuranceCapKrwChange={pageState.setPayrollEmploymentInsuranceCapKrw}
           onLastPayrollRunIdChange={pageState.setLastPayrollRunId}
-          onPreviewPayroll={() => void dashboardActions.previewPayroll()}
-          onConfirmPayroll={() => void dashboardActions.confirmPayroll(pageState.lastPayrollRunId)}
+          onPreviewPayroll={() => void workspaceActions.previewPayroll()}
+          onConfirmPayroll={() => void workspaceActions.confirmPayroll(pageState.lastPayrollRunId)}
           onResetPayrollPresetShareContext={pageState.resetPayrollPresetShareContext}
           onReapplyPayrollPresetShareContext={pageState.reapplyPayrollPresetShareContext}
           onClearManualIncomeSplitItems={() => {
@@ -250,7 +220,7 @@ export default function AdminPayrollPreviewBuilderPageClient() {
           isKoLocale={isKoLocale}
           logs={pageState.logs}
           logStatusLabels={localeLabelBundle.logStatusLabels}
-          onClearLogs={dashboardActions.clearLogs}
+          onClearLogs={workspaceActions.clearLogs}
         />
       </section>
     </main>

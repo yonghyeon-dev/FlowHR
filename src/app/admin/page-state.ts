@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { firstDayOfMonthLocal, lastDayOfMonthLocal, toLocalInputValue } from "@/app/admin/page-helpers";
 import { isDefaultDemoOrganizationName } from "@/app/admin/page-locale-helpers";
@@ -30,15 +30,6 @@ import type {
   QueueSearchSortScope
 } from "@/components/admin-approval/approval-queue-types";
 import { type PayrollKrPresetShareLinkFeedback } from "@/components/payroll/PayrollKrPresetShareLinkFeedbackPanel";
-import {
-  createEmptyPayrollKrIncomeSplitItemDraft,
-  type PayrollKrIncomeSplitItemDraft
-} from "@/components/payroll/PayrollKrIncomeSplitItemsTable";
-import {
-  hasPayrollKrPresetShareContext,
-  parsePayrollKrPresetShareContext,
-  resolvePayrollKrPresetShareContext
-} from "@/features/payroll/kr-preset-share-context";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { defaultEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 
@@ -133,31 +124,6 @@ export function useAdminDashboardState({
   const [leaveMaxConsecutiveDays, setLeaveMaxConsecutiveDays] = useState("");
   const [accrualResult, setAccrualResult] = useState<LeaveBalanceDto | null>(null);
 
-  const [payrollHourlyRateKrw, setPayrollHourlyRateKrw] = useState("12000");
-  const [payrollPreviewMode, setPayrollPreviewMode] = useState<"gross" | "statutory_kr_baseline">(
-    "gross"
-  );
-  const [payrollNonTaxableIncomeKrw, setPayrollNonTaxableIncomeKrw] = useState("0");
-  const [payrollTaxableIncomeKrw, setPayrollTaxableIncomeKrw] = useState("");
-  const [payrollTaxableItems, setPayrollTaxableItems] = useState<PayrollKrIncomeSplitItemDraft[]>([
-    createEmptyPayrollKrIncomeSplitItemDraft()
-  ]);
-  const [payrollNonTaxableItems, setPayrollNonTaxableItems] = useState<PayrollKrIncomeSplitItemDraft[]>([
-    createEmptyPayrollKrIncomeSplitItemDraft()
-  ]);
-  const [payrollIncomeSplitItemPresetId, setPayrollIncomeSplitItemPresetId] = useState("");
-  const [payrollOtherDeductionsKrw, setPayrollOtherDeductionsKrw] = useState("0");
-  const [payrollAdditionalTaxCreditKrw, setPayrollAdditionalTaxCreditKrw] = useState("0");
-  const [payrollDependentCount, setPayrollDependentCount] = useState("0");
-  const [payrollDependentTaxCreditPerPersonKrw, setPayrollDependentTaxCreditPerPersonKrw] =
-    useState("0");
-  const [payrollIncomeTaxLookupPresetId, setPayrollIncomeTaxLookupPresetId] = useState("");
-  const [payrollIncomeTaxLookupPresetAuto, setPayrollIncomeTaxLookupPresetAuto] = useState(true);
-  const [payrollIncomeTaxLookupAsOf, setPayrollIncomeTaxLookupAsOf] = useState("");
-  const [payrollRequireMonthlyBoundary, setPayrollRequireMonthlyBoundary] = useState(false);
-  const [payrollNationalPensionCapKrw, setPayrollNationalPensionCapKrw] = useState("");
-  const [payrollHealthInsuranceCapKrw, setPayrollHealthInsuranceCapKrw] = useState("");
-  const [payrollEmploymentInsuranceCapKrw, setPayrollEmploymentInsuranceCapKrw] = useState("");
   const [lastPayrollRunId, setLastPayrollRunId] = useState("");
 
   useEffect(() => {
@@ -177,9 +143,7 @@ export function useAdminDashboardState({
   const [approvalActivities, setApprovalActivities] = useState<ApprovalActivity[]>([]);
   const [, setMobileApprovalFeedback] = useState<QueueMobileApprovalFeedback | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
-  const [payrollPresetShareLinkFeedback, setPayrollPresetShareLinkFeedback] =
-    useState<PayrollKrPresetShareLinkFeedback | null>(null);
-  const payrollPresetShareContextAppliedRef = useRef(false);
+  const [payrollPresetShareLinkFeedback] = useState<PayrollKrPresetShareLinkFeedback | null>(null);
 
   useEffect(() => {
     if (!isProductionRuntime || organizationId.trim()) {
@@ -190,55 +154,6 @@ export function useAdminDashboardState({
       setOrganizationId(orgId.trim());
     }
   }, [isProductionRuntime, organizationId, setOrganizationId, supabaseOrganizationId]);
-
-  const applyPayrollPresetShareContext = useCallback((search: string) => {
-    const resolution = resolvePayrollKrPresetShareContext(search);
-    const context = parsePayrollKrPresetShareContext(search);
-    setPayrollPresetShareLinkFeedback({
-      hasAnyQuery: resolution.hasAnyQuery,
-      applied: {
-        presetId: context.presetId,
-        taxableIncomeKrw: context.taxableIncomeKrw,
-        nonTaxableIncomeKrw: context.nonTaxableIncomeKrw
-      },
-      invalid: resolution.invalid
-    });
-    if (!hasPayrollKrPresetShareContext(context)) {
-      return false;
-    }
-    setPayrollPreviewMode("statutory_kr_baseline");
-    if (context.presetId) {
-      setPayrollIncomeSplitItemPresetId(context.presetId);
-    }
-    if (context.taxableIncomeKrw !== null) {
-      setPayrollTaxableIncomeKrw(context.taxableIncomeKrw);
-    }
-    if (context.nonTaxableIncomeKrw !== null) {
-      setPayrollNonTaxableIncomeKrw(context.nonTaxableIncomeKrw);
-    }
-    return true;
-  }, []);
-
-  const resetPayrollPresetShareContext = useCallback(() => {
-    setPayrollIncomeSplitItemPresetId("");
-    setPayrollTaxableIncomeKrw("");
-    setPayrollNonTaxableIncomeKrw("0");
-  }, []);
-
-  const reapplyPayrollPresetShareContext = useCallback(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    applyPayrollPresetShareContext(window.location.search);
-  }, [applyPayrollPresetShareContext]);
-
-  useEffect(() => {
-    if (payrollPresetShareContextAppliedRef.current || typeof window === "undefined") {
-      return;
-    }
-    payrollPresetShareContextAppliedRef.current = true;
-    applyPayrollPresetShareContext(window.location.search);
-  }, [applyPayrollPresetShareContext]);
 
   return {
     accessToken,
@@ -346,42 +261,6 @@ export function useAdminDashboardState({
     setLeaveMaxConsecutiveDays,
     accrualResult,
     setAccrualResult,
-    payrollHourlyRateKrw,
-    setPayrollHourlyRateKrw,
-    payrollPreviewMode,
-    setPayrollPreviewMode,
-    payrollNonTaxableIncomeKrw,
-    setPayrollNonTaxableIncomeKrw,
-    payrollTaxableIncomeKrw,
-    setPayrollTaxableIncomeKrw,
-    payrollTaxableItems,
-    setPayrollTaxableItems,
-    payrollNonTaxableItems,
-    setPayrollNonTaxableItems,
-    payrollIncomeSplitItemPresetId,
-    setPayrollIncomeSplitItemPresetId,
-    payrollOtherDeductionsKrw,
-    setPayrollOtherDeductionsKrw,
-    payrollAdditionalTaxCreditKrw,
-    setPayrollAdditionalTaxCreditKrw,
-    payrollDependentCount,
-    setPayrollDependentCount,
-    payrollDependentTaxCreditPerPersonKrw,
-    setPayrollDependentTaxCreditPerPersonKrw,
-    payrollIncomeTaxLookupPresetId,
-    setPayrollIncomeTaxLookupPresetId,
-    payrollIncomeTaxLookupPresetAuto,
-    setPayrollIncomeTaxLookupPresetAuto,
-    payrollIncomeTaxLookupAsOf,
-    setPayrollIncomeTaxLookupAsOf,
-    payrollRequireMonthlyBoundary,
-    setPayrollRequireMonthlyBoundary,
-    payrollNationalPensionCapKrw,
-    setPayrollNationalPensionCapKrw,
-    payrollHealthInsuranceCapKrw,
-    setPayrollHealthInsuranceCapKrw,
-    payrollEmploymentInsuranceCapKrw,
-    setPayrollEmploymentInsuranceCapKrw,
     lastPayrollRunId,
     setLastPayrollRunId,
     logs,
@@ -391,8 +270,6 @@ export function useAdminDashboardState({
     setMobileApprovalFeedback,
     pendingLabel,
     setPendingLabel,
-    payrollPresetShareLinkFeedback,
-    resetPayrollPresetShareContext,
-    reapplyPayrollPresetShareContext
+    payrollPresetShareLinkFeedback
   } as const;
 }

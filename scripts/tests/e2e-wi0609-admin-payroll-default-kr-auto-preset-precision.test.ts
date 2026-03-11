@@ -8,6 +8,14 @@ function readUtf8(...parts: string[]) {
 
 function run() {
   const pageStateSource = readUtf8("src", "app", "admin", "page-state.ts");
+  const previewBuilderStateSource = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "payroll-close",
+    "preview-builder",
+    "page-state.ts"
+  );
   const adminPayrollHelperSource = readUtf8("src", "app", "admin", "page-payroll-helpers.ts");
   const adminPayrollPanelSource = readUtf8("src", "components", "admin-dashboard", "AdminPayrollPanel.tsx");
   const payrollTestCasesSource = readUtf8("specs", "payroll", "test-cases.md");
@@ -18,7 +26,7 @@ function run() {
   );
 
   assert.match(
-    pageStateSource,
+    `${pageStateSource}\n${previewBuilderStateSource}`,
     /const \[payrollIncomeTaxLookupPresetAuto, setPayrollIncomeTaxLookupPresetAuto\] = useState\(true\);/,
     "admin payroll state should default lookup preset auto mode to true"
   );
