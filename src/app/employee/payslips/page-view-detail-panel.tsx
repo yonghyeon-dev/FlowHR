@@ -46,7 +46,7 @@ export function PayslipDetailPanel({
   const isNetPayBalanced = selectedRun ? (selectedRun.netPayKrw ?? 0) === expectedNetPayKrw : false;
 
   return (
-    <article className="panel panel-payslip-print">
+    <article className="panel workspace-section-card workspace-detail-card panel-payslip-print">
       <h2>{pageCopy.detail.title}</h2>
       {!selectedRun ? (
         <p className="small muted">{pageCopy.detail.empty}</p>

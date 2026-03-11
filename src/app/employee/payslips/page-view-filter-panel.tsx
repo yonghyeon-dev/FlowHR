@@ -95,11 +95,13 @@ export function EmployeePayslipFilterPanel({
 
   return (
     <>
-      <header className="page-header">
+      <header className="page-header workspace-page-header employee-workspace-status-header">
         <div>
           <h1 className="page-title">{pageCopy.pageTitle}</h1>
           <p className="page-subtitle">{pageCopy.pageSubtitle}</p>
-          {sourceContextLabel ? <p className="small muted">{sourceContextLabel}</p> : null}
+          {sourceContextLabel ? (
+            <p className="small muted workspace-source-banner">{sourceContextLabel}</p>
+          ) : null}
         </div>
         <div className="page-actions">
           <Link className="btn btn-secondary" href="/employee">
@@ -120,29 +122,29 @@ export function EmployeePayslipFilterPanel({
       </header>
 
       {requiresLoginSession ? (
-        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
+        <p className="small fail workspace-inline-status">
           {productionSessionRequiredNotice} <Link href="/login">/login</Link>
         </p>
       ) : null}
 
-      <section className="kpi-strip">
-        <article className="kpi-card">
+      <section className="kpi-strip workspace-summary-strip employee-workspace-status-strip">
+        <article className="kpi-card workspace-summary-card employee-workspace-status-card">
           <p>{pageCopy.kpi.count}</p>
           <strong>{payslipStats.count}</strong>
         </article>
-        <article className="kpi-card">
+        <article className="kpi-card workspace-summary-card employee-workspace-status-card">
           <p>{pageCopy.kpi.totalGross}</p>
           <strong>{formatKrw(payslipStats.totalGross)}</strong>
         </article>
-        <article className="kpi-card">
+        <article className="kpi-card workspace-summary-card employee-workspace-status-card">
           <p>{pageCopy.kpi.totalDeductions}</p>
           <strong>{formatKrw(payslipStats.totalDeductions)}</strong>
         </article>
-        <article className="kpi-card">
+        <article className="kpi-card workspace-summary-card employee-workspace-status-card">
           <p>{pageCopy.kpi.totalNet}</p>
           <strong>{formatKrw(payslipStats.totalNet)}</strong>
         </article>
-        <article className="kpi-card">
+        <article className="kpi-card workspace-summary-card employee-workspace-status-card">
           <p>{pageCopy.kpi.apiCalls}</p>
           <strong>
             {stats.total} ({pageCopy.kpi.ok} {stats.success} / {pageCopy.kpi.fail} {stats.fail})
@@ -150,7 +152,7 @@ export function EmployeePayslipFilterPanel({
         </article>
       </section>
 
-      <article className="panel">
+      <article className="panel workspace-section-card workspace-toolbar-card">
         <h2>{pageCopy.filters.title}</h2>
         {showDevTools ? (
           <p className="small muted">

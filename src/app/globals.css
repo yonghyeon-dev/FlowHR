@@ -584,6 +584,12 @@ body {
 .workspace-note-card {
   border-style: dashed;
 }
+.workspace-toolbar-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+.workspace-detail-card {
+  border-color: rgba(180, 203, 228, 0.34);
+}
 .employee-workspace-status-header {
   margin-bottom: 20px;
 }
