@@ -324,25 +324,58 @@ export default function EmployeeYearEndInputConsole() {
       simulation
     ]
   );
+  const backToEmployeeHomeLabel =
+    locale === "ko" ? "직원 홈으로 돌아가기" : "Back to employee home";
+  const completedWorkspacePanels = [finalizedSettlement, simulation].filter(Boolean).length;
 
   return (
-    <main className="saas-content">
-      <header className="hero">
+    <main className="saas-content workspace-shell employee-workspace-shell">
+      <header className="page-header workspace-page-header">
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
-        {sourceEntry ? <p className="small muted">{sourceEntry.hint}</p> : null}
+        {sourceEntry ? <p className="small muted workspace-source-banner">{sourceEntry.hint}</p> : null}
+        <div className="page-actions" style={{ marginTop: 8 }}>
+          {sourceEntry ? (
+            <Link href="/employee" className="btn btn-secondary btn-small">
+              {sourceEntry.returnLabel}
+            </Link>
+          ) : null}
+          <Link href="/employee" className="btn btn-secondary btn-small">
+            {backToEmployeeHomeLabel}
+          </Link>
+        </div>
       </header>
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.title}>
+        <article className="kpi">
+          <span>{copy.yearLabel}</span>
+          <strong>{year}</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.validationTitle}</span>
+          <strong>
+            {validationPassCount} / {validationChecks.length}
+          </strong>
+        </article>
+        <article className="kpi">
+          <span>{locale === "ko" ? "준비 패널" : "Loaded panels"}</span>
+          <strong>{completedWorkspacePanels} / 2</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.apiLogsTitle}</span>
+          <strong>{logs.length}</strong>
+        </article>
+      </section>
       {requiresLoginSession ? (
-        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
+        <p className="small fail workspace-inline-status">
           {productionSessionRequiredNotice} <Link href="/login">/login</Link>
         </p>
       ) : null}
-      <section className="panel-grid">
-        <article className="panel">
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.inputTitle}</h2>
           {showDevTools ? (
-            <p className="small muted">
+            <p className="small muted workspace-source-banner">
               <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong> /{" "}
               <strong>{formatEmployeeSessionConnectionState(Boolean(employeeId.trim()), runtimeLocale)}</strong>
             </p>
@@ -389,18 +422,18 @@ export default function EmployeeYearEndInputConsole() {
             </ul>
           </div>
           {!coreLoadValid ? (
-            <p className="small fail">
+            <p className="small fail workspace-inline-status">
               {copy.coreLoadInvalidGuide}
             </p>
           ) : null}
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
+          {statusMessage ? <p className="small workspace-inline-status">{statusMessage}</p> : null}
           {normalizedSupabaseSessionError ? (
-            <p className="small fail">
+            <p className="small fail workspace-inline-status">
               {copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}
             </p>
           ) : null}
         </article>
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.simulationTitle}</h2>
           {!simulation ? <p className="small">{copy.loadFirstGuide}</p> : (
             <ul className="simple-list">
@@ -434,7 +467,7 @@ export default function EmployeeYearEndInputConsole() {
           </div>
         </article>
         {showDevTools ? (
-          <article className="panel">
+          <article className="panel workspace-section-card workspace-note-card">
             <h2>{copy.apiLogsTitle}</h2>
             <p className="small">
               {copy.apiLogsTotalPrefix} {logs.length}
