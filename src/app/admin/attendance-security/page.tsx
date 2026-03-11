@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
@@ -300,6 +301,12 @@ export default function AdminAttendanceSecurityPage() {
   const parsedLatitude = Number(form.geofenceLatitude);
   const parsedLongitude = Number(form.geofenceLongitude);
   const parsedRadius = Number(form.geofenceRadiusMeters);
+  const sourceHint =
+    locale === "ko"
+      ? "GPS와 지오펜스 정책은 직원 출퇴근 기록과 관리자 검토 흐름에 바로 반영됩니다."
+      : "GPS and geofence policies immediately affect attendance capture and admin review flows.";
+  const backToHubLabel = locale === "ko" ? "관리자 허브" : "Admin hub";
+  const settingsLabel = locale === "ko" ? "조직 설정" : "Organization settings";
   const canShowGeofenceSummary =
     form.geofenceEnabled &&
     Number.isFinite(parsedLatitude) &&
@@ -311,167 +318,179 @@ export default function AdminAttendanceSecurityPage() {
   }
 
   return (
-    <div className="page">
-      <header className="hero">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <div>
-          <p className="eyebrow">{copy.pageTitle}</p>
-          <h1>{copy.pageTitle}</h1>
-          <p className="muted">{copy.pageSubtitle}</p>
+          <h1 className="page-title">{copy.pageTitle}</h1>
+          <p className="page-subtitle">{copy.pageSubtitle}</p>
+          <p className="small muted workspace-source-banner">{sourceHint}</p>
         </div>
-        <div className="hero-actions">
+        <div className="page-actions">
+          <Link className="btn btn-secondary" href="/admin">
+            {backToHubLabel}
+          </Link>
+          <Link className="btn btn-secondary" href="/admin/settings">
+            {settingsLabel}
+          </Link>
           <button className="btn btn-secondary" type="button" onClick={() => void loadWorkspace()} disabled={loadingWorkspace || saving}>
             {loadingWorkspace ? copy.reloadLoadingLabel : copy.reloadLabel}
           </button>
-          <button className="btn" type="button" onClick={() => void handleSave()} disabled={loadingWorkspace || saving}>
+          <button className="btn btn-primary" type="button" onClick={() => void handleSave()} disabled={loadingWorkspace || saving}>
             {saving ? copy.saveLoadingLabel : copy.saveLabel}
           </button>
         </div>
       </header>
 
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.pageTitle}>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.gpsRequiredStateLabel}</p>
+          <strong>{effectiveGpsRequired ? copy.enabledLabel : copy.disabledLabel}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.geofenceStateLabel}</p>
+          <strong>{form.geofenceEnabled ? copy.enabledLabel : copy.disabledLabel}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.lastSavedLabel}</p>
+          <strong>{lastSavedAt ? new Date(lastSavedAt).toLocaleString(runtimeLocale) : copy.neverSavedLabel}</strong>
+        </article>
+      </section>
+
       {sessionError ? (
-        <div className="card fail">
-          <strong>{copy.sessionErrorLabel}</strong>
-          <p>{formatUserFacingErrorMessage(sessionError, runtimeLocale)}</p>
-        </div>
+        <p className="small fail workspace-inline-status">
+          {copy.sessionErrorLabel}: {formatUserFacingErrorMessage(sessionError, runtimeLocale)}
+        </p>
       ) : null}
+      {errorMessage ? <p className="small fail workspace-inline-status">{errorMessage}</p> : null}
+      {successMessage ? <p className="small ok workspace-inline-status">{successMessage}</p> : null}
 
-      {errorMessage ? (
-        <div className="card fail">
-          <strong>{errorMessage}</strong>
-        </div>
-      ) : null}
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
+          <div className="section-heading">
+            <div>
+              <h2>{copy.currentStatusTitle}</h2>
+              <p className="small muted">{copy.currentStatusDescription}</p>
+            </div>
+          </div>
+          <dl className="definition-grid">
+            <div>
+              <dt>{copy.gpsRequiredStateLabel}</dt>
+              <dd>{effectiveGpsRequired ? copy.enabledLabel : copy.disabledLabel}</dd>
+            </div>
+            <div>
+              <dt>{copy.geofenceStateLabel}</dt>
+              <dd>{form.geofenceEnabled ? copy.enabledLabel : copy.disabledLabel}</dd>
+            </div>
+            <div>
+              <dt>{copy.geofenceSummaryLabel}</dt>
+              <dd>
+                {canShowGeofenceSummary
+                  ? copy.geofenceSummary(parsedLatitude, parsedLongitude, parsedRadius)
+                  : copy.geofenceDisabledHint}
+              </dd>
+            </div>
+            <div>
+              <dt>{copy.lastSavedLabel}</dt>
+              <dd>{lastSavedAt ? new Date(lastSavedAt).toLocaleString(runtimeLocale) : copy.neverSavedLabel}</dd>
+            </div>
+          </dl>
+        </article>
 
-      {successMessage ? (
-        <div className="card success">
-          <strong>{successMessage}</strong>
-        </div>
-      ) : null}
+        <article className="panel workspace-section-card workspace-note-card">
+          <div className="section-heading">
+            <div>
+              <h2>{copy.formTitle}</h2>
+              <p className="small muted">{copy.formDescription}</p>
+            </div>
+          </div>
 
-      <section className="card">
-        <div className="section-heading">
-          <div>
-            <h2>{copy.currentStatusTitle}</h2>
-            <p className="muted">{copy.currentStatusDescription}</p>
+          <div className="form-grid">
+            <label className="stack gap-8">
+              <span>{copy.fields.gpsRequired}</span>
+              <input
+                type="checkbox"
+                checked={effectiveGpsRequired}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    gpsRequired: event.target.checked
+                  }))
+                }
+                disabled={form.geofenceEnabled}
+              />
+            </label>
+
+            <label className="stack gap-8">
+              <span>{copy.fields.geofenceEnabled}</span>
+              <input
+                type="checkbox"
+                checked={form.geofenceEnabled}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    geofenceEnabled: event.target.checked,
+                    gpsRequired: event.target.checked ? true : current.gpsRequired
+                  }))
+                }
+              />
+            </label>
+
+            <label className="stack gap-8">
+              <span>{copy.fields.geofenceLatitude}</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.000001"
+                value={form.geofenceLatitude}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    geofenceLatitude: event.target.value
+                  }))
+                }
+              />
+            </label>
+
+            <label className="stack gap-8">
+              <span>{copy.fields.geofenceLongitude}</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.000001"
+                value={form.geofenceLongitude}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    geofenceLongitude: event.target.value
+                  }))
+                }
+              />
+            </label>
+
+            <label className="stack gap-8">
+              <span>{copy.fields.geofenceRadiusMeters}</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="1"
+                step="1"
+                value={form.geofenceRadiusMeters}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    geofenceRadiusMeters: event.target.value
+                  }))
+                }
+              />
+            </label>
           </div>
-        </div>
-        <dl className="definition-grid">
-          <div>
-            <dt>{copy.gpsRequiredStateLabel}</dt>
-            <dd>{effectiveGpsRequired ? copy.enabledLabel : copy.disabledLabel}</dd>
+
+          <div className="stack gap-8">
+            <p className="small muted">{copy.geofenceDisabledHint}</p>
+            <p className="small muted">{copy.geofenceRequiresGpsHint}</p>
           </div>
-          <div>
-            <dt>{copy.geofenceStateLabel}</dt>
-            <dd>{form.geofenceEnabled ? copy.enabledLabel : copy.disabledLabel}</dd>
-          </div>
-          <div>
-            <dt>{copy.geofenceSummaryLabel}</dt>
-            <dd>
-              {canShowGeofenceSummary
-                ? copy.geofenceSummary(parsedLatitude, parsedLongitude, parsedRadius)
-                : copy.geofenceDisabledHint}
-            </dd>
-          </div>
-          <div>
-            <dt>{copy.lastSavedLabel}</dt>
-            <dd>{lastSavedAt ? new Date(lastSavedAt).toLocaleString(runtimeLocale) : copy.neverSavedLabel}</dd>
-          </div>
-        </dl>
+        </article>
       </section>
-
-      <section className="card">
-        <div className="section-heading">
-          <div>
-            <h2>{copy.formTitle}</h2>
-            <p className="muted">{copy.formDescription}</p>
-          </div>
-        </div>
-
-        <div className="form-grid">
-          <label className="stack gap-8">
-            <span>{copy.fields.gpsRequired}</span>
-            <input
-              type="checkbox"
-              checked={effectiveGpsRequired}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  gpsRequired: event.target.checked
-                }))
-              }
-              disabled={form.geofenceEnabled}
-            />
-          </label>
-
-          <label className="stack gap-8">
-            <span>{copy.fields.geofenceEnabled}</span>
-            <input
-              type="checkbox"
-              checked={form.geofenceEnabled}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  geofenceEnabled: event.target.checked,
-                  gpsRequired: event.target.checked ? true : current.gpsRequired
-                }))
-              }
-            />
-          </label>
-
-          <label className="stack gap-8">
-            <span>{copy.fields.geofenceLatitude}</span>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="0.000001"
-              value={form.geofenceLatitude}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  geofenceLatitude: event.target.value
-                }))
-              }
-            />
-          </label>
-
-          <label className="stack gap-8">
-            <span>{copy.fields.geofenceLongitude}</span>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="0.000001"
-              value={form.geofenceLongitude}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  geofenceLongitude: event.target.value
-                }))
-              }
-            />
-          </label>
-
-          <label className="stack gap-8">
-            <span>{copy.fields.geofenceRadiusMeters}</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              min="1"
-              step="1"
-              value={form.geofenceRadiusMeters}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  geofenceRadiusMeters: event.target.value
-                }))
-              }
-            />
-          </label>
-        </div>
-
-        <div className="stack gap-8">
-          <p className="muted">{copy.geofenceDisabledHint}</p>
-          <p className="muted">{copy.geofenceRequiresGpsHint}</p>
-        </div>
-      </section>
-    </div>
+    </main>
   );
 }

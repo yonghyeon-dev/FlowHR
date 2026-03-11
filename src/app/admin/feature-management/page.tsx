@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
@@ -276,6 +277,12 @@ export default function AdminFeatureManagementPage() {
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const sourceHint =
+    locale === "ko"
+      ? "조직 단위 기능 롤아웃은 급여와 연말정산 워크스페이스 접근 범위를 직접 바꿉니다."
+      : "Organization-level rollout settings directly change payroll and year-end workspace access.";
+  const backToHubLabel = locale === "ko" ? "관리자 허브" : "Admin hub";
+  const settingsLabel = locale === "ko" ? "조직 설정" : "Organization settings";
 
   const featureKeys = useMemo(
     () => Object.keys(copy.features) as FeatureKey[],
@@ -356,13 +363,20 @@ export default function AdminFeatureManagementPage() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="page-header">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <div>
           <h1 className="page-title">{copy.pageTitle}</h1>
           <p className="page-subtitle">{copy.pageSubtitle}</p>
+          <p className="small muted workspace-source-banner">{sourceHint}</p>
         </div>
         <div className="page-actions">
+          <Link className="btn btn-secondary" href="/admin">
+            {backToHubLabel}
+          </Link>
+          <Link className="btn btn-secondary" href="/admin/settings">
+            {settingsLabel}
+          </Link>
           <button
             className="btn btn-secondary"
             type="button"
@@ -374,14 +388,35 @@ export default function AdminFeatureManagementPage() {
         </div>
       </header>
 
-      {sessionError ? (
-        <p className="small fail">{formatUserFacingErrorMessage(sessionError, runtimeLocale)}</p>
-      ) : null}
-      {errorMessage ? <p className="small fail">{errorMessage}</p> : null}
-      {successMessage ? <p className="small ok">{successMessage}</p> : null}
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.pageTitle}>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.effectiveLabel}</p>
+          <strong>
+            {
+              featureKeys.filter((key) => form.payroll[key].effectiveEnabled).length
+            }
+          </strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.fallbackLabel}</p>
+          <strong>
+            {
+              featureKeys.filter((key) => form.payroll[key].fallbackEnabled).length
+            }
+          </strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.lastSavedLabel}</p>
+          <strong>{formatLocalizedDateTime(lastSavedAt, runtimeLocale, copy.noSaveHistory)}</strong>
+        </article>
+      </section>
 
-      <section className="panel-grid">
-        <article className="panel">
+      {sessionError ? <p className="small fail workspace-inline-status">{formatUserFacingErrorMessage(sessionError, runtimeLocale)}</p> : null}
+      {errorMessage ? <p className="small fail workspace-inline-status">{errorMessage}</p> : null}
+      {successMessage ? <p className="small ok workspace-inline-status">{successMessage}</p> : null}
+
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.featureTitle}</h2>
           <p className="small muted">{copy.featureDescription}</p>
 
@@ -419,7 +454,7 @@ export default function AdminFeatureManagementPage() {
           </div>
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.effectiveTitle}</h2>
           <p className="small muted">{copy.effectiveDescription}</p>
           <ul className="simple-list">
@@ -442,7 +477,7 @@ export default function AdminFeatureManagementPage() {
           </ul>
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card workspace-note-card">
           <h2>{copy.opsOnlyTitle}</h2>
           <p className="small muted">{copy.opsOnlyDescription}</p>
           <ul className="simple-list">

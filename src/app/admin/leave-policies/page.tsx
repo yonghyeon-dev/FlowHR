@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
@@ -297,6 +298,12 @@ export default function AdminLeavePoliciesPage() {
   const [archiveTargetId, setArchiveTargetId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const sourceHint =
+    locale === "ko"
+      ? "휴가 정책은 신청 가능 범위와 연차 촉진 자동화 기준을 함께 바꿉니다."
+      : "Leave policy changes affect request limits and leave-promotion automation together.";
+  const backToHubLabel = locale === "ko" ? "관리자 허브" : "Admin hub";
+  const settingsLabel = locale === "ko" ? "조직 설정" : "Organization settings";
 
   const loadWorkspace = useCallback(async () => {
     setIsLoading(true);
@@ -445,24 +452,46 @@ export default function AdminLeavePoliciesPage() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="page-header">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <div>
           <h1 className="page-title">{copy.pageTitle}</h1>
           <p className="page-subtitle">{copy.pageSubtitle}</p>
+          <p className="small muted workspace-source-banner">{sourceHint}</p>
         </div>
         <div className="page-actions">
+          <Link className="btn btn-secondary" href="/admin">
+            {backToHubLabel}
+          </Link>
+          <Link className="btn btn-secondary" href="/admin/settings">
+            {settingsLabel}
+          </Link>
           <button className="btn btn-secondary" type="button" onClick={() => void loadWorkspace()} disabled={isLoading}>
             {isLoading ? copy.reloadLoadingLabel : copy.reloadLabel}
           </button>
         </div>
       </header>
 
-      {error ? <p className="small fail">{error}</p> : null}
-      {notice ? <p className="small ok">{notice}</p> : null}
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.pageTitle}>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.currentPolicyLabel}</p>
+          <strong>{policySource === "configured" ? copy.sourceConfigured : copy.sourceDefault}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.activeOption}</p>
+          <strong>{policies.filter((policy) => policy.status === "ACTIVE").length}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.archivedOption}</p>
+          <strong>{policies.filter((policy) => policy.status === "ARCHIVED").length}</strong>
+        </article>
+      </section>
 
-      <section className="panel-grid">
-        <article className="panel">
+      {error ? <p className="small fail workspace-inline-status">{error}</p> : null}
+      {notice ? <p className="small ok workspace-inline-status">{notice}</p> : null}
+
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.formTitle}</h2>
           <p className="small muted">{copy.formDescription}</p>
           <dl className="detail-grid">
@@ -622,7 +651,7 @@ export default function AdminLeavePoliciesPage() {
           </div>
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card workspace-note-card">
           <h2>{copy.listTitle}</h2>
           <p className="small muted">{copy.listDescription}</p>
 
