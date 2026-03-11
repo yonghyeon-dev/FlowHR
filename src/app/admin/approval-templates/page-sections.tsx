@@ -66,9 +66,13 @@ export function ApprovalTemplatePreviewPanel({
   runGatePreview
 }: PreviewPanelProps) {
   return (
-    <article className="panel">
-      <h2>{copy.preview.title}</h2>
-      <p className="small">{copy.preview.description}</p>
+    <article className="panel workspace-section-card">
+      <div className="section-heading">
+        <div>
+          <h2>{copy.preview.title}</h2>
+          <p className="small muted">{copy.preview.description}</p>
+        </div>
+      </div>
       <label>
         {copy.preview.domain}
         <select value={previewDomain} onChange={(event) => setPreviewDomain(event.target.value as ApprovalDomain)}>
@@ -173,10 +177,17 @@ export function ApprovalTemplateListPanel({
   onToggleTemplateActive
 }: TemplateListPanelProps) {
   return (
-    <article className="panel">
-      <h2>
-        {copy.templateList.title} ({templates.length})
-      </h2>
+    <article className="panel workspace-section-card">
+      <div className="section-heading">
+        <div>
+          <h2>
+            {copy.templateList.title} ({templates.length})
+          </h2>
+          <p className="small muted">
+            {templates.length === 0 ? copy.templateList.empty : copy.templateList.roles}
+          </p>
+        </div>
+      </div>
       {templates.length === 0 ? (
         <p className="small">{copy.templateList.empty}</p>
       ) : (
@@ -214,8 +225,13 @@ export function ApprovalTemplateListPanel({
 
 export function ApprovalTemplateLogsPanel({ copy, stats, pendingLabel, logs }: LogsPanelProps) {
   return (
-    <article className="panel">
-      <h2>{copy.logs.title}</h2>
+    <article className="panel workspace-section-card workspace-note-card">
+      <div className="section-heading">
+        <div>
+          <h2>{copy.logs.title}</h2>
+          <p className="small muted">{copy.logs.empty}</p>
+        </div>
+      </div>
       <p className="small">
         {copy.logs.total} {stats.total} / {copy.logs.success} {stats.success} / {copy.logs.fail} {stats.fail}
         {pendingLabel ? ` / ${copy.logs.inProgress} ${pendingLabel}` : ""}

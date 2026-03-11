@@ -232,27 +232,63 @@ export default function AdminApprovalPolicyPage() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="hero">
-        <p className="eyebrow">{copy.hero.eyebrow}</p>
-        <h1>{copy.hero.title}</h1>
-        <p>
-          {copy.hero.description}
-          {showDevTools ? ` ${copy.hero.devNotice}` : ""}
-        </p>
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
+        <div>
+          <p className="eyebrow">{copy.hero.eyebrow}</p>
+          <h1 className="page-title">{copy.hero.title}</h1>
+          <p className="page-subtitle">
+            {copy.hero.description}
+            {showDevTools ? ` ${copy.hero.devNotice}` : ""}
+          </p>
+          <p className="small muted workspace-source-banner">
+            {isKoLocale
+              ? "결재 정책과 임시 위임은 승인 운영 인사이트 흐름에서 템플릿, 단계 이력, 실행 현황과 함께 관리합니다."
+              : "Approval policy and temporary delegations stay aligned with templates, stage history, and execution review in the admin insight lane."}
+          </p>
+        </div>
+        <div className="page-actions">
+          <Link href="/admin" className="btn btn-secondary">
+            {isKoLocale ? "관리자 허브" : "Admin hub"}
+          </Link>
+        </div>
       </header>
 
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.hero.title}>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.context.policyState}</p>
+          <strong>{policyConfigured ? copy.context.configured : copy.context.defaultFallback}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.delegationList.title}</p>
+          <strong>{delegations.length}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.logs.title}</p>
+          <strong>{stats.total}</strong>
+        </article>
+      </section>
+
       {requiresLoginSession ? (
-        <p className="small fail">
+        <p className="small fail workspace-inline-status">
           {isKoLocale ? "운영 환경에서는 로그인 세션이 필요합니다. " : "Login session is required in production. "}
           <Link href="/login">/login</Link>
         </p>
       ) : null}
-      {error ? <p className="small fail">{error}</p> : null}
+      {error ? <p className="small fail workspace-inline-status">{error}</p> : null}
 
-      <section className="panel-grid">
-        <article className="panel">
-          <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
+          <div className="section-heading">
+            <div>
+              <h2>{copy.context.title}</h2>
+              <p className="small muted">
+                {isKoLocale
+                  ? "정책과 위임 데이터를 다시 불러오고 현재 작업 공간 연결 상태를 확인합니다."
+                  : "Refresh policy and delegation data while checking the current workspace connection state."}
+              </p>
+            </div>
+          </div>
           {showDevTools ? (
             <p className="small muted">
               {copy.context.organizationId}:{" "}
@@ -287,8 +323,44 @@ export default function AdminApprovalPolicyPage() {
           </p>
         </article>
 
-        <article className="panel">
-          <h2>{copy.policy.title}</h2>
+        <article className="panel workspace-section-card workspace-note-card">
+          <div className="section-heading">
+            <div>
+              <h2>{isKoLocale ? "요약" : "Summary"}</h2>
+              <p className="small muted">
+                {isKoLocale
+                  ? "현재 정책 상태와 위임 운영 규모를 빠르게 확인합니다."
+                  : "Review the current policy state and delegation scale at a glance."}
+              </p>
+            </div>
+          </div>
+          <dl className="definition-grid">
+            <div>
+              <dt>{copy.context.policyState}</dt>
+              <dd>{policyConfigured ? copy.context.configured : copy.context.defaultFallback}</dd>
+            </div>
+            <div>
+              <dt>{copy.delegationList.title}</dt>
+              <dd>{delegations.length}</dd>
+            </div>
+            <div>
+              <dt>{copy.logs.title}</dt>
+              <dd>{stats.total}</dd>
+            </div>
+          </dl>
+        </article>
+
+        <article className="panel workspace-section-card">
+          <div className="section-heading">
+            <div>
+              <h2>{copy.policy.title}</h2>
+              <p className="small muted">
+                {isKoLocale
+                  ? "도메인별 기본 승인 역할을 설정하고 저장합니다."
+                  : "Configure and save default approver roles by approval domain."}
+              </p>
+            </div>
+          </div>
           <label>
             {copy.policy.attendanceApproverRole}
             <select value={attendanceRole} onChange={(event) => setAttendanceRole(event.target.value)}>
@@ -330,8 +402,17 @@ export default function AdminApprovalPolicyPage() {
           </div>
         </article>
 
-        <article className="panel">
-          <h2>{copy.delegationCreate.title}</h2>
+        <article className="panel workspace-section-card">
+          <div className="section-heading">
+            <div>
+              <h2>{copy.delegationCreate.title}</h2>
+              <p className="small muted">
+                {isKoLocale
+                  ? "임시 결재 위임을 등록해 휴가, 부재, 대결 상황을 운영합니다."
+                  : "Register temporary approval delegations for absence, leave, and proxy scenarios."}
+              </p>
+            </div>
+          </div>
           <label>
             {copy.delegationCreate.domain}
             <select value={delegationDomain} onChange={(event) => setDelegationDomain(event.target.value as ApprovalDomain)}>
@@ -387,10 +468,19 @@ export default function AdminApprovalPolicyPage() {
           </div>
         </article>
 
-        <article className="panel">
-          <h2>
-            {copy.delegationList.title} ({delegations.length})
-          </h2>
+        <article className="panel workspace-section-card">
+          <div className="section-heading">
+            <div>
+              <h2>
+                {copy.delegationList.title} ({delegations.length})
+              </h2>
+              <p className="small muted">
+                {isKoLocale
+                  ? "활성 위임을 점검하고 필요 시 만료 정리 또는 비활성화합니다."
+                  : "Review active delegations and expire or deactivate them when needed."}
+              </p>
+            </div>
+          </div>
           <div className="panel-actions">
             <button
               className="btn btn-secondary btn-small"
@@ -456,8 +546,17 @@ export default function AdminApprovalPolicyPage() {
         </article>
 
         {showDevTools ? (
-          <article className="panel">
-            <h2>{copy.logs.title}</h2>
+          <article className="panel workspace-section-card">
+            <div className="section-heading">
+              <div>
+                <h2>{copy.logs.title}</h2>
+                <p className="small muted">
+                  {isKoLocale
+                    ? "개발 모드에서만 정책/위임 요청 결과를 확인합니다."
+                    : "Inspect policy and delegation request outcomes in dev mode only."}
+                </p>
+              </div>
+            </div>
             <p className="small">
               {copy.logs.total} {stats.total} / {copy.logs.success} {stats.success} / {copy.logs.fail} {stats.fail}
               {pendingLabel ? ` / ${copy.logs.inProgress} ${pendingLabel}` : ""}
@@ -481,8 +580,17 @@ export default function AdminApprovalPolicyPage() {
             </div>
           </article>
         ) : (
-          <article className="panel">
-            <h2>{isKoLocale ? "관련 화면 이동" : "Related workspaces"}</h2>
+          <article className="panel workspace-section-card workspace-note-card">
+            <div className="section-heading">
+              <div>
+                <h2>{isKoLocale ? "관련 화면 이동" : "Related workspaces"}</h2>
+                <p className="small muted">
+                  {isKoLocale
+                    ? "실행 현황과 단계 이력으로 이어지는 승인 운영 흐름을 바로 엽니다."
+                    : "Open the connected approval execution and stage-history workspaces."}
+                </p>
+              </div>
+            </div>
             <div className="panel-actions">
               <Link href="/admin/approval-executions" className="btn btn-secondary">
                 {isKoLocale ? "결재 실행 현황" : "Approval executions"}

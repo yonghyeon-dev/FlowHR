@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -234,26 +234,62 @@ export default function AdminApprovalTemplatesPage() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="hero">
-        <p className="eyebrow">{copy.hero.eyebrow}</p>
-        <h1>{copy.hero.title}</h1>
-        <p>
-          {copy.hero.description}
-          {showDevTools ? ` ${copy.hero.devNotice}` : ""}
-        </p>
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
+        <div>
+          <p className="eyebrow">{copy.hero.eyebrow}</p>
+          <h1 className="page-title">{copy.hero.title}</h1>
+          <p className="page-subtitle">
+            {copy.hero.description}
+            {showDevTools ? ` ${copy.hero.devNotice}` : ""}
+          </p>
+          <p className="small muted workspace-source-banner">
+            {isKoLocale
+              ? "결재 라인 템플릿은 승인 운영 인사이트 흐름에서 정책, 단계 이력, 실행 현황과 같은 기준으로 관리합니다."
+              : "Approval line templates stay aligned with policy, stage history, and execution review in the admin insight lane."}
+          </p>
+        </div>
+        <div className="page-actions">
+          <Link href="/admin" className="btn btn-secondary">
+            {isKoLocale ? "관리자 허브" : "Admin hub"}
+          </Link>
+        </div>
       </header>
 
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.hero.title}>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.templateList.title}</p>
+          <strong>{templates.length}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.preview.title}</p>
+          <strong>{gatePreview ? (gatePreview.allowed ? copy.preview.allowed : copy.preview.blocked) : "-"}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.logs.title}</p>
+          <strong>{stats.total}</strong>
+        </article>
+      </section>
+
       {requiresLoginSession ? (
-        <p className="small fail">
+        <p className="small fail workspace-inline-status">
           {isKoLocale ? "운영 환경에서는 로그인 세션이 필요합니다. " : "Login session is required in production. "}
           <Link href="/login">/login</Link>
         </p>
       ) : null}
 
-      <section className="panel-grid">
-        <article className="panel">
-          <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
+          <div className="section-heading">
+            <div>
+              <h2>{copy.context.title}</h2>
+              <p className="small muted">
+                {isKoLocale
+                  ? "템플릿 목록을 새로 불러오고 현재 작업 공간 연결 상태를 확인합니다."
+                  : "Refresh templates and confirm the current workspace connection state."}
+              </p>
+            </div>
+          </div>
           {showDevTools ? (
             <p className="small muted">
               {copy.context.organizationId}:{" "}
@@ -278,8 +314,44 @@ export default function AdminApprovalTemplatesPage() {
           ) : null}
         </article>
 
-        <article className="panel">
-          <h2>{copy.create.title}</h2>
+        <article className="panel workspace-section-card workspace-note-card">
+          <div className="section-heading">
+            <div>
+              <h2>{isKoLocale ? "요약" : "Summary"}</h2>
+              <p className="small muted">
+                {isKoLocale
+                  ? "현재 템플릿 규모와 최근 프리뷰 결과를 한 번에 확인합니다."
+                  : "Review template scale and the latest gate preview result at a glance."}
+              </p>
+            </div>
+          </div>
+          <dl className="definition-grid">
+            <div>
+              <dt>{copy.templateList.title}</dt>
+              <dd>{templates.length}</dd>
+            </div>
+            <div>
+              <dt>{copy.preview.title}</dt>
+              <dd>{gatePreview ? (gatePreview.allowed ? copy.preview.allowed : copy.preview.blocked) : "-"}</dd>
+            </div>
+            <div>
+              <dt>{copy.logs.title}</dt>
+              <dd>{stats.total}</dd>
+            </div>
+          </dl>
+        </article>
+
+        <article className="panel workspace-section-card workspace-toolbar-card">
+          <div className="section-heading">
+            <div>
+              <h2>{copy.create.title}</h2>
+              <p className="small muted">
+                {isKoLocale
+                  ? "도메인별 승인 역할 구성을 새 템플릿으로 등록합니다."
+                  : "Register a new domain-based approver-role template."}
+              </p>
+            </div>
+          </div>
           <label>
             {copy.create.templateName}
             <input value={name} onChange={(event) => setName(event.target.value)} />
@@ -388,8 +460,17 @@ export default function AdminApprovalTemplatesPage() {
         {showDevTools ? (
           <ApprovalTemplateLogsPanel copy={copy} stats={stats} pendingLabel={pendingLabel} logs={logs} />
         ) : (
-          <article className="panel">
-            <h2>{isKoLocale ? "관련 화면 이동" : "Related workspaces"}</h2>
+          <article className="panel workspace-section-card workspace-note-card">
+            <div className="section-heading">
+              <div>
+                <h2>{isKoLocale ? "관련 화면 이동" : "Related workspaces"}</h2>
+                <p className="small muted">
+                  {isKoLocale
+                    ? "정책과 실행 현황으로 이어지는 승인 운영 흐름을 바로 엽니다."
+                    : "Open the connected policy and execution workspaces."}
+                </p>
+              </div>
+            </div>
             <div className="panel-actions">
               <Link className="btn btn-secondary" href="/admin/approval-executions">
                 {isKoLocale ? "결재 실행 현황" : "Approval executions"}
@@ -398,7 +479,7 @@ export default function AdminApprovalTemplatesPage() {
                 {isKoLocale ? "결재/위임 정책" : "Approval policy"}
               </Link>
               <Link className="btn btn-secondary" href="/admin">
-                {isKoLocale ? "관리자 홈" : "Admin home"}
+                {isKoLocale ? "관리자 허브" : "Admin hub"}
               </Link>
             </div>
           </article>
@@ -407,4 +488,3 @@ export default function AdminApprovalTemplatesPage() {
     </main>
   );
 }
-
