@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1120` so schedule-heavy work also leaves Today home and settles under the dedicated employee schedule route.
-2. Begin the first shared workspace implementation slice once employee request / attendance / leave / schedule seams are explicit.
-3. Align employee mobile entry points with the route-first Today / Requests / Attendance / Leave / Schedule model.
+1. Begin the first shared workspace implementation slice now that employee request / attendance / leave / schedule seams all route directly through dedicated workspaces.
+2. Align employee mobile entry points with the route-first Today / Requests / Attendance / Leave / Schedule model.
+3. Start the next employee shell pass that removes the remaining request/leave hash-only entry dependence where a stable route or workspace destination is more appropriate.
 
 ## 5. Blockers Or Watch Items
 
@@ -281,3 +281,9 @@ Latest planning reset:
 - Closed `WI-1119` through the full GitHub flow and merged it to `main` as `747986123be689035e9d8de87703789cf6f1b1ce`, then deleted the feature branch.
 - Re-verified `WI-1119` on the delivery path and confirmed both `ci` (`22928605264`) and `vercel-production-deploy` (`22928605256`) stay green after the employee attendance and leave route promotion.
 - Started `WI-1120` to remove the remaining schedule-heavy panel from Today home, promote `schedule` focus entry to `/employee/schedule`, and keep only schedule summary plus next actions on the home surface.
+- Closed `WI-1120` through the full GitHub flow and merged it to `main` as `491f7f0b9f1cd64f8027f25cdf5ce235bad2e2a9`, then deleted the feature branch.
+- Re-verified `WI-1120` on the delivery path and confirmed both `ci` (`22929428664`) and `vercel-production-deploy` (`22929428657`) stay green after the employee schedule route-first home relief.
+- Started `WI-1121` to align employee workspace hero framing, source hints, and return affordances across request / attendance / leave / schedule workspaces.
+- Closed `WI-1121` through the full GitHub flow and merged it to `main` as `b835618b9ca007df5febfa0e86cb1a493523d8cc`, then deleted the feature branch.
+- Re-verified `WI-1121` on the delivery path and confirmed both `ci` (`22930076868`) and `vercel-production-deploy` (`22930076871`) stay green after the employee workspace hero alignment.
+- Started `WI-1122` to remove the last requests-workspace resubmit handoff that still returned through the hidden home `?focus=` path.

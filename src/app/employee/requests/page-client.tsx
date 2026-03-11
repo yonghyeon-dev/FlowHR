@@ -366,7 +366,11 @@ export default function EmployeeRequestsPageClient({
   }, []);
 
   const resolveDraftHref = useCallback((candidate: { channel: "attendance" | "leave"; recordId: string }) => {
-    return `/employee?focus=${candidate.channel === "attendance" ? "attendance" : "leave"}&resubmitChannel=${candidate.channel}&resubmitRecordId=${encodeURIComponent(candidate.recordId)}`;
+    const basePath =
+      candidate.channel === "attendance"
+        ? "/employee/attendance"
+        : "/employee/leave";
+    return `${basePath}?source=employee-requests&resubmitChannel=${candidate.channel}&resubmitRecordId=${encodeURIComponent(candidate.recordId)}`;
   }, []);
 
   if (supabaseSessionLoading) {
