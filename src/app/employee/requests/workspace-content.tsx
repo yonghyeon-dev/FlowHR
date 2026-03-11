@@ -247,7 +247,7 @@ export function EmployeeRequestsWorkspaceContent({
   const requestCards = buildRequestActionCards(locale, sectionMode);
 
   return (
-    <main className="saas-content">
+    <main className="saas-content workspace-shell employee-workspace-shell">
       <EmployeeWorkspaceHero
         eyebrow={heroCopy.eyebrow}
         title={heroCopy.title}
@@ -268,9 +268,13 @@ export function EmployeeRequestsWorkspaceContent({
         ]}
       />
 
-      <section className="panel-grid">
+      <section className="panel-grid workspace-panel-grid">
         {requestCards.map((card) => (
-          <article key={card.id} className="panel" id={card.id}>
+          <article
+            key={card.id}
+            className="panel workspace-section-card workspace-action-card"
+            id={card.id}
+          >
             <h2>{card.title}</h2>
             <p className="small">{card.description}</p>
             <div className="actions">
@@ -294,7 +298,7 @@ export function EmployeeRequestsWorkspaceContent({
 
       <EmployeeRequestsPageClient locale={locale} sectionMode={sectionMode} />
 
-      <section className="panel">
+      <section className="panel workspace-section-card workspace-note-card">
         <h2>
           {locale === "ko"
             ? "왜 요청 워크스페이스를 더 세분화하나요?"

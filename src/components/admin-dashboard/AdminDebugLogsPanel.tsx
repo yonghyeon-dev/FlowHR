@@ -25,7 +25,7 @@ export function AdminDebugLogsPanel({
   }
 
   return (
-    <article className="panel">
+    <article className="panel workspace-side-panel">
       <h2>{isKoLocale ? "디버그 로그" : "Debug Logs"}</h2>
       <p className="small">
         {isKoLocale

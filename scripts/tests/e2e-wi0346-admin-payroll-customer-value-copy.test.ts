@@ -16,7 +16,10 @@ async function run() {
   assert.match(adminPayrollPanel, /summaryTitle: "Payroll Customer Value"/);
   assert.match(adminPayrollPanel, /label: "정확성"/);
   assert.match(adminPayrollPanel, /label: "Accuracy"/);
-  assert.match(adminPayrollPanel, /<section className="kpi-strip" aria-label=\{valueNarrative\.summaryTitle\}>/);
+  assert.match(
+    adminPayrollPanel,
+    /<section[\s\S]*className="kpi-strip(?: workspace-summary-strip)?"[\s\S]*aria-label=\{valueNarrative\.summaryTitle\}[\s\S]*>/
+  );
 
   assert.match(workItem, /WI-0346/i);
   assert.match(workItem, /customer[- ]value/i);

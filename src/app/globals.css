@@ -389,6 +389,23 @@ body {
   padding: 24px;
   box-shadow: var(--shadow);
 }
+.workspace-shell {
+  display: grid;
+  gap: 18px;
+}
+.workspace-page-header {
+  align-items: stretch;
+  padding: 22px;
+  border: 1px solid rgba(180, 203, 228, 0.48);
+  border-radius: 22px;
+  background:
+    radial-gradient(460px 220px at 0% 0%, rgba(229, 240, 255, 0.78) 0%, transparent 72%),
+    linear-gradient(140deg, #f9fbff 0%, #ffffff 52%, #f6fbff 100%);
+  box-shadow: 0 22px 42px rgba(67, 93, 120, 0.08);
+}
+.workspace-panel-grid {
+  align-items: start;
+}
 .eyebrow {
   margin: 0 0 8px;
   color: var(--primary);
@@ -407,10 +424,22 @@ body {
   color: var(--muted);
   line-height: 1.5;
 }
+.workspace-hero-panel {
+  border-color: rgba(180, 203, 228, 0.52);
+  background:
+    radial-gradient(480px 220px at 0% 0%, rgba(229, 240, 255, 0.84) 0%, transparent 72%),
+    linear-gradient(145deg, #fbfdff 0%, #ffffff 52%, #f5fbff 100%);
+}
+.workspace-hero-copy {
+  max-width: 62ch;
+}
 .hero-meta {
   margin-top: 14px;
   display: flex;
   flex-wrap: wrap;
+  gap: 10px;
+}
+.workspace-hero-meta {
   gap: 10px;
 }
 .hero-meta span,
@@ -425,6 +454,11 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+.workspace-hero-chip {
+  border-color: rgba(180, 203, 228, 0.48);
+  background: rgba(255, 255, 255, 0.92);
+  color: #45607b;
 }
 .hero-meta code {
   color: var(--primary);
@@ -452,6 +486,17 @@ body {
 }
 .kpi-card strong {
   font-size: 1.2rem;
+}
+.workspace-section-card {
+  border-color: rgba(180, 203, 228, 0.36);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+.workspace-summary-strip {
+  margin-top: 12px;
+}
+.workspace-summary-card {
+  border-color: rgba(180, 203, 228, 0.4);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
 .admin-hub-priority-panel,
 .admin-hub-queue-panel,
@@ -522,6 +567,16 @@ body {
 .panel-focus-target .panel {
   border-color: #98bcfa;
   box-shadow: 0 0 0 2px rgba(152, 188, 250, 0.28), var(--shadow);
+}
+.workspace-side-panel {
+  border-color: rgba(180, 203, 228, 0.34);
+  background: linear-gradient(180deg, #ffffff 0%, #fafcff 100%);
+}
+.workspace-action-card .actions {
+  margin-top: 14px;
+}
+.workspace-note-card {
+  border-style: dashed;
 }
 .admin-hub-workspace-card {
   background: linear-gradient(180deg, #ffffff 0%, #fffaf4 100%);
@@ -4422,6 +4477,10 @@ button.queue-badge:hover {
   .employee-home-hero {
     padding: 20px;
   }
+  .workspace-page-header,
+  .workspace-hero-panel {
+    padding: 20px;
+  }
   .admin-hub-queue-grid,
   .admin-hub-status-grid,
   .admin-hub-workspace-grid {
@@ -4795,11 +4854,18 @@ button.queue-badge:hover {
   .employee-home-hero-meta {
     gap: 8px;
   }
+  .workspace-hero-meta {
+    gap: 8px;
+  }
   .admin-hub-chip {
     width: 100%;
     justify-content: space-between;
   }
   .employee-home-chip {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .workspace-hero-chip {
     width: 100%;
     justify-content: space-between;
   }

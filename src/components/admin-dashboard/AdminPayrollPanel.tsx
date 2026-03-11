@@ -226,12 +226,15 @@ export function AdminPayrollPanel({
       };
 
   return (
-    <article className="panel" id="payroll">
+    <article className="panel workspace-section-card" id="payroll">
       <h2>{headingTitle}</h2>
       <p className="small">{headingDescription}</p>
-      <section className="kpi-strip" aria-label={valueNarrative.summaryTitle}>
+      <section
+        className="kpi-strip workspace-summary-strip"
+        aria-label={valueNarrative.summaryTitle}
+      >
         {valueNarrative.cards.map((card) => (
-          <article key={card.label} className="kpi-card">
+          <article key={card.label} className="kpi-card workspace-summary-card">
             <span>{card.label}</span>
             <strong>{card.value}</strong>
             <p className="small">{card.detail}</p>
