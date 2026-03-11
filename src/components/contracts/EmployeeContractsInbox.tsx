@@ -79,6 +79,10 @@ export default function EmployeeContractsInbox({ accessToken }: EmployeeContract
   const actionNeededCount = useMemo(() => countActionNeededPending(filteredDocuments), [filteredDocuments]);
   const dueSoonCount = useMemo(() => filteredDocuments.filter((document) => isDueSoonPendingDocument(document)).length, [filteredDocuments]);
   const overdueCount = useMemo(() => filteredDocuments.filter((document) => isOverduePendingDocument(document)).length, [filteredDocuments]);
+  const messageToneClass =
+    error || (message && message.toLowerCase().includes("error"))
+      ? "small fail workspace-inline-status"
+      : "small workspace-inline-status";
   const canRespondDocument = useCallback((document: ContractDocument) => canEmployeeRespondToContractDocument(document.status), []);
   const selected = useMemo(
     () => filteredDocuments.find((document) => document.id === selectedDocumentId) ?? filteredDocuments[0] ?? null,
@@ -198,7 +202,7 @@ export default function EmployeeContractsInbox({ accessToken }: EmployeeContract
     }
   }
   return (
-    <main className="saas-content">
+    <main className="saas-content workspace-shell employee-workspace-shell">
       <EmployeeContractsInboxHeader
         title={copy.title}
         description={copy.description}
@@ -206,10 +210,32 @@ export default function EmployeeContractsInbox({ accessToken }: EmployeeContract
         returnLabel={sourceEntry?.returnLabel ?? null}
       />
       {error ? <p className="inline-error">{error}</p> : null}
-      {message ? <p className="small">{message}</p> : null}
-      <section className="panel-grid">
-        <article className="panel panel-contract-template-library">
+      {message ? <p className={messageToneClass}>{message}</p> : null}
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel panel-contract-template-library workspace-section-card workspace-toolbar-card">
           <h2>{copy.inboxTitle}</h2>
+          <div className="kpi-strip workspace-summary-strip employee-workspace-status-strip">
+            <article className="kpi-card">
+              <span>{copy.visibleCountLabel}</span>
+              <strong>{filteredDocuments.length}</strong>
+            </article>
+            <article className="kpi-card">
+              <span>{copy.actionNeededCountLabel}</span>
+              <strong>{actionNeededCount}</strong>
+            </article>
+            <article className="kpi-card">
+              <span>{copy.pendingResponseCountLabel}</span>
+              <strong>{pendingResponseCount}</strong>
+            </article>
+            <article className="kpi-card">
+              <span>{copy.dueSoonCountLabel}</span>
+              <strong>{dueSoonCount}</strong>
+            </article>
+            <article className="kpi-card">
+              <span>{copy.overdueCountLabel}</span>
+              <strong>{overdueCount}</strong>
+            </article>
+          </div>
           <label>
             {copy.inboxSearchLabel}
             <input
