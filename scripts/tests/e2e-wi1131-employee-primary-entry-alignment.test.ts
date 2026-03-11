@@ -9,6 +9,12 @@ function readUtf8(...parts: string[]) {
 function run() {
   const employeeLayout = readUtf8("src", "app", "employee", "layout.tsx");
   const guidePage = readUtf8("src", "app", "employee", "guide", "page.tsx");
+  const guideDashboard = readUtf8(
+    "src",
+    "components",
+    "employee-guide",
+    "EmployeeGuideDashboard.tsx"
+  );
   const guideCopy = readUtf8("src", "components", "employee-guide", "copy.ts");
   const workItem = readUtf8(
     "work-items",
@@ -25,12 +31,17 @@ function run() {
   );
   assert.match(
     guidePage,
+    /EmployeeGuideDashboard/
+  );
+  assert.match(
+    guideCopy,
     /href: "\/employee\/attendance\/correction\?source=employee-guide"/
   );
   assert.match(
-    guidePage,
+    guideCopy,
     /href: "\/employee\/leave\/request\?source=employee-guide"/
   );
+  assert.match(guideDashboard, /\/employee\/requests\?source=employee-guide/);
   assert.match(
     guideCopy,
     /\/employee\/attendance\/correction\?source=employee-guide/

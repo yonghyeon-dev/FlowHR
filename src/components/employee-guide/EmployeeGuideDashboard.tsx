@@ -15,6 +15,7 @@ export function EmployeeGuideDashboard() {
   const { locale } = useI18n();
   const copy = employeeGuideCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const isKoLocale = locale === "ko";
   const data = useEmployeeGuideData({
     loadingLabel: copy.loadingLabel,
     runtimeLocale,
@@ -22,27 +23,56 @@ export function EmployeeGuideDashboard() {
   });
 
   return (
-    <main className="saas-content">
-      <header className="hero">
-        <p className="eyebrow">{copy.heroEyebrow}</p>
-        <h1>{copy.title}</h1>
-        <p>{copy.description}</p>
+    <main className="saas-content workspace-shell employee-workspace-shell">
+      <header className="page-header workspace-page-header employee-workspace-status-header">
+        <div>
+          <p className="eyebrow">{copy.heroEyebrow}</p>
+          <h1 className="page-title">{copy.title}</h1>
+          <p className="page-subtitle">{copy.description}</p>
+          <p className="small muted workspace-source-banner">{copy.sourceHint}</p>
+        </div>
+        <div className="page-actions">
+          <Link className="btn btn-secondary" href="/employee">
+            {copy.backToHomeLabel}
+          </Link>
+          <Link className="btn btn-secondary" href="/employee/requests?source=employee-guide">
+            {copy.requestsHubLabel}
+          </Link>
+        </div>
       </header>
 
+      <section className="kpi-strip workspace-summary-strip employee-workspace-status-strip">
+        <article className="kpi-card workspace-summary-card employee-workspace-status-card">
+          <p>{copy.progressLabel}</p>
+          <strong>{data.progressPercent}%</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card employee-workspace-status-card">
+          <p>{copy.summary.attendance}</p>
+          <strong>{data.attendanceRecordCount}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card employee-workspace-status-card">
+          <p>{copy.summary.leave}</p>
+          <strong>{data.leaveRequestCount}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card employee-workspace-status-card">
+          <p>{copy.summary.payslip}</p>
+          <strong>{data.confirmedPayslipCount}</strong>
+        </article>
+      </section>
+
       {data.requiresLoginSession ? (
-        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
-          {data.productionSessionRequiredNotice} <Link href="/login">/login</Link>
+        <p className="small fail workspace-inline-status">
+          {data.productionSessionRequiredNotice} <Link href="/login">{copy.loginCta}</Link>
         </p>
       ) : null}
 
       <EmployeeGuideContextPanel
         copy={copy}
-        organizationId={data.organizationId}
         employeeId={data.employeeId}
         showDevTools={data.showDevTools}
         pendingLabel={data.pendingLabel}
         refreshDisabled={data.refreshDisabled}
-        isKoLocale={locale === "ko"}
+        isKoLocale={isKoLocale}
         onRefresh={() => {
           void data.loadGuide();
         }}

@@ -16,7 +16,6 @@ export type EmployeeGuideApiLog = {
 
 type ContextPanelProps = {
   copy: EmployeeGuideCopy;
-  organizationId: string;
   employeeId: string;
   showDevTools: boolean;
   pendingLabel: string | null;
@@ -26,15 +25,16 @@ type ContextPanelProps = {
 };
 
 export function EmployeeGuideContextPanel(props: ContextPanelProps) {
-  const { copy, employeeId, showDevTools, pendingLabel, refreshDisabled, isKoLocale, onRefresh } = props;
+  const { copy, employeeId, showDevTools, pendingLabel, refreshDisabled, isKoLocale, onRefresh } =
+    props;
 
   return (
-    <section className="panel-grid">
-      <article className="panel">
+    <section className="panel-grid workspace-panel-grid">
+      <article className="panel workspace-section-card workspace-toolbar-card">
         <h2>{copy.contextTitle}</h2>
         {showDevTools ? (
-          <p className="small">
-            {isKoLocale ? "로그인 직원 번호" : "Signed-in employee number"}:{" "}
+          <p className="small muted">
+            {isKoLocale ? "로그인된 직원 번호" : "Signed-in employee number"}:{" "}
             <code>{formatPublicEmployeeNumber(employeeId)}</code>
           </p>
         ) : null}
@@ -57,8 +57,8 @@ export function EmployeeGuideQuickActionsPanel(props: QuickActionsPanelProps) {
   const { copy } = props;
 
   return (
-    <section className="panel-grid">
-      <article className="panel">
+    <section className="panel-grid workspace-panel-grid">
+      <article className="panel workspace-section-card">
         <h2>{copy.journeyTitle}</h2>
         <ol className="simple-list">
           {copy.journeySteps.map((step) => (
@@ -69,7 +69,7 @@ export function EmployeeGuideQuickActionsPanel(props: QuickActionsPanelProps) {
         </ol>
       </article>
 
-      <article className="panel">
+      <article className="panel workspace-section-card workspace-note-card">
         <h2>{copy.quickActionsTitle}</h2>
         <ul className="simple-list">
           {copy.quickActions.map((action) => (
@@ -109,8 +109,8 @@ export function EmployeeGuideChecklistPanel(props: ChecklistPanelProps) {
   } = props;
 
   return (
-    <section className="panel-grid">
-      <article className="panel">
+    <section className="panel-grid workspace-panel-grid">
+      <article className="panel workspace-section-card">
         <h2>{copy.checklistTitle}</h2>
         <p className="small">
           {copy.progressLabel}: <strong>{progressPercent}%</strong>
@@ -135,7 +135,7 @@ export function EmployeeGuideChecklistPanel(props: ChecklistPanelProps) {
         </ul>
       </article>
 
-      <article className="panel">
+      <article className="panel workspace-section-card workspace-note-card">
         <h2>{copy.summaryTitle}</h2>
         <ul className="simple-list">
           <li>
@@ -154,7 +154,7 @@ export function EmployeeGuideChecklistPanel(props: ChecklistPanelProps) {
       </article>
 
       {showDevTools ? (
-        <article className="panel">
+        <article className="panel workspace-section-card workspace-note-card">
           <h2>{copy.logsTitle}</h2>
           {logs.length === 0 ? (
             <p className="small muted">{copy.logsEmpty}</p>
