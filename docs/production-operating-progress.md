@@ -401,3 +401,6 @@ Latest planning reset:
 - Closed `WI-1158` with merge `bd26e43199695708239fe24772092ed6da213d41`.
 - Re-verified `WI-1158` on the delivery path and confirmed both `ci` (`22964429339`) and `vercel-production-deploy` (`22964429343`) stay green after the seventeenth shared workspace visual wave.
 - Started `WI-1159` to extend the same route-first workspace shell onto year-end settlement, filing, and withholding receipt consoles.
+- Closed `WI-1159` with merge `80704bc538df08fd74507d3caf8acfd8d15dc733`.
+- Re-verified `WI-1159` on the delivery path and confirmed both `ci` (`22965178583`) and `vercel-production-deploy` (`22965178633`) stay green after the eighteenth shared workspace visual wave.
+- Started `WI-1160` to extend the same route-first workspace shell onto employee document consoles covering payslip receipts and year-end input.

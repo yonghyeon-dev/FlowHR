@@ -217,24 +217,56 @@ export default function PayslipReceiptConsole() {
       setPendingLabel(null);
     }
   }
+  const backToEmployeeHomeLabel =
+    locale === "ko" ? "직원 홈으로 돌아가기" : "Back to employee home";
   return (
-    <main className="saas-content">
-      <header className="hero">
+    <main className="saas-content workspace-shell employee-workspace-shell">
+      <header className="page-header workspace-page-header">
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
-        {sourceContextLabel ? <p className="small muted">{sourceContextLabel}</p> : null}
+        {sourceContextLabel ? <p className="small muted workspace-source-banner">{sourceContextLabel}</p> : null}
+        <div className="page-actions" style={{ marginTop: 8 }}>
+          {sourceContextReturnLabel ? (
+            <Link className="btn btn-secondary btn-small" href="/employee">
+              {sourceContextReturnLabel}
+            </Link>
+          ) : null}
+          <Link className="btn btn-secondary btn-small" href="/employee">
+            {backToEmployeeHomeLabel}
+          </Link>
+        </div>
       </header>
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.title}>
+        <article className="kpi">
+          <span>{copy.totalConfirmedRunsLabel}</span>
+          <strong>{receiptSummary.total}</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.pendingConfirmationLabel}</span>
+          <strong>{receiptSummary.pending}</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.visibleRunsLabel}</span>
+          <strong>
+            {filteredRuns.length} / {runs.length}
+          </strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.apiLogsTitle}</span>
+          <strong>{logs.length}</strong>
+        </article>
+      </section>
       {requiresLoginSession ? (
-        <p className="small fail">
+        <p className="small fail workspace-inline-status">
           {copy.productionSessionRequiredNotice} <Link href="/login">/login</Link>
         </p>
       ) : null}
-      <section className="panel-grid">
-        <article className="panel">
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.filtersTitle}</h2>
           {showDevTools ? (
-            <p className="small muted">
+            <p className="small muted workspace-source-banner">
               {copy.sessionOrganizationLabel}:{" "}
               <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, locale)}</strong> /{" "}
               {copy.sessionEmployeeLabel}:{" "}
@@ -259,10 +291,10 @@ export default function PayslipReceiptConsole() {
               </Link>
             ) : null}
           </div>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {normalizedSupabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}</p> : null}
+          {statusMessage ? <p className="small workspace-inline-status">{statusMessage}</p> : null}
+          {normalizedSupabaseSessionError ? <p className="small fail workspace-inline-status">{copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}</p> : null}
         </article>
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.receiptStatusTitle}</h2>
           <ul className="simple-list">
             <li><span>{copy.totalConfirmedRunsLabel}</span><strong>{receiptSummary.total}</strong></li>
@@ -271,7 +303,7 @@ export default function PayslipReceiptConsole() {
             <li><span>{copy.pendingConfirmationLabel}</span><strong>{receiptSummary.pending}</strong></li>
           </ul>
         </article>
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.runsTitle}</h2>
           <label>{copy.runsSearchLabel}<input value={runsSearchQuery} placeholder={copy.runsSearchPlaceholder} onChange={(event) => setRunsSearchQuery(event.target.value)} /></label>
           <label>
@@ -315,7 +347,7 @@ export default function PayslipReceiptConsole() {
           )}
         </article>
         {showDevTools ? (
-          <article className="panel">
+          <article className="panel workspace-section-card workspace-note-card">
             <h2>{copy.apiLogsTitle}</h2>
             <p className="small">
               {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
