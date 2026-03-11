@@ -1,6 +1,6 @@
 # FlowHR Production Operating Progress
 
-Last updated: 2026-03-11
+Last updated: 2026-03-12
 Status: active
 
 ## 1. Current Phase
@@ -9,6 +9,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 2. Completed In This Wave
 
+- Started `WI-1164` to turn the employee guide into a stronger route-first walkthrough with a workspace hero, visible progress framing, and an explicit next recommended action.
+- Closed `WI-1163` through the full GitHub flow and merged it to `main` as `dbbfa450e8106f3d9111660cbcbc5704707f0134`, then deleted the feature branch.
+- Re-verified `WI-1163` on the delivery path and confirmed both `ci` (`22970927419`) and `vercel-production-deploy` (`22970927415`) stay green after the guide visual-density follow-up pass.
 - Closed `WI-1162` through the full GitHub flow and merged it to `main` as `9673b4f133b4df60bb531d5e8975aed459acec58`, then deleted the feature branch.
 - Re-verified `WI-1162` on the delivery path and confirmed both `ci` (`22968706490`) and `vercel-production-deploy` (`22968706549`) stay green after the employee home visual-density tidy pass.
 - Started `WI-1163` to restore readable Korean guide copy and tighten employee guide context, quick-action, and checklist density with guide-specific visual grouping.

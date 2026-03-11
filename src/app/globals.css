@@ -679,6 +679,26 @@ body {
   gap: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+.employee-guide-status-panel {
+  display: grid;
+  gap: 14px;
+}
+.employee-guide-progress-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.employee-guide-progress-head p,
+.employee-guide-progress-head strong {
+  margin: 0;
+}
+.employee-guide-progress-head strong {
+  font-size: 1.45rem;
+}
+.employee-guide-progress-track {
+  width: 100%;
+}
 .employee-guide-context-card,
 .employee-guide-action-item {
   border: 1px solid rgba(176, 209, 195, 0.34);
@@ -690,6 +710,9 @@ body {
   display: grid;
   gap: 6px;
 }
+.employee-guide-context-card p {
+  margin: 0;
+}
 .employee-guide-context-card strong {
   font-size: 1rem;
   line-height: 1.35;
@@ -699,6 +722,9 @@ body {
 }
 .employee-guide-context-actions {
   margin-top: 16px;
+}
+.employee-guide-next-action-card {
+  grid-column: span 2;
 }
 .employee-guide-journey-card,
 .employee-guide-actions-card,
@@ -737,14 +763,21 @@ body {
   display: grid;
   gap: 12px;
 }
+.employee-guide-action-item > div {
+  display: grid;
+  gap: 8px;
+}
 .employee-guide-action-item strong {
   font-size: 0.96rem;
 }
 .employee-guide-action-item p {
-  margin: 6px 0 0;
+  margin: 0;
   color: var(--muted);
   line-height: 1.45;
   font-size: 0.82rem;
+}
+.employee-guide-action-item .workspace-hero-chip {
+  width: fit-content;
 }
 .employee-guide-action-item .btn {
   justify-self: flex-start;
@@ -4655,6 +4688,9 @@ button.queue-badge:hover {
   .employee-guide-context-grid,
   .employee-guide-action-grid {
     grid-template-columns: 1fr;
+  }
+  .employee-guide-next-action-card {
+    grid-column: span 1;
   }
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
