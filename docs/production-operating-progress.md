@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1132` by landing the dedicated admin payroll preview workspace and switching preset-share replay away from `/admin?...#payroll`.
-2. Continue the next admin payroll route-first pass by reducing remaining dashboard dependence on embedded preview/confirm work now that a stable workspace exists.
-3. Begin the next admin route-first extraction after the payroll preview-builder seam is live.
+1. Close `WI-1133` by replacing the embedded admin dashboard payroll form with a route-first workspace entry card.
+2. Continue the next admin payroll route-first pass by removing leftover dashboard payroll preview/confirm state once the card seam is live.
+3. Begin the next admin route-first extraction after the payroll dashboard lane no longer renders the embedded payroll panel.
 
 ## 5. Blockers Or Watch Items
 
@@ -317,3 +317,6 @@ Latest planning reset:
 - Closed `WI-1131` through the full GitHub flow and merged it to `main` as `f02b460b6b3c7efef40c1a3acb646faf06b0ee34`, then deleted the feature branch.
 - Re-verified `WI-1131` on the delivery path and confirmed both `ci` (`22937825077`) and `vercel-production-deploy` (`22937824984`) stay green after the employee primary-entry alignment.
 - Started `WI-1132` to promote payroll preset share replay from the admin dashboard hash surface onto a dedicated `/admin/payroll-close/preview-builder` workspace route.
+- Closed `WI-1132` with merge `8c96feb3dfd201d078a8f84d87680025795c50b8`.
+- Re-verified `WI-1132` on the delivery path and confirmed both `ci` (`22938577863`) and `vercel-production-deploy` (`22938577869`) stay green after the admin payroll preview workspace route promotion.
+- Started `WI-1133` to replace the embedded admin dashboard payroll form with a route-first workspace card that points to payroll close, preview-builder, and previewed queue routes.
