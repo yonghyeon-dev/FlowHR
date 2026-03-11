@@ -60,30 +60,60 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
   } = props;
   const hasWorkspaceSession = sessionOrganizationId.trim().length > 0;
   const hasAdminSession = sessionActorId.trim().length > 0;
+  const scheduleCount = schedules.length;
+  const holidayCount = schedules.filter((schedule) => schedule.isHoliday).length;
+  const selectedCount = selectedSchedule ? 1 : 0;
+  const incidentTotal = incidentPanel.incidentSummary.total || incidentPanel.incidentTotal;
+  const incidentUnassigned = incidentPanel.incidentSummary.unassigned;
+  const statusToneClass = statusMessage.startsWith(copy.loadErrorPrefix)
+    ? "small fail workspace-inline-status"
+    : "small workspace-inline-status";
 
   return (
-    <main className="saas-content">
-      <header className="hero">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="hero page-header workspace-page-header">
         <p className="eyebrow">{copy.eyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
       </header>
 
-      <section className="panel-grid">
-        <article className="panel">
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.filtersTitle}</h2>
           {showDevTools ? (
-            <p className="small muted">
+            <p className="small muted workspace-source-banner">
               {copy.organizationIdLabel}:{" "}
               <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, runtimeLocale)}</strong> /{" "}
               {copy.actorIdLabel}: <strong>{formatAdminSessionConnectionState(hasAdminSession, runtimeLocale)}</strong>
             </p>
           ) : null}
           {isProductionRuntime && !usesBearerToken ? (
-            <p className="small fail">
+            <p className="small fail workspace-inline-status">
               {copy.loadErrorPrefix}. <a href="/login">/login</a>
             </p>
           ) : null}
+          <div className="kpi-strip workspace-summary-strip">
+            <article className="kpi-card">
+              <span>{copy.listTitle}</span>
+              <strong>{scheduleCount}</strong>
+            </article>
+            <article className="kpi-card">
+              <span>{copy.holidayLabel}</span>
+              <strong>{holidayCount}</strong>
+            </article>
+            <article className="kpi-card">
+              <span>{copy.selectedTitle}</span>
+              <strong>{selectedCount}</strong>
+            </article>
+            <article className="kpi-card">
+              <span>{copy.incidentSummaryTotalLabel}</span>
+              <strong>{incidentTotal}</strong>
+            </article>
+            <article className="kpi-card">
+              <span>{copy.incidentSummaryUnassignedLabel}</span>
+              <strong>{incidentUnassigned}</strong>
+            </article>
+          </div>
           <label>
             {copy.employeeIdLabel}
             <input value={queryEmployeeId} onChange={(event) => onQueryEmployeeIdChange(event.target.value)} />
@@ -103,9 +133,9 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
               {copy.loadAction}
             </button>
           </div>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
+          {statusMessage ? <p className={statusToneClass}>{statusMessage}</p> : null}
         </article>
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.createTitle}</h2>
           <label>
             {copy.createEmployeeIdLabel}
@@ -148,7 +178,7 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
             </button>
           </div>
         </article>
-        <article className="panel">
+        <article className="panel workspace-section-card workspace-note-card">
           <h2>{copy.listTitle}</h2>
           {schedules.length === 0 ? (
             <>
@@ -192,7 +222,7 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
           )}
         </article>
         <AdminSchedulingIncidentPanel copy={copy} runtimeLocale={runtimeLocale} incidentPanel={incidentPanel} />
-        <article className="panel">
+        <article className="panel workspace-section-card workspace-detail-card">
           <h2>{copy.selectedTitle}</h2>
           {!selectedSchedule ? (
             <p className="small muted">{copy.selectedEmpty}</p>
@@ -242,7 +272,7 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
           )}
         </article>
         {showDevTools ? (
-          <article className="panel">
+          <article className="panel workspace-side-panel">
             <h2>{copy.logsTitle}</h2>
             <p className="small">
               {copy.logTotals} {logStats.total} / {copy.logSuccess} {logStats.success} / {copy.logFail} {logStats.fail}
