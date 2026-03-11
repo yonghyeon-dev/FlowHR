@@ -383,58 +383,57 @@ export default function EmployeeRequestsPageClient({
 
   return (
     <>
-      <section className="kpi-strip">
+      <section className="kpi-strip workspace-summary-strip employee-workspace-status-strip employee-requests-status-strip">
         {integratedSummaryCards.map((card) => (
-          <article key={card.key} className="kpi-card">
+          <article
+            key={card.key}
+            className="kpi-card workspace-summary-card employee-workspace-status-card employee-requests-status-card"
+          >
             <p>{card.label}</p>
             <strong>{card.value}</strong>
           </article>
         ))}
-        <article className="kpi-card">
+        <article className="kpi-card workspace-summary-card employee-workspace-status-card employee-requests-status-card">
           <p>{isKoLocale ? "최근 처리 작업" : "Latest activity"}</p>
           <strong>{pendingLabel ?? (snapshotLoaded ? "-" : "…")}</strong>
         </article>
       </section>
 
-      <section className="panel-grid">
+      <section className="panel-grid workspace-panel-grid employee-requests-detail-grid">
         {sectionMode !== "resubmit" ? (
-          <div
-            id="request-monitoring"
-            className="panel-grid"
-            style={{ gap: "var(--space-4)" }}
-          >
-          <EmployeeRequestFeedbackPanels
-            isKoLocale={isKoLocale}
-            requestFeedbackStatusFilter={requestFeedbackStatusFilter}
-            filteredRequestFeedbackRows={filteredRequestFeedbackRows}
-            requestFailureCauses={requestFailureCauses}
-            latestFailureCauseMessage={latestFailureCauseMessage}
-            requestSearchScope={requestSearchScope}
-            requestSearchQuery={requestSearchQuery}
-            requestSortOption={requestSortOption}
-            filteredRequestSearchRows={filteredRequestSearchRows}
-            timelineChannelFilter={timelineChannelFilter}
-            timelineStatusFilter={timelineStatusFilter}
-            filteredMobileRequestTimeline={filteredMobileRequestTimeline}
-            toRequestStatusLabel={toRequestStatusLabel}
-            formatDateTime={formatDateTimeByLocale}
-            statusToTone={statusToTone}
-            onRequestFeedbackStatusFilterChange={setRequestFeedbackStatusFilter}
-            onCopyFailureCause={(message) => void copyFailureCause(message)}
-            onRequestSearchScopeChange={setRequestSearchScope}
-            onRequestSearchQueryChange={setRequestSearchQuery}
-            onRequestSortOptionChange={setRequestSortOption}
-            onResetRequestSearchFilters={() =>
-              resetEmployeeRequestSearchFilters({
-                setRequestSearchScope,
-                setRequestSearchQuery,
-                setRequestSortOption
-              })
-            }
-            onOpenPendingRequestSearch={openPendingRequestSearch}
-            onTimelineChannelFilterChange={setTimelineChannelFilter}
-            onTimelineStatusFilterChange={setTimelineStatusFilter}
-          />
+          <div id="request-monitoring" className="employee-requests-monitoring-stack">
+            <EmployeeRequestFeedbackPanels
+              isKoLocale={isKoLocale}
+              requestFeedbackStatusFilter={requestFeedbackStatusFilter}
+              filteredRequestFeedbackRows={filteredRequestFeedbackRows}
+              requestFailureCauses={requestFailureCauses}
+              latestFailureCauseMessage={latestFailureCauseMessage}
+              requestSearchScope={requestSearchScope}
+              requestSearchQuery={requestSearchQuery}
+              requestSortOption={requestSortOption}
+              filteredRequestSearchRows={filteredRequestSearchRows}
+              timelineChannelFilter={timelineChannelFilter}
+              timelineStatusFilter={timelineStatusFilter}
+              filteredMobileRequestTimeline={filteredMobileRequestTimeline}
+              toRequestStatusLabel={toRequestStatusLabel}
+              formatDateTime={formatDateTimeByLocale}
+              statusToTone={statusToTone}
+              onRequestFeedbackStatusFilterChange={setRequestFeedbackStatusFilter}
+              onCopyFailureCause={(message) => void copyFailureCause(message)}
+              onRequestSearchScopeChange={setRequestSearchScope}
+              onRequestSearchQueryChange={setRequestSearchQuery}
+              onRequestSortOptionChange={setRequestSortOption}
+              onResetRequestSearchFilters={() =>
+                resetEmployeeRequestSearchFilters({
+                  setRequestSearchScope,
+                  setRequestSearchQuery,
+                  setRequestSortOption
+                })
+              }
+              onOpenPendingRequestSearch={openPendingRequestSearch}
+              onTimelineChannelFilterChange={setTimelineChannelFilter}
+              onTimelineStatusFilterChange={setTimelineStatusFilter}
+            />
           </div>
         ) : null}
 

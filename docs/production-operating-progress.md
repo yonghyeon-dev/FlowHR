@@ -9,6 +9,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 2. Completed In This Wave
 
+- Started `WI-1165` to rebuild the employee requests hub into a stronger action hierarchy, align monitoring/resubmit panels to the employee workspace rhythm, and tighten resubmit workbench presentation.
+- Closed `WI-1164` through the full GitHub flow and merged it to `main` as `80aefa47ee500a2313cea6ec7ad7f0fae7967d92`, then deleted the feature branch.
+- Re-verified `WI-1164` on the delivery path and confirmed both `ci` (`22971814756`) and `vercel-production-deploy` (`22971814781`) stay green after the employee guide hero action hierarchy pass.
 - Started `WI-1164` to turn the employee guide into a stronger route-first walkthrough with a workspace hero, visible progress framing, and an explicit next recommended action.
 - Closed `WI-1163` through the full GitHub flow and merged it to `main` as `dbbfa450e8106f3d9111660cbcbc5704707f0134`, then deleted the feature branch.
 - Re-verified `WI-1163` on the delivery path and confirmed both `ci` (`22970927419`) and `vercel-production-deploy` (`22970927415`) stay green after the guide visual-density follow-up pass.
