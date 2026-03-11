@@ -66,13 +66,13 @@ const FOCUS_SECTION_RETRY_TIMEOUT_MS = 3500;
 const FOCUS_SECTION_RETRY_INTERVAL_MS = 120;
 const FOCUS_SECTION_OBSERVER_TIMEOUT_MS = 8000;
 
-export type EmployeeSelfServicePageMode = "home" | "attendance" | "leave";
+type EmployeeSelfServicePageMode = "home" | "attendance" | "leave";
 
 type EmployeeSelfServicePageProps = {
   mode?: EmployeeSelfServicePageMode;
 };
 
-export function EmployeeSelfServicePage({
+function EmployeeSelfServicePage({
   mode = "home"
 }: EmployeeSelfServicePageProps) {
   const { locale } = useI18n();

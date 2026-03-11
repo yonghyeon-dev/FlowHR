@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Begin the first shared workspace implementation slice now that employee request / attendance / leave / schedule seams all route directly through dedicated workspaces.
-2. Start the next employee shell pass that removes the remaining request/leave hash-only entry dependence where a stable route or workspace destination is more appropriate.
-3. Reduce the home-route monolith further now that attendance / leave workspaces can be extracted behind dedicated route clients.
+1. Restore green deploy after the employee attendance / leave workspace extraction by removing invalid page-file named exports from the home route.
+2. Reduce the home-route monolith further now that attendance / leave workspaces can be extracted behind dedicated route clients.
+3. Start the next employee shell pass that removes the remaining request/leave hash-only entry dependence where a stable route or workspace destination is more appropriate.
 
 ## 5. Blockers Or Watch Items
 
@@ -293,3 +293,6 @@ Latest planning reset:
 - Closed `WI-1123` through the full GitHub flow and merged it to `main` as `6a5d5649cd24e576230a300b378e278a2bd5e817`, then deleted the feature branch.
 - Re-verified `WI-1123` on the delivery path and confirmed both `ci` (`22931403925`) and `vercel-production-deploy` (`22931403938`) stay green after the employee mobile source-context alignment.
 - Started `WI-1124` to extract `/employee/attendance` and `/employee/leave` away from the home-route `EmployeeSelfServicePage` mode switch and into a dedicated attendance/leave workspace client.
+- Closed `WI-1124` through the full GitHub flow and merged it to `main` as `c6b0b447c93d2dc1dc3d1ec16ced41bfbb7b90dc`, then deleted the feature branch.
+- Re-verified `WI-1124` locally with `npm run build`, but the first `main` production deploy failed because `src/app/employee/page.tsx` still exposed the invalid named export `EmployeeSelfServicePage` from a Next page file.
+- Started `WI-1125` to remove the invalid home-page named export and restore green production deploy after the attendance / leave workspace extraction.
