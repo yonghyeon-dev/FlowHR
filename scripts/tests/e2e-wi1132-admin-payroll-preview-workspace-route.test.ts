@@ -40,8 +40,8 @@ async function run() {
   );
   assert.match(previewPanel, /search\.set\("source", "payroll-preview-share"\)/);
   assert.match(previewPage, /AdminPayrollPreviewBuilderPageClient/);
-  assert.match(previewPageClient, /useAdminDashboardState/);
-  assert.match(previewPageClient, /buildAdminDashboardActions/);
+  assert.match(previewPageClient, /useAdminPayrollPreviewBuilderState/);
+  assert.match(previewPageClient, /buildAdminPayrollPreviewWorkspaceActions/);
   assert.match(previewPageClient, /<AdminPayrollPanel/);
   assert.match(workItem, /\/admin\/payroll-close\/preview-builder/);
 }

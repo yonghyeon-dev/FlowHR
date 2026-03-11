@@ -8,7 +8,6 @@ import {
   settleLeaveAccrualFromHelper,
   type AdminCallApi
 } from "@/app/admin/page-action-helpers";
-import { buildAdminPayrollPreviewRequest } from "@/app/admin/page-payroll-helpers";
 import type {
   ApiLog,
   AttendanceAggregateDto,
@@ -18,7 +17,6 @@ import type {
   PayrollRunDto
 } from "@/app/admin/page-types";
 import type { QueueMobileApprovalFeedback } from "@/components/admin-approval/approval-queue-types";
-import type { PayrollKrIncomeSplitItemDraft } from "@/components/payroll/PayrollKrIncomeSplitItemsTable";
 
 type StringSetter = (value: string) => void;
 type BooleanSetter = (value: boolean | ((prev: boolean) => boolean)) => void;
@@ -80,25 +78,6 @@ export type BuildAdminDashboardActionsInput = {
   leaveMaxHoursPerRequest: string;
   leaveMinNoticeDays: string;
   leaveMaxConsecutiveDays: string;
-  payrollPreviewMode: "gross" | "statutory_kr_baseline";
-  employeeId: string;
-  payrollHourlyRateKrw: string;
-  payrollNonTaxableIncomeKrw: string;
-  payrollTaxableIncomeKrw: string;
-  payrollTaxableItems: PayrollKrIncomeSplitItemDraft[];
-  payrollNonTaxableItems: PayrollKrIncomeSplitItemDraft[];
-  payrollIncomeSplitItemPresetId: string;
-  payrollOtherDeductionsKrw: string;
-  payrollAdditionalTaxCreditKrw: string;
-  payrollDependentCount: string;
-  payrollDependentTaxCreditPerPersonKrw: string;
-  payrollIncomeTaxLookupPresetId: string;
-  payrollIncomeTaxLookupPresetAuto: boolean;
-  payrollIncomeTaxLookupAsOf: string;
-  payrollRequireMonthlyBoundary: boolean;
-  payrollNationalPensionCapKrw: string;
-  payrollHealthInsuranceCapKrw: string;
-  payrollEmploymentInsuranceCapKrw: string;
   setApprovalActivities: ApprovalActivitySetter;
   setMobileApprovalFeedback: QueueMobileFeedbackSetter;
 };
@@ -181,67 +160,6 @@ export function buildAdminDashboardActions(input: BuildAdminDashboardActionsInpu
     });
     if (confirmed.ok && confirmed.confirmedRunId) {
       input.setLastPayrollRunId(confirmed.confirmedRunId);
-    }
-    await refreshInbox();
-  }
-
-  async function previewPayroll() {
-    const previewRequest = buildAdminPayrollPreviewRequest({
-      payrollPreviewMode: input.payrollPreviewMode,
-      periodStart: input.periodStart,
-      periodEnd: input.periodEnd,
-      employeeId: input.employeeId,
-      payrollHourlyRateKrw: input.payrollHourlyRateKrw,
-      payrollNonTaxableIncomeKrw: input.payrollNonTaxableIncomeKrw,
-      payrollTaxableIncomeKrw: input.payrollTaxableIncomeKrw,
-      payrollTaxableItems: input.payrollTaxableItems,
-      payrollNonTaxableItems: input.payrollNonTaxableItems,
-      payrollIncomeSplitItemPresetId: input.payrollIncomeSplitItemPresetId,
-      payrollOtherDeductionsKrw: input.payrollOtherDeductionsKrw,
-      payrollAdditionalTaxCreditKrw: input.payrollAdditionalTaxCreditKrw,
-      payrollDependentCount: input.payrollDependentCount,
-      payrollDependentTaxCreditPerPersonKrw: input.payrollDependentTaxCreditPerPersonKrw,
-      payrollIncomeTaxLookupPresetId: input.payrollIncomeTaxLookupPresetId,
-      payrollIncomeTaxLookupPresetAuto: input.payrollIncomeTaxLookupPresetAuto,
-      payrollIncomeTaxLookupAsOf: input.payrollIncomeTaxLookupAsOf,
-      payrollRequireMonthlyBoundary: input.payrollRequireMonthlyBoundary,
-      payrollNationalPensionCapKrw: input.payrollNationalPensionCapKrw,
-      payrollHealthInsuranceCapKrw: input.payrollHealthInsuranceCapKrw,
-      payrollEmploymentInsuranceCapKrw: input.payrollEmploymentInsuranceCapKrw,
-      toIso: input.toIso
-    });
-
-    if (previewRequest.hasBlockingConsistencyIssues) {
-      input.setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: "Payroll preview (client consistency guard)",
-          status: 400,
-          ok: false,
-          durationMs: 0,
-          at: new Date().toLocaleString(input.runtimeLocale),
-          body: {
-            error: "Fix split-item rows before submit.",
-            details: previewRequest.consistencySummary
-          }
-        },
-        ...prev
-      ]);
-      return;
-    }
-
-    const { response, body } = await input.callApi(
-      previewRequest.label,
-      "POST",
-      previewRequest.path,
-      previewRequest.payload
-    );
-    if (!response.ok) {
-      return;
-    }
-    const parsed = body as { run?: { id?: string } };
-    if (parsed.run?.id) {
-      input.setLastPayrollRunId(parsed.run.id);
     }
     await refreshInbox();
   }
@@ -364,7 +282,6 @@ export function buildAdminDashboardActions(input: BuildAdminDashboardActionsInpu
   return {
     refreshInbox,
     confirmPayroll,
-    previewPayroll,
     settleLeaveAccrual,
     loadLeavePolicy,
     saveLeavePolicy,

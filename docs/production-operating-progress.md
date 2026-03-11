@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1133` by replacing the embedded admin dashboard payroll form with a route-first workspace entry card.
-2. Close `WI-1134` by pruning leftover dashboard payroll preview/confirm props and actions now that the route-first card seam is live.
-3. Begin the next admin route-first extraction after the payroll dashboard lane no longer carries dead preview/confirm wiring.
+1. Close `WI-1135` by isolating payroll preview draft state into the preview-builder workspace seam.
+2. Re-verify `WI-1135` through PR CI, `main` CI, and `vercel-production-deploy`.
+3. Start the next admin route-first extraction after payroll preview draft ownership no longer lives in the shared dashboard state.
 
 ## 5. Blockers Or Watch Items
 
@@ -323,3 +323,6 @@ Latest planning reset:
 - Closed `WI-1133` with merge `b757b3b3bea8ca5c358e634083e202d6a091b377`.
 - Re-verified `WI-1133` on the delivery path and confirmed both `ci` (`22939050019`) and `vercel-production-deploy` (`22939050038`) stay green after the admin payroll dashboard route-first card conversion.
 - Started `WI-1134` to remove leftover dashboard payroll preview/confirm dead props and actions now that the embedded payroll panel is gone.
+- Closed `WI-1134` with merge `5c1bfb7af2c19100bc80e4f06b2b2cb0a3ec83be`.
+- Re-verified `WI-1134` on the delivery path and confirmed both `ci` (`22939485442`) and `vercel-production-deploy` (`22939485472`) stay green after pruning the admin dashboard payroll dead props.
+- Started `WI-1135` to move payroll preview draft state and preview wiring out of the shared admin dashboard state and into the dedicated preview-builder workspace seam.
