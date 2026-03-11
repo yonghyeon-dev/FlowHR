@@ -146,15 +146,19 @@ export default function AdminNoticeWorkspaceView({
   const workspaceStatusLabel = runtimeLocale === "ko-KR" ? "작업 공간 상태" : "Workspace status";
   const adminSessionStatusLabel = runtimeLocale === "ko-KR" ? "관리자 세션 상태" : "Admin session status";
   const statusMessageClassName =
-    statusTone === "success" ? "small ok" : statusTone === "error" ? "small fail" : "small";
+    statusTone === "success"
+      ? "small ok workspace-inline-status"
+      : statusTone === "error"
+        ? "small fail workspace-inline-status"
+        : "small workspace-inline-status";
 
   return (
-    <main className="saas-content">
-      <header className="page-header">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <div>
           <h1 className="page-title">{copy.pageTitle}</h1>
           <p className="page-subtitle">{copy.pageSubtitle}</p>
-          {sourceHint ? <p className="small muted">{sourceHint}</p> : null}
+          {sourceHint ? <p className="small muted workspace-source-banner">{sourceHint}</p> : null}
         </div>
         <div className="page-actions">
           {analyticsBackHref ? (
@@ -171,15 +175,37 @@ export default function AdminNoticeWorkspaceView({
         </div>
       </header>
 
-      <section className="panel-grid">
-        <article className="panel">
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.filtersTitle}</h2>
           {showDevTools ? (
-            <p className="small muted">
+            <p className="small muted workspace-source-banner">
               {workspaceStatusLabel}: <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, runtimeLocale)}</strong> /{" "}
               {adminSessionStatusLabel}: <strong>{formatAdminSessionConnectionState(hasAdminSession, runtimeLocale)}</strong>
             </p>
           ) : null}
+          <div className="kpi-strip workspace-summary-strip">
+            <article className="kpi-card workspace-summary-card">
+              <p>{copy.statsLabel}</p>
+              <strong>{summary.total}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card">
+              <p>{copy.statusFilter.DRAFT}</p>
+              <strong>{draftCount}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card">
+              <p>{copy.statusFilter.SCHEDULED}</p>
+              <strong>{scheduledCount}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card">
+              <p>{copy.statusFilter.PUBLISHED}</p>
+              <strong>{publishedCount}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card">
+              <p>{copy.readRiskSummaryLabel}</p>
+              <strong>{readRiskNoticeCount}</strong>
+            </article>
+          </div>
           <div className="input-grid">
             <label>
               {copy.statusFilterLabel}
@@ -244,7 +270,7 @@ export default function AdminNoticeWorkspaceView({
           {statusMessage ? <p className={statusMessageClassName}>{statusMessage}</p> : null}
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{editingNoticeId ? copy.editTitle ?? copy.composeTitle : copy.composeTitle}</h2>
           <label>
             {copy.titleLabel}
@@ -330,7 +356,7 @@ export default function AdminNoticeWorkspaceView({
           </div>
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card workspace-note-card">
           <h2>{copy.listTitle}</h2>
           <label>
             {copy.listSearchLabel}
@@ -433,7 +459,7 @@ export default function AdminNoticeWorkspaceView({
         </article>
 
         {showDevTools ? (
-          <article className="panel">
+          <article className="panel workspace-side-panel">
             <h2>{copy.logsTitle}</h2>
             {logs.length === 0 ? (
               <p className="small muted">{copy.logsEmpty}</p>

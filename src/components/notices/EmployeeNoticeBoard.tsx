@@ -100,6 +100,10 @@ export default function EmployeeNoticeBoard() {
   const isUnreadQuickFilter = !unreadOnly && readStatusFilter === "unread" && agingRiskFilter === "all";
   const isAgingRiskQuickFilter = !unreadOnly && readStatusFilter === "unread" && agingRiskFilter === "aging_3d";
   const readAtByNoticeId = useMemo(() => buildReadAtByNoticeIdMap(readReceipts), [readReceipts]);
+  const statusMessageClassName =
+    statusMessage === copy.messages.markedRead || statusMessage === copy.messages.markedAllRead
+      ? "small ok workspace-inline-status"
+      : "small fail workspace-inline-status";
 
   function buildActorHeaders() {
     const headers: Record<string, string> = {};
@@ -254,12 +258,12 @@ export default function EmployeeNoticeBoard() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="page-header">
+    <main className="saas-content workspace-shell employee-workspace-shell">
+      <header className="page-header workspace-page-header employee-workspace-status-header">
         <div>
           <h1 className="page-title">{copy.pageTitle}</h1>
           <p className="page-subtitle">{copy.pageSubtitle}</p>
-          {sourceEntry ? <p className="small muted">{sourceEntry.hint}</p> : null}
+          {sourceEntry ? <p className="small muted workspace-source-banner">{sourceEntry.hint}</p> : null}
         </div>
         <div className="page-actions">
           <Link className="btn btn-secondary" href="/employee">
@@ -269,19 +273,41 @@ export default function EmployeeNoticeBoard() {
         </div>
       </header>
       {requiresLoginSession ? (
-        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
+        <p className="small fail workspace-inline-status">
           {productionSessionRequiredNotice} <Link href="/login">/login</Link>
         </p>
       ) : null}
-      <section className="panel-grid">
-        <article className="panel">
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.filtersTitle}</h2>
           {showDevTools ? (
-            <p className="small muted">
+            <p className="small muted workspace-source-banner">
               {workspaceStatusLabel}: <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, runtimeLocale)}</strong> /{" "}
               {employeeSessionStatusLabel}: <strong>{formatEmployeeSessionConnectionState(hasEmployeeSession, runtimeLocale)}</strong>
             </p>
           ) : null}
+          <div className="kpi-strip workspace-summary-strip employee-workspace-status-strip">
+            <article className="kpi-card workspace-summary-card employee-workspace-status-card">
+              <p>{copy.summaryLabel}</p>
+              <strong>{publishedCount}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card employee-workspace-status-card">
+              <p>{copy.filteredSummaryLabel}</p>
+              <strong>{filteredNotices.length}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card employee-workspace-status-card">
+              <p>{copy.unreadLabel}</p>
+              <strong>{unreadCount}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card employee-workspace-status-card">
+              <p>{copy.readStatusFilterReadOption}</p>
+              <strong>{readCount}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card employee-workspace-status-card">
+              <p>{copy.unreadAgingRiskSummaryLabel}</p>
+              <strong>{unreadAgingRiskCount}</strong>
+            </article>
+          </div>
           <label>
             {copy.searchLabel}
             <input
@@ -365,9 +391,9 @@ export default function EmployeeNoticeBoard() {
           <p className="small muted">
             {copy.summaryLabel}: {publishedCount} / {copy.filteredSummaryLabel}: {filteredNotices.length} / {copy.unreadLabel}: {unreadCount} / {copy.readStatusFilterReadOption}: {readCount} / {copy.unreadAgingRiskSummaryLabel}: {unreadAgingRiskCount}
           </p>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
+          {statusMessage ? <p className={statusMessageClassName}>{statusMessage}</p> : null}
         </article>
-        <article className="panel">
+        <article className="panel workspace-section-card workspace-note-card">
           <h2>{copy.listTitle}</h2>
           <EmployeeNoticeBoardList
             copy={copy}
