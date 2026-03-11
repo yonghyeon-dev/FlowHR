@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -70,6 +70,11 @@ export default function EmployeeSettingsPage() {
   const isKoLocale = locale === "ko";
   const l = useCallback((ko: string, en: string) => getLabel(isKoLocale, ko, en), [isKoLocale]);
 
+  const languageSummary = useMemo(
+    () => (locale === "ko" ? l("한국어", "Korean") : l("영어", "English")),
+    [l, locale]
+  );
+
   const handleLocaleChange = useCallback((newLocale: LocaleOption) => {
     setLocale(newLocale);
     localStorage.setItem(LOCALE_STORAGE_KEY, newLocale);
@@ -132,37 +137,71 @@ export default function EmployeeSettingsPage() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="page-header">
+    <main className="saas-content workspace-shell employee-workspace-shell">
+      <header className="page-header workspace-page-header employee-workspace-status-header">
         <div>
           <h1 className="page-title">{l("개인 설정", "Personal Settings")}</h1>
-          <p className="page-subtitle">{l("언어 및 알림 환경을 설정합니다.", "Configure language and notification preferences.")}</p>
+          <p className="page-subtitle">
+            {l("언어, 알림, 계정 보안 설정을 한 화면에서 관리합니다.", "Manage language, alerts, and account security in one place.")}
+          </p>
+          <p className="small muted workspace-source-banner">
+            {l(
+              "변경한 설정은 현재 계정과 연결된 self-service 경험에 바로 반영됩니다.",
+              "Changes apply immediately to the current self-service account experience."
+            )}
+          </p>
+        </div>
+        <div className="page-actions">
+          <Link href="/employee" className="btn btn-secondary">
+            {l("직원 홈", "Employee Home")}
+          </Link>
+          <Link href="/employee/notifications/settings" className="btn btn-secondary">
+            {l("알림 설정", "Notification Settings")}
+          </Link>
         </div>
       </header>
 
-      {saved ? <p className="small ok">{l("저장되었습니다.", "Saved.")}</p> : null}
-      {passwordError ? <p className="small fail">{passwordError}</p> : null}
-      {passwordNotice ? <p className="small ok">{passwordNotice}</p> : null}
+      <section className="kpi-strip workspace-summary-strip employee-workspace-status-strip">
+        <article className="kpi-card workspace-summary-card">
+          <p>{l("현재 언어", "Current language")}</p>
+          <strong>{languageSummary}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{l("알림 관리", "Alert management")}</p>
+          <strong>{l("바로가기 제공", "Shortcut ready")}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{l("계정 보안", "Account security")}</p>
+          <strong>{l("비밀번호 변경 가능", "Password update ready")}</strong>
+        </article>
+      </section>
 
-      <section className="panel-grid">
-        <article className="panel">
+      {saved ? <p className="small ok workspace-inline-status">{l("언어 설정이 저장되었습니다.", "Language preference saved.")}</p> : null}
+      {passwordError ? <p className="small fail workspace-inline-status">{passwordError}</p> : null}
+      {passwordNotice ? <p className="small ok workspace-inline-status">{passwordNotice}</p> : null}
+
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{l("언어 설정", "Language Settings")}</h2>
-          <p className="small muted">{l("화면 표시 언어를 선택합니다.", "Choose your display language.")}</p>
+          <p className="small muted">{l("화면에 표시할 기본 언어를 선택합니다.", "Choose the default language shown across the product.")}</p>
           <div className="input-grid">
             <label>
               {l("언어", "Language")}
               <select value={locale} onChange={(event) => handleLocaleChange(event.target.value as LocaleOption)}>
-                <option value="ko">한국어</option>
+                <option value="ko">{l("한국어", "Korean")}</option>
                 <option value="en">English</option>
               </select>
             </label>
           </div>
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card workspace-note-card">
           <h2>{l("알림 설정", "Notification Settings")}</h2>
           <p className="small muted">
-            {l("이메일/인앱 알림 수신 환경을 설정합니다.", "Configure email and in-app notification preferences.")}
+            {l(
+              "이메일과 인앱 알림 수신 기준은 알림 설정 화면에서 자세히 조정할 수 있습니다.",
+              "Fine-tune email and in-app delivery rules from the dedicated notification settings workspace."
+            )}
           </p>
           <div className="panel-actions">
             <Link href="/employee/notifications/settings" className="btn btn-secondary">
@@ -171,12 +210,12 @@ export default function EmployeeSettingsPage() {
           </div>
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{l("비밀번호 변경", "Change Password")}</h2>
           <p className="small muted">
             {l(
-              "로그인 상태에서 새 비밀번호로 변경합니다. 현재 비밀번호 입력은 확인용이며 필수는 아닙니다.",
-              "Change to a new password while signed in. The current password field is optional and only for your reference."
+              "로그인된 상태에서 새 비밀번호로 갱신합니다. 현재 비밀번호 입력란은 확인용으로만 사용됩니다.",
+              "Update to a new password while signed in. The current password field is optional and used only for reference."
             )}
           </p>
 
@@ -224,7 +263,7 @@ export default function EmployeeSettingsPage() {
                 className="btn btn-primary"
                 disabled={passwordPending || newPassword.length === 0 || confirmPassword.length === 0}
               >
-                {passwordPending ? l("변경 중...", "Changing...") : l("변경", "Change")}
+                {passwordPending ? l("변경하는 중...", "Changing...") : l("비밀번호 변경", "Change Password")}
               </button>
             </div>
           </form>
