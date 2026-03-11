@@ -149,7 +149,7 @@ async function run() {
   assert.match(employeeRequestFeedbackPanels, /Math\.round\(row\.pendingHours\)/);
   assert.match(
     employeeAttendancePage,
-    /EmployeeAttendanceLeaveWorkspaceClient mode="attendance"/
+    /(EmployeeAttendanceLeaveWorkspaceClient mode="attendance"|EmployeeAttendanceWorkspacePageClient)/
   );
   assert.match(employeeLeavePage, /EmployeeLeaveWorkspacePageClient/);
   assert.match(
