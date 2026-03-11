@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1128` by promoting the admin payroll queue `focus` links onto stable subroutes instead of banner-only pseudo-state.
-2. Start the next employee requests follow-up pass that trims residual hash-only deep links inside route-first workspaces.
-3. Begin the next admin route-first slice after payroll queue route ownership is explicit.
+1. Close `WI-1129` by promoting the employee leave-calendar hash destination onto a stable subroute while keeping legacy hash entry as compatibility-only behavior.
+2. Continue the next employee route-first pass by trimming the remaining hash-only or pseudo-state deep links inside workspace surfaces.
+3. Begin the next admin route-first slice after employee calendar entry parity is explicit.
 
 ## 5. Blockers Or Watch Items
 
@@ -305,3 +305,6 @@ Latest planning reset:
 - Closed `WI-1127` through the full GitHub flow and merged it to `main` as `4571ffcab8c101319ff49cf892a7f947b4cb9a9d`, then deleted the feature branch.
 - Re-verified `WI-1127` on the delivery path and confirmed both `ci` (`22934931479`) and `vercel-production-deploy` (`22934931488`) stay green after the employee requests subroute promotion.
 - Started `WI-1128` to promote admin payroll queue pseudo-focus links into stable subroutes and keep legacy `?focus=` entries on compatibility redirects only.
+- Closed `WI-1128` through the full GitHub flow and merged it to `main` as `7877b61bf315ad8a5a919d634da7618db9a54df9`, then deleted the feature branch.
+- Re-verified `WI-1128` on the delivery path and confirmed both `ci` (`22935717065`) and `vercel-production-deploy` (`22935717062`) stay green after the admin payroll queue subroute promotion.
+- Started `WI-1129` to promote the employee leave-calendar hash destination onto `/employee/leave/calendar` and keep the legacy hash entry as compatibility-only behavior.

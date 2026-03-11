@@ -1,5 +1,5 @@
-import EmployeeAttendanceLeaveWorkspaceClient from "@/app/employee/attendance-leave-workspace-client";
+import EmployeeLeaveWorkspacePageClient from "./page-client";
 
 export default function EmployeeLeaveWorkspacePage() {
-  return <EmployeeAttendanceLeaveWorkspaceClient mode="leave" />;
+  return <EmployeeLeaveWorkspacePageClient />;
 }

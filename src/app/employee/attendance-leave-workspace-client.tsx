@@ -51,13 +51,16 @@ import { useI18n } from "@/lib/i18n/provider";
 import { useSearchParams } from "next/navigation";
 
 type EmployeeAttendanceLeaveWorkspaceMode = "attendance" | "leave";
+export type EmployeeLeaveWorkspaceSectionMode = "all" | "calendar";
 
 type EmployeeAttendanceLeaveWorkspaceClientProps = {
   mode: EmployeeAttendanceLeaveWorkspaceMode;
+  sectionMode?: EmployeeLeaveWorkspaceSectionMode;
 };
 
 export default function EmployeeAttendanceLeaveWorkspaceClient({
-  mode
+  mode,
+  sectionMode = "all"
 }: EmployeeAttendanceLeaveWorkspaceClientProps) {
   const { locale } = useI18n();
   const searchParams = useSearchParams();
@@ -600,6 +603,8 @@ export default function EmployeeAttendanceLeaveWorkspaceClient({
   } as const;
 
   const isAttendanceWorkspace = mode === "attendance";
+  const isLeaveCalendarWorkspace =
+    !isAttendanceWorkspace && sectionMode === "calendar";
 
   return (
     <main className="saas-content">
@@ -667,11 +672,14 @@ export default function EmployeeAttendanceLeaveWorkspaceClient({
         {isAttendanceWorkspace ? (
           <EmployeeAttendanceFormPanel {...sharedPanelProps} />
         ) : null}
-        {!isAttendanceWorkspace ? (
+        {!isAttendanceWorkspace && !isLeaveCalendarWorkspace ? (
           <EmployeeLeaveRequestPanel {...sharedPanelProps} />
         ) : null}
         {!isAttendanceWorkspace ? (
           <EmployeeLeaveCalendarPanel {...sharedPanelProps} />
+        ) : null}
+        {isLeaveCalendarWorkspace ? (
+          <EmployeeLeaveRequestPanel {...sharedPanelProps} />
         ) : null}
       </section>
     </main>

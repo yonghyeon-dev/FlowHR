@@ -64,7 +64,7 @@ function buildRequestActionCards(
               tone: "primary"
             },
             {
-              href: "/employee/leave?source=employee-requests#leave-calendar",
+              href: "/employee/leave/calendar?source=employee-requests",
               label: "휴가 캘린더 보기",
               tone: "secondary"
             }
@@ -138,7 +138,7 @@ function buildRequestActionCards(
               tone: "primary"
             },
             {
-              href: "/employee/leave?source=employee-requests#leave-calendar",
+              href: "/employee/leave/calendar?source=employee-requests",
               label: "Open leave calendar",
               tone: "secondary"
             }

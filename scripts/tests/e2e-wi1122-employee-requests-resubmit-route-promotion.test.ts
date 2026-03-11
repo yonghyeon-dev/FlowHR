@@ -28,6 +28,13 @@ function run() {
     "leave",
     "page.tsx"
   );
+  const leavePageClient = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "leave",
+    "page-client.tsx"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-1122-employee-requests-resubmit-route-promotion.md"
@@ -49,9 +56,10 @@ function run() {
     attendancePage,
     /EmployeeAttendanceLeaveWorkspaceClient mode="attendance"/
   );
+  assert.match(leavePage, /EmployeeLeaveWorkspacePageClient/);
   assert.match(
-    leavePage,
-    /EmployeeAttendanceLeaveWorkspaceClient mode="leave"/
+    leavePageClient,
+    /EmployeeAttendanceLeaveWorkspaceClient[\s\S]*mode="leave"/
   );
   assert.match(workItem, /route/i);
 }

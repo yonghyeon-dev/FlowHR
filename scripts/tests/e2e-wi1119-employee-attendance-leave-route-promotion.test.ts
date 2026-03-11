@@ -12,6 +12,13 @@ function run() {
   const employeeLayout = readUtf8("src", "app", "employee", "layout.tsx");
   const attendancePage = readUtf8("src", "app", "employee", "attendance", "page.tsx");
   const leavePage = readUtf8("src", "app", "employee", "leave", "page.tsx");
+  const leavePageClient = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "leave",
+    "page-client.tsx"
+  );
   const workspaceClient = readUtf8(
     "src",
     "app",
@@ -43,7 +50,7 @@ function run() {
 
   assert.match(queryHelpers, /attendance: "\/employee\/attendance#attendance"/);
   assert.match(queryHelpers, /leave: "\/employee\/leave#leave"/);
-  assert.match(queryHelpers, /"leave-calendar": "\/employee\/leave#leave-calendar"/);
+  assert.match(queryHelpers, /"leave-calendar": "\/employee\/leave\/calendar"/);
   assert.doesNotMatch(employeePage, /mode === "attendance"/);
   assert.doesNotMatch(employeePage, /mode === "leave"/);
   assert.doesNotMatch(employeePage, /EmployeeWorkspaceHero/);
@@ -52,16 +59,17 @@ function run() {
     attendancePage,
     /EmployeeAttendanceLeaveWorkspaceClient mode="attendance"/
   );
+  assert.match(leavePage, /EmployeeLeaveWorkspacePageClient/);
   assert.match(
-    leavePage,
-    /EmployeeAttendanceLeaveWorkspaceClient mode="leave"/
+    leavePageClient,
+    /EmployeeAttendanceLeaveWorkspaceClient[\s\S]*mode="leave"/
   );
   assert.match(workspaceClient, /EmployeeAttendanceFormPanel/);
   assert.match(workspaceClient, /EmployeeLeaveRequestPanel/);
   assert.match(employeeLayout, /\/employee\/attendance/);
   assert.match(employeeLayout, /\/employee\/leave/);
   assert.match(shortcuts, /\/employee\/attendance\?source=employee-dashboard/);
-  assert.match(shortcuts, /\/employee\/leave\?source=employee-dashboard#leave-calendar/);
+  assert.match(shortcuts, /\/employee\/leave\/calendar\?source=employee-dashboard/);
   assert.match(workspaceHubs, /\/employee\/attendance\?source=employee-dashboard/);
   assert.match(workspaceHubs, /\/employee\/leave\?source=employee-dashboard/);
   assert.match(scheduleBoard, /\/employee\/attendance\?source=employee-schedule&attendanceSource=schedule/);
