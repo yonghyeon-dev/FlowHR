@@ -329,3 +329,6 @@ Latest planning reset:
 - Closed `WI-1135` with merge `3eef52d055970f85ea8203130877ef2d4252194a`.
 - Re-verified `WI-1135` on the delivery path and confirmed both `ci` (`22940359312`) and `vercel-production-deploy` (`22940359339`) stay green after the admin payroll preview state isolation.
 - Started `WI-1136` to retire unused admin dashboard panel/state/action scaffolding and rewrite stale decomposition guards around the current route-first admin model.
+- Closed `WI-1136` with merge `0f63d6fa2255dc414a72ebe867c1edb64b93bbfd`.
+- Re-verified `WI-1136` on the delivery path and confirmed both `ci` (`22941341706`) and `vercel-production-deploy` (`22941341732`) stay green after the admin legacy dashboard scaffolding retirement.
+- Started `WI-1137` to retire the remaining unused admin dashboard fragment components and rewrite stale guard expectations around the grouped admin hub shell.

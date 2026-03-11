@@ -109,11 +109,10 @@ async function run() {
   assert.match(adminNavSource, /\/admin\/attendance-live"/);
   assert.match(adminNavSource, /\/admin\/payroll-close"/);
 
-  assert.match(adminChrome, /export function AdminDashboardChrome/);
-  assert.match(adminOnboardingAccountPanels, /id="onboarding"/);
-  assert.match(adminPeopleInvitePanels, /id="people"/);
-  assert.match(adminPeopleInvitePanels, /id="invites"/);
-  assert.match(adminSchedulingPanel, /id="scheduling"/);
+  assert.match(adminChrome, /ADMIN_DASHBOARD_CHROME_RETIRED_WI_1137/);
+  assert.match(adminOnboardingAccountPanels, /ADMIN_ONBOARDING_ACCOUNT_PANELS_RETIRED_WI_1137/);
+  assert.match(adminPeopleInvitePanels, /ADMIN_PEOPLE_INVITE_PANELS_RETIRED_WI_1137/);
+  assert.match(adminSchedulingPanel, /ADMIN_SCHEDULING_PANEL_RETIRED_WI_1137/);
   assert.match(adminPanels, /ADMIN_DASHBOARD_PANELS_RETIRED_WI_1136/);
   assert.doesNotMatch(adminPanels, /from "@\/components\/admin-dashboard\/AdminOnboardingAccountPanels"/);
   assert.doesNotMatch(adminPanels, /from "@\/components\/admin-dashboard\/AdminPeopleInvitePanels"/);
@@ -123,9 +122,8 @@ async function run() {
   assert.doesNotMatch(adminPanels, /<AdminPeopleInvitePanels/);
   assert.doesNotMatch(adminPanels, /<AdminSchedulingPanel/);
   assert.doesNotMatch(adminPanels, /<AdminCompensationPanels/);
-  assert.match(adminAggregateLeavePanels, /id="aggregates"/);
-  assert.match(adminAggregateLeavePanels, /id="leave-policy"/);
-  assert.match(adminPayrollWorkspaceCard, /id="payroll-workspace-card"/);
+  assert.match(adminAggregateLeavePanels, /ADMIN_AGGREGATE_LEAVE_PANELS_RETIRED_WI_1137/);
+  assert.match(adminPayrollWorkspaceCard, /ADMIN_PAYROLL_WORKSPACE_CARD_RETIRED_WI_1137/);
   assert.match(adminPayrollPanel, /id="payroll"/);
   assert.match(adminCompensationPanels, /ADMIN_COMPENSATION_PANELS_RETIRED_WI_1136/);
   assert.doesNotMatch(adminCompensationPanels, /from "@\/components\/admin-dashboard\/AdminAggregateLeavePanels"/);

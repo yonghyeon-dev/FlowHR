@@ -21,18 +21,8 @@ const onboardingSectionsSource = readFileSync(
 
 assert.match(
   invitePanelSource,
-  /Invite workspace|초대가 연결될 워크스페이스/,
-  "invite panel should explain the current workspace in product language"
-);
-assert.doesNotMatch(
-  invitePanelSource,
-  /Target organization|대상 조직/,
-  "invite panel should not expose raw target-organization wording"
-);
-assert.doesNotMatch(
-  invitePanelSource,
-  /onOrganizationIdChange/,
-  "invite panel should not allow direct raw organization editing"
+  /ADMIN_PEOPLE_INVITE_PANELS_RETIRED_WI_1137/,
+  "invite panel legacy fragment should be retired after the grouped admin hub migration"
 );
 assert.match(
   panelContainerSource,

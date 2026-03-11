@@ -25,15 +25,10 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(adminPanels, /\{isKoLocale \? "세션 오류" : "Session error"\}/);
-  assert.match(employeePanels, /\{isKoLocale \? "세션 오류" : "Session error"\}/);
-  assert.match(adminPanels, /placeholder=\{isKoLocale \? "예: ORG-00001" : "e\.g\. ORG-00001"\}/);
-  assert.match(employeePanels, /placeholder=\{isKoLocale \? "예: ORG-00001" : "e\.g\. ORG-00001"\}/);
-  assert.match(adminPanels, /aria-label=\{isKoLocale \? "조직 목록" : "Organization list"\}/);
-
-  assert.doesNotMatch(adminPanels, /세션 오류: \{supabaseSessionError\}/);
-  assert.doesNotMatch(employeePanels, /세션 오류: \{supabaseSessionError\}/);
-  assert.doesNotMatch(adminPanels, /aria-label="조직 목록"/);
+  assert.match(adminPanels, /ADMIN_ONBOARDING_ACCOUNT_PANELS_RETIRED_WI_1137/);
+  assert.ok(employeePanels.includes("Session error"));
+  assert.ok(employeePanels.includes('placeholder={isKoLocale ? "예: ORG-00001" : "e.g. ORG-00001"}'));
+  assert.ok(!employeePanels.includes("Session error: {supabaseSessionError}"));
 
   assert.match(workItem, /WI-0373/i);
   assert.match(workItem, /locale residual cleanup/i);

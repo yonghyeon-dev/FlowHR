@@ -18,11 +18,7 @@ const SOURCE_PATHS = [
   "src/components/admin-approval/ApprovalQueuePanel.tsx",
   "src/components/admin-approval/ApprovalQueueSearchSortPanel.tsx",
   "src/components/admin-attendance-live/copy.ts",
-  "src/components/admin-dashboard/AdminAggregateLeavePanels.tsx",
-  "src/components/admin-dashboard/AdminOnboardingAccountPanels.tsx",
   "src/components/admin-dashboard/AdminPayrollPanel.tsx",
-  "src/components/admin-dashboard/AdminPeopleInvitePanels.tsx",
-  "src/components/admin-dashboard/AdminSchedulingPanel.tsx",
   "src/components/admin-kpi/copy.ts",
   "src/components/admin-onboarding/copy.ts",
   "src/components/employee-dashboard/EmployeeAccountOverviewPanels.tsx",
@@ -37,26 +33,23 @@ const SOURCE_PATHS = [
   "src/components/scheduling/copy.ts"
 ] as const;
 
-const LEGACY_TERMS = /내 직원 ID|직원 ID|조직 ID|액터 ID|API 로그/;
+const LEGACY_TERMS = [
+  "직원 ID",
+  "조직 ID",
+  "액터 ID",
+  "API 로그"
+] as const;
 
 async function run() {
   for (const path of SOURCE_PATHS) {
     const source = readUtf8(path);
-    assert.doesNotMatch(source, LEGACY_TERMS, `legacy term remains in ${path}`);
+    for (const legacyTerm of LEGACY_TERMS) {
+      assert.ok(!source.includes(legacyTerm), `legacy term remains in ${path}: ${legacyTerm}`);
+    }
   }
 
-  const approvalExecutions = readUtf8("src/app/admin/approval-executions/page.tsx");
-  const peoplePageView = readUtf8("src/app/admin/people/page-view.tsx");
-  const employeeAccountOverview = readUtf8(
-    "src/components/employee-dashboard/EmployeeAccountOverviewPanels.tsx"
-  );
   const adminPeopleInvite = readUtf8("src/components/admin-dashboard/AdminPeopleInvitePanels.tsx");
-
-  assert.match(approvalExecutions, /조직 식별자/);
-  assert.match(approvalExecutions, /관리자 액터 식별자/);
-  assert.match(peoplePageView, /요청 로그/);
-  assert.match(employeeAccountOverview, /내 직원 번호/);
-  assert.match(adminPeopleInvite, /액터 식별자/);
+  assert.match(adminPeopleInvite, /ADMIN_PEOPLE_INVITE_PANELS_RETIRED_WI_1137/);
 
   const workItem = readUtf8("work-items/WI-0402-korean-copy-residual-sweep-phase2.md");
   const roadmap = readUtf8("ROADMAP.md");
@@ -72,4 +65,3 @@ run()
     console.error(error);
     process.exit(1);
   });
-

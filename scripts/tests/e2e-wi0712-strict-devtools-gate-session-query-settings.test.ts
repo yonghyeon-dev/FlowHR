@@ -25,9 +25,8 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(adminOnboardingAccountPanels, /\{showDevTools \? \(/);
+  assert.match(adminOnboardingAccountPanels, /ADMIN_ONBOARDING_ACCOUNT_PANELS_RETIRED_WI_1137/);
   assert.match(employeeAccountOverviewPanels, /\{showDevTools \? \(/);
-  assert.ok(!adminOnboardingAccountPanels.includes("showDevTools || !isProductionRuntime"));
   assert.ok(!employeeAccountOverviewPanels.includes("showDevTools || !isProductionRuntime"));
 
   assert.match(workItem, /WI-0712/i);

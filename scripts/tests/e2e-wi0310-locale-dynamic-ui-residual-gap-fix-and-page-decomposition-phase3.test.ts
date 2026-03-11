@@ -82,7 +82,7 @@ async function run() {
   assert.match(adminPayrollPanel, /Statutory deductions \(KR baseline\)/);
 
   assert.match(adminDebugLogsPanel, /Debug Logs/);
-  assert.match(adminOnboardingAccountPanels, /Dev and verification settings/);
+  assert.match(adminOnboardingAccountPanels, /ADMIN_ONBOARDING_ACCOUNT_PANELS_RETIRED_WI_1137/);
   assert.match(adminOnboardingSections, /copy\.inviteCoverageTitle/);
   assert.match(adminOnboardingSections, /copy\.inviteCoverageIssueButton/);
 

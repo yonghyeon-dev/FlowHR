@@ -9,13 +9,8 @@ const source = readFileSync(
 
 assert.match(
   source,
-  /formatPublicEmployeeNumber\(aggregate\.employeeId\)/,
-  "admin aggregate leave panel should format employee identifiers through the public employee number helper"
-);
-assert.doesNotMatch(
-  source,
-  /<strong>\{aggregate\.employeeId\}<\/strong>/,
-  "admin aggregate leave panel should not print raw employee ids in aggregate rows"
+  /ADMIN_AGGREGATE_LEAVE_PANELS_RETIRED_WI_1137/,
+  "admin aggregate leave fragment should be retired after the route-first hub cleanup"
 );
 
 console.log("e2e-wi1077-admin-aggregate-leave-surface-humanization.test passed");

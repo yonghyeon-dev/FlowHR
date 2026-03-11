@@ -9,18 +9,8 @@ const source = readFileSync(
 
 assert.match(
   source,
-  /formatPublicEmployeeNumber\(schedule\.employeeId\)/,
-  "admin scheduling panel should format employee identifiers through the public employee number helper"
-);
-assert.doesNotMatch(
-  source,
-  /<strong>\{schedule\.employeeId\}<\/strong>/,
-  "admin scheduling panel should not print raw employee ids in the schedule list"
-);
-assert.doesNotMatch(
-  source,
-  /<time className="muted">\{schedule\.id\}<\/time>/,
-  "admin scheduling panel should not expose raw schedule ids in the schedule list"
+  /ADMIN_SCHEDULING_PANEL_RETIRED_WI_1137/,
+  "admin scheduling panel legacy fragment should be retired after the route-first hub cleanup"
 );
 
 console.log("e2e-wi1076-admin-scheduling-surface-humanization.test passed");
