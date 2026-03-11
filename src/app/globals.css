@@ -600,6 +600,13 @@ body {
 .employee-workspace-status-card strong {
   color: var(--text-strong);
 }
+.employee-requests-status-strip {
+  margin-bottom: 18px;
+}
+.employee-requests-status-card {
+  border-color: rgba(176, 209, 195, 0.5);
+  background: linear-gradient(180deg, #ffffff 0%, #f6fff9 100%);
+}
 .admin-hub-workspace-card {
   background: linear-gradient(180deg, #ffffff 0%, #fffaf4 100%);
   border-color: rgba(214, 190, 164, 0.34);
@@ -638,6 +645,46 @@ body {
 .employee-home-shortcuts-panel {
   border-color: rgba(176, 209, 195, 0.42);
   background: linear-gradient(180deg, #ffffff 0%, #f7fffb 100%);
+}
+.employee-requests-hub-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.employee-requests-hub-card {
+  display: grid;
+  gap: 14px;
+  border-color: rgba(176, 209, 195, 0.36);
+  background: linear-gradient(180deg, #ffffff 0%, #f7fffb 100%);
+}
+.employee-requests-hub-copy {
+  display: grid;
+  gap: 8px;
+}
+.employee-requests-hub-copy h2 {
+  margin-bottom: 0;
+}
+.employee-requests-hub-chip {
+  width: fit-content;
+}
+.employee-requests-hub-primary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.employee-requests-hub-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.employee-requests-route-note {
+  border-style: dashed;
+  border-color: rgba(176, 209, 195, 0.42);
+}
+.employee-requests-detail-grid {
+  margin-top: 0;
+}
+.employee-requests-monitoring-stack {
+  display: grid;
+  gap: 14px;
 }
 .employee-home-shortcuts-grid {
   margin-top: 12px;
@@ -2045,6 +2092,30 @@ button.queue-badge:hover {
 .panel-self-service-overview,
 .panel-request-resubmit {
   grid-column: 1 / -1;
+}
+.employee-requests-resubmit-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.employee-requests-resubmit-copy {
+  display: grid;
+  gap: 8px;
+}
+.employee-requests-resubmit-copy .small {
+  margin-bottom: 0;
+}
+.employee-requests-resubmit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.employee-requests-resubmit-empty {
+  display: inline-flex;
+  margin-top: 10px;
 }
 .submit-checklist-grid {
   margin-top: 10px;
@@ -4803,6 +4874,16 @@ button.queue-badge:hover {
   }
   #request-timeline .timeline-filter-grid {
     grid-template-columns: 1fr;
+  }
+  .employee-requests-hub-grid {
+    grid-template-columns: 1fr;
+  }
+  .employee-requests-resubmit-summary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .employee-requests-resubmit-meta {
+    justify-content: flex-start;
   }
   #attendance .pre-submit-check-list li,
   #leave .pre-submit-check-list li {

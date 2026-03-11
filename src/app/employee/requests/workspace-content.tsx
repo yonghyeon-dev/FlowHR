@@ -7,12 +7,16 @@ import EmployeeRequestsPageClient, { type EmployeeRequestsSectionMode } from "./
 
 type RequestActionCard = {
   id: string;
+  eyebrow: string;
   title: string;
   description: string;
-  actions: {
+  primaryAction: {
     href: string;
     label: string;
-    tone: "primary" | "secondary";
+  };
+  secondaryActions: {
+    href: string;
+    label: string;
   }[];
 };
 
@@ -36,73 +40,69 @@ function buildRequestActionCards(
     ? [
         {
           id: "attendance-actions",
+          eyebrow: "근태",
           title: "근태 요청 시작",
           description:
             "근태 정정 초안과 확인 작업은 전용 근태 워크스페이스에서 시작하고, 요청 상태 확인은 이 허브에서 이어갑니다.",
-          actions: [
-            {
-              href: "/employee/attendance/correction?source=employee-requests",
-              label: "근태 작업 열기",
-              tone: "primary"
-            },
+          primaryAction: {
+            href: "/employee/attendance/correction?source=employee-requests",
+            label: "근태 작업 열기"
+          },
+          secondaryActions: [
             {
               href: "/employee/schedule?source=employee-requests",
-              label: "내 일정 보기",
-              tone: "secondary"
+              label: "내 일정 보기"
             }
           ]
         },
         {
           id: "leave-actions",
+          eyebrow: "휴가",
           title: "휴가 요청 시작",
           description:
             "휴가 초안과 일정 조정은 전용 휴가 워크스페이스에서 시작하고, 승인/재제출 후속 조치는 요청 허브에서 이어갑니다.",
-          actions: [
-            {
-              href: "/employee/leave/request?source=employee-requests",
-              label: "휴가 작업 열기",
-              tone: "primary"
-            },
+          primaryAction: {
+            href: "/employee/leave/request?source=employee-requests",
+            label: "휴가 작업 열기"
+          },
+          secondaryActions: [
             {
               href: "/employee/leave/calendar?source=employee-requests",
-              label: "휴가 캘린더 보기",
-              tone: "secondary"
+              label: "휴가 캘린더 보기"
             }
           ]
         },
         {
           id: "request-monitoring",
+          eyebrow: "모니터링",
           title: "요청 상태와 후속 조치",
           description:
             "요청 피드백, 통합 검색, 타임라인을 전용 모니터링 경로에서 이어서 확인합니다.",
-          actions: [
-            {
-              href: requestMonitoringHref,
-              label: "요청 모니터링 열기",
-              tone: "primary"
-            },
+          primaryAction: {
+            href: requestMonitoringHref,
+            label: "요청 모니터링 열기"
+          },
+          secondaryActions: [
             {
               href: resubmitWorkbenchHref,
-              label: "재제출 워크벤치 열기",
-              tone: "secondary"
+              label: "재제출 워크벤치 열기"
             }
           ]
         },
         {
           id: "resubmit-workbench",
+          eyebrow: "재제출",
           title: "재제출 워크벤치",
           description:
             "반려/취소 요청을 다시 검토하고, 올바른 초안 경로로 이어가는 작업면입니다.",
-          actions: [
-            {
-              href: resubmitWorkbenchHref,
-              label: "재제출 워크벤치 열기",
-              tone: "primary"
-            },
+          primaryAction: {
+            href: resubmitWorkbenchHref,
+            label: "재제출 워크벤치 열기"
+          },
+          secondaryActions: [
             {
               href: requestMonitoringHref,
-              label: "요청 모니터링 보기",
-              tone: "secondary"
+              label: "요청 모니터링 보기"
             }
           ]
         }
@@ -110,73 +110,69 @@ function buildRequestActionCards(
     : [
         {
           id: "attendance-actions",
+          eyebrow: "Attendance",
           title: "Start attendance work",
           description:
             "Use the attendance workspace for drafts and corrections, then continue monitoring here.",
-          actions: [
-            {
-              href: "/employee/attendance/correction?source=employee-requests",
-              label: "Open attendance workspace",
-              tone: "primary"
-            },
+          primaryAction: {
+            href: "/employee/attendance/correction?source=employee-requests",
+            label: "Open attendance workspace"
+          },
+          secondaryActions: [
             {
               href: "/employee/schedule?source=employee-requests",
-              label: "View my schedule",
-              tone: "secondary"
+              label: "View my schedule"
             }
           ]
         },
         {
           id: "leave-actions",
+          eyebrow: "Leave",
           title: "Start leave work",
           description:
             "Use the leave workspace for leave drafts and continue request follow-up from this hub.",
-          actions: [
-            {
-              href: "/employee/leave/request?source=employee-requests",
-              label: "Open leave workspace",
-              tone: "primary"
-            },
+          primaryAction: {
+            href: "/employee/leave/request?source=employee-requests",
+            label: "Open leave workspace"
+          },
+          secondaryActions: [
             {
               href: "/employee/leave/calendar?source=employee-requests",
-              label: "Open leave calendar",
-              tone: "secondary"
+              label: "Open leave calendar"
             }
           ]
         },
         {
           id: "request-monitoring",
+          eyebrow: "Monitoring",
           title: "Request monitoring",
           description:
             "Track feedback, search, and request timeline from a dedicated monitoring route.",
-          actions: [
-            {
-              href: requestMonitoringHref,
-              label: "Open request monitoring",
-              tone: "primary"
-            },
+          primaryAction: {
+            href: requestMonitoringHref,
+            label: "Open request monitoring"
+          },
+          secondaryActions: [
             {
               href: resubmitWorkbenchHref,
-              label: "Open resubmit workbench",
-              tone: "secondary"
+              label: "Open resubmit workbench"
             }
           ]
         },
         {
           id: "resubmit-workbench",
+          eyebrow: "Resubmit",
           title: "Resubmit workbench",
           description:
             "Review rejected or canceled requests, then continue in the correct draft route.",
-          actions: [
-            {
-              href: resubmitWorkbenchHref,
-              label: "Open resubmit workbench",
-              tone: "primary"
-            },
+          primaryAction: {
+            href: resubmitWorkbenchHref,
+            label: "Open resubmit workbench"
+          },
+          secondaryActions: [
             {
               href: requestMonitoringHref,
-              label: "Open request monitoring",
-              tone: "secondary"
+              label: "Open request monitoring"
             }
           ]
         }
@@ -268,24 +264,30 @@ export function EmployeeRequestsWorkspaceContent({
         ]}
       />
 
-      <section className="panel-grid workspace-panel-grid">
+      <section className="panel-grid workspace-panel-grid employee-requests-hub-grid">
         {requestCards.map((card) => (
           <article
             key={card.id}
-            className="panel workspace-section-card workspace-action-card"
+            className="panel workspace-section-card workspace-action-card employee-requests-hub-card"
             id={card.id}
           >
-            <h2>{card.title}</h2>
-            <p className="small">{card.description}</p>
-            <div className="actions">
-              {card.actions.map((action) => (
+            <div className="employee-requests-hub-copy">
+              <span className="workspace-hero-chip employee-requests-hub-chip">
+                {card.eyebrow}
+              </span>
+              <h2>{card.title}</h2>
+              <p className="small">{card.description}</p>
+            </div>
+            <div className="employee-requests-hub-primary">
+              <Link className="btn btn-primary" href={card.primaryAction.href}>
+                {card.primaryAction.label}
+              </Link>
+            </div>
+            <div className="employee-requests-hub-secondary">
+              {card.secondaryActions.map((action) => (
                 <Link
                   key={`${card.id}-${action.href}`}
-                  className={
-                    action.tone === "primary"
-                      ? "btn btn-primary"
-                      : "btn btn-secondary"
-                  }
+                  className="btn btn-secondary"
                   href={action.href}
                 >
                   {action.label}
@@ -298,7 +300,7 @@ export function EmployeeRequestsWorkspaceContent({
 
       <EmployeeRequestsPageClient locale={locale} sectionMode={sectionMode} />
 
-      <section className="panel workspace-section-card workspace-note-card">
+      <section className="panel workspace-section-card workspace-note-card employee-requests-route-note">
         <h2>
           {locale === "ko"
             ? "왜 요청 워크스페이스를 더 세분화하나요?"

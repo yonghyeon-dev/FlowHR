@@ -30,15 +30,30 @@ export function EmployeeRequestsResubmitWorkspacePanel({
   resolveDraftHref
 }: EmployeeRequestsResubmitWorkspacePanelProps) {
   const latestCandidate = resubmitCandidates[0] ?? null;
+  const candidateCountLabel = isKoLocale
+    ? `재제출 후보 ${resubmitCandidates.length}건`
+    : `${resubmitCandidates.length} resubmit candidates`;
 
   return (
     <article className="panel panel-request-resubmit" id="resubmit-workbench">
-      <h2>{isKoLocale ? "재제출 워크벤치" : "Resubmit workbench"}</h2>
-      <p className="small">
-        {isKoLocale
-          ? "반려되거나 취소된 요청을 검토한 뒤, 적절한 초안으로 다시 이어서 작업합니다."
-          : "Review rejected or canceled requests, then continue from the right draft handoff."}
-      </p>
+      <div className="employee-requests-resubmit-summary">
+        <div className="employee-requests-resubmit-copy">
+          <h2>{isKoLocale ? "재제출 워크벤치" : "Resubmit workbench"}</h2>
+          <p className="small">
+            {isKoLocale
+              ? "반려되거나 취소된 요청을 검토한 뒤, 적절한 초안으로 다시 이어서 작업합니다."
+              : "Review rejected or canceled requests, then continue from the right draft handoff."}
+          </p>
+        </div>
+        <div className="employee-requests-resubmit-meta">
+          <span className="workspace-hero-chip">{candidateCountLabel}</span>
+          {latestCandidate ? (
+            <span className="queue-history-chip">
+              {isKoLocale ? "최신 후보 준비됨" : "Latest candidate ready"}
+            </span>
+          ) : null}
+        </div>
+      </div>
       <div className="input-grid">
         <label className="full">
           {isKoLocale ? "재제출 후보" : "Resubmit candidate"}
@@ -108,7 +123,7 @@ export function EmployeeRequestsResubmitWorkspacePanel({
           </p>
         </article>
       ) : (
-        <p className="small muted" style={{ marginTop: 10 }}>
+        <p className="small muted employee-requests-resubmit-empty">
           {isKoLocale
             ? "현재 재제출 후보가 없습니다."
             : "No resubmit candidate selected."}
@@ -119,12 +134,12 @@ export function EmployeeRequestsResubmitWorkspacePanel({
         aria-label={isKoLocale ? "재제출 후보 목록" : "resubmit candidate list"}
       >
         {resubmitCandidates.length === 0 ? (
-          <li>
-            <strong>{listBadgeLabels.empty}</strong>
-            <span className="muted">
-              {isKoLocale
-                ? "반려/취소 요청이 없습니다."
-                : "No rejected/canceled requests."}
+            <li>
+              <strong>{listBadgeLabels.empty}</strong>
+              <span className="muted employee-requests-resubmit-empty">
+                {isKoLocale
+                  ? "반려/취소 요청이 없습니다."
+                  : "No rejected/canceled requests."}
             </span>
           </li>
         ) : (
