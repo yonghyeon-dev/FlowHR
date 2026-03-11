@@ -1,14 +1,14 @@
 import { getRequestLocale } from "@/lib/i18n/server";
 
-import { EmployeeRequestsWorkspaceContent } from "./workspace-content";
+import { EmployeeRequestsWorkspaceContent } from "../workspace-content";
 
-type EmployeeRequestsPageProps = {
+type EmployeeRequestsResubmitPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function EmployeeRequestsPage({
+export default async function EmployeeRequestsResubmitPage({
   searchParams
-}: EmployeeRequestsPageProps) {
+}: EmployeeRequestsResubmitPageProps) {
   const locale = await getRequestLocale();
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const sourceParam = resolvedSearchParams.source;
@@ -23,7 +23,7 @@ export default async function EmployeeRequestsPage({
     <EmployeeRequestsWorkspaceContent
       locale={locale}
       source={source}
-      sectionMode="all"
+      sectionMode="resubmit"
     />
   );
 }

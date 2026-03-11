@@ -9,6 +9,13 @@ function readUtf8(...parts: string[]) {
 function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
   const requestsPage = readUtf8("src", "app", "employee", "requests", "page.tsx");
+  const requestsWorkspaceContent = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "requests",
+    "workspace-content.tsx"
+  );
   const attendanceLeaveWorkspaceClient = readUtf8(
     "src",
     "app",
@@ -59,7 +66,8 @@ function run() {
   );
 
   assert.doesNotMatch(employeePage, /EmployeeWorkspaceHero/);
-  assert.match(requestsPage, /EmployeeWorkspaceHero/);
+  assert.match(requestsPage, /EmployeeRequestsWorkspaceContent/);
+  assert.match(requestsWorkspaceContent, /EmployeeWorkspaceHero/);
   assert.match(attendanceLeaveWorkspaceClient, /EmployeeWorkspaceHero/);
   assert.match(scheduleBoard, /EmployeeWorkspaceHero/);
   assert.match(sourceContext, /employee-dashboard/);
@@ -74,16 +82,16 @@ function run() {
   assert.match(accountOverviewPanels, /\/employee\/leave\?source=employee-dashboard/);
   assert.match(
     accountOverviewPanels,
-    /\/employee\/requests\?source=employee-dashboard#request-monitoring/
+    /\/employee\/requests\/monitoring\?source=employee-dashboard/
   );
   assert.match(
     accountOverviewPanels,
-    /\/employee\/requests\?source=employee-dashboard#resubmit-workbench/
+    /\/employee\/requests\/resubmit\?source=employee-dashboard/
   );
   assert.match(workspaceHubs, /\/employee\/attendance\?source=employee-dashboard/);
   assert.match(
     shortcuts,
-    /\/employee\/requests\?source=employee-dashboard#request-feedback/
+    /\/employee\/requests\/monitoring\?source=employee-dashboard/
   );
   assert.match(guidePage, /\/employee\/requests\?source=employee-guide/);
   assert.match(guideCopy, /\/employee\/attendance\?source=employee-guide/);

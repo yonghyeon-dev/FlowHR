@@ -53,19 +53,16 @@ function run() {
 
   assert.match(
     queryHelpers,
-    /"request-feedback": "\/employee\/requests#request-feedback"/
+    /"request-feedback": "\/employee\/requests\/monitoring"/
   );
   assert.match(
     queryHelpers,
-    /"request-resubmit": "\/employee\/requests#resubmit-workbench"/
+    /"request-resubmit": "\/employee\/requests\/resubmit"/
   );
   assert.match(queryHelpers, /resolveEmployeeResubmitDraftPrefill/);
 
-  assert.match(requestsPage, /EmployeeRequestsPageClient/);
-  assert.match(requestsPage, /\/employee\/requests#request-feedback/);
-  assert.match(requestsPage, /\/employee\/requests#request-search-sort/);
-  assert.match(requestsPage, /\/employee\/requests#request-timeline/);
-  assert.match(requestsPage, /\/employee\/requests#resubmit-workbench/);
+  assert.match(requestsPage, /EmployeeRequestsWorkspaceContent/);
+  assert.match(requestsPage, /sectionMode="all"/);
 
   assert.match(requestsClient, /EmployeeRequestFeedbackPanels/);
   assert.match(requestsClient, /EmployeeRequestsResubmitWorkspacePanel/);
@@ -74,10 +71,10 @@ function run() {
   assert.match(requestsClient, /resubmitChannel=/);
   assert.match(requestsClient, /resubmitRecordId=/);
 
-  assert.match(shortcuts, /\/employee\/requests\?source=employee-dashboard#request-feedback/);
+  assert.match(shortcuts, /\/employee\/requests\/monitoring\?source=employee-dashboard/);
   assert.match(accountPanels, /resolveChecklistActionTarget/);
-  assert.match(accountPanels, /\/employee\/requests\?source=employee-dashboard#request-monitoring/);
-  assert.match(accountPanels, /\/employee\/requests\?source=employee-dashboard#resubmit-workbench/);
+  assert.match(accountPanels, /\/employee\/requests\/monitoring\?source=employee-dashboard/);
+  assert.match(accountPanels, /\/employee\/requests\/resubmit\?source=employee-dashboard/);
 
   assert.match(workItem, /route-first/i);
 }
