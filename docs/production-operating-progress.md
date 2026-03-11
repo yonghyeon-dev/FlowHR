@@ -380,3 +380,6 @@ Latest planning reset:
 - Closed `WI-1152` with merge `3479daa2abd74706f9393d3d85e5b84eb0d4ed32`.
 - Re-verified `WI-1152` on the delivery path and confirmed both `ci` (`22956768973`) and `vercel-production-deploy` (`22956768980`) stay green after the eleventh shared workspace visual wave.
 - Started `WI-1153` to extend the shared workspace visual primitives onto operational settings workspaces covering leave policies, attendance security, feature management, and employee notification settings.
+- Closed `WI-1153` with merge `4c995dc10fb40a1dc436f8f191f4ce8f6646fd0c`.
+- Re-verified `WI-1153` on the delivery path and confirmed both `ci` (`22957610458`) and `vercel-production-deploy` (`22957610435`) stay green after the twelfth shared workspace visual wave.
+- Started `WI-1154` to extend the same route-first workspace shell onto remaining admin settings-adjacent operator surfaces covering operator alerts, notification defaults, approval escalation settings, and leave promotion email.

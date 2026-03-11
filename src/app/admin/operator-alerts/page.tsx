@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
@@ -53,8 +54,12 @@ type OperatorAlertsCopy = {
   lastSavedLabel: string;
   noSaveHistory: string;
   activeFlowCountLabel: string;
+  providerStatusLabel: string;
   fallbackHint: string;
   envFallbackHint: string;
+  sourceHint: string;
+  backToHubLabel: string;
+  settingsLabel: string;
   providerOptions: {
     discord: string;
     slack: string;
@@ -76,7 +81,7 @@ function getCopy(locale: string): OperatorAlertsCopy {
   if (locale === "ko") {
     return {
       pageTitle: "운영 알림 연동",
-      pageSubtitle: "결재 에스컬레이션과 연차 촉진 알림에 사용할 조직 기본 웹훅을 관리합니다.",
+      pageSubtitle: "결재 에스컬레이션과 연차 촉진 알림에 쓰는 조직 기본 웹훅을 관리합니다.",
       reloadLabel: "새로고침",
       reloadLoadingLabel: "불러오는 중...",
       saveLabel: "연동 저장",
@@ -85,25 +90,29 @@ function getCopy(locale: string): OperatorAlertsCopy {
       saveFailed: "운영 알림 연동 설정을 저장하지 못했습니다.",
       saveSuccess: "운영 알림 연동 설정을 저장했습니다.",
       configTitle: "조직 기본 웹훅",
-      configDescription: "여기에 입력한 웹훅은 선택한 운영 플로우에서 조직 기본 알림 채널로 사용됩니다.",
+      configDescription: "아래 웹훅은 선택된 운영 알림 흐름의 조직 기본 채널로 사용됩니다.",
       statusTitle: "적용 상태",
-      statusDescription: "현재 조직에서 어떤 운영 플로우가 기본 웹훅을 사용하도록 열려 있는지 확인합니다.",
+      statusDescription: "현재 조직에서 어떤 운영 알림이 기본 웹훅을 쓰는지 확인합니다.",
       urlLabel: "웹훅 URL",
       urlPlaceholder: "https://hooks.slack.com/... 또는 https://discord.com/api/webhooks/...",
       providerLabel: "웹훅 채널",
       providerPlaceholder: "채널 선택",
-      approvalLabel: "결재 에스컬레이션에 조직 기본 웹훅 사용",
+      approvalLabel: "결재 에스컬레이션 알림에 조직 기본 웹훅 사용",
       leavePromotionLabel: "연차 촉진 알림에 조직 기본 웹훅 사용",
       enabledLabel: "사용",
       disabledLabel: "사용 안 함",
       webhookStatusLabel: "기본 웹훅 상태",
-      configuredLabel: "구성됨",
-      unconfiguredLabel: "미구성",
+      configuredLabel: "설정됨",
+      unconfiguredLabel: "미설정",
       lastSavedLabel: "마지막 저장",
       noSaveHistory: "저장 이력 없음",
-      activeFlowCountLabel: "기본 웹훅 사용 플로우 수",
+      activeFlowCountLabel: "기본 웹훅 사용 흐름",
+      providerStatusLabel: "선택된 채널",
       fallbackHint: "웹훅 URL을 비우면 조직 기본 웹훅은 저장되지 않습니다.",
-      envFallbackHint: "조직 기본 웹훅이 비어 있으면 현재 서버 환경 설정이 계속 사용됩니다.",
+      envFallbackHint: "조직 기본 웹훅이 비어 있으면 기존 서버 환경 설정이 계속 적용됩니다.",
+      sourceHint: "운영 알림 연동은 결재 지연 알림과 연차 촉진 발송 흐름에 바로 반영됩니다.",
+      backToHubLabel: "관리자 허브",
+      settingsLabel: "조직 설정",
       providerOptions: {
         discord: "디스코드",
         slack: "슬랙"
@@ -113,7 +122,7 @@ function getCopy(locale: string): OperatorAlertsCopy {
 
   return {
     pageTitle: "Operator Alert Integrations",
-    pageSubtitle: "Manage the organization-level fallback webhook used by approval escalation and leave promotion alerts.",
+    pageSubtitle: "Manage the organization fallback webhook used by approval escalation and leave promotion alerts.",
     reloadLabel: "Reload",
     reloadLoadingLabel: "Loading...",
     saveLabel: "Save integrations",
@@ -139,8 +148,12 @@ function getCopy(locale: string): OperatorAlertsCopy {
     lastSavedLabel: "Last saved",
     noSaveHistory: "No save history",
     activeFlowCountLabel: "Flows using fallback webhook",
+    providerStatusLabel: "Selected provider",
     fallbackHint: "Leaving the webhook URL blank means no organization fallback webhook is stored.",
     envFallbackHint: "If the organization fallback webhook is blank, the existing server environment configuration still applies.",
+    sourceHint: "Operator alert integrations directly affect approval escalation and leave promotion delivery flows.",
+    backToHubLabel: "Admin hub",
+    settingsLabel: "Organization settings",
     providerOptions: {
       discord: "Discord",
       slack: "Slack"
@@ -258,31 +271,59 @@ export default function AdminOperatorAlertsPage() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="page-header">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <div>
           <h1 className="page-title">{copy.pageTitle}</h1>
           <p className="page-subtitle">{copy.pageSubtitle}</p>
+          <p className="small muted workspace-source-banner">{copy.sourceHint}</p>
         </div>
         <div className="page-actions">
-          <button className="btn btn-secondary" type="button" onClick={() => void loadWorkspace()} disabled={workspaceLoading}>
+          <Link className="btn btn-secondary" href="/admin">
+            {copy.backToHubLabel}
+          </Link>
+          <Link className="btn btn-secondary" href="/admin/settings">
+            {copy.settingsLabel}
+          </Link>
+          <button className="btn btn-secondary" type="button" onClick={() => void loadWorkspace()} disabled={workspaceLoading || saving}>
             {workspaceLoading ? copy.reloadLoadingLabel : copy.reloadLabel}
           </button>
         </div>
       </header>
 
-      {sessionError ? <p className="small fail">{formatUserFacingErrorMessage(sessionError, runtimeLocale)}</p> : null}
-      {errorMessage ? <p className="small fail">{errorMessage}</p> : null}
-      {successMessage ? <p className="small ok">{successMessage}</p> : null}
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.pageTitle}>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.webhookStatusLabel}</p>
+          <strong>{form.fallbackWebhook.url ? copy.configuredLabel : copy.unconfiguredLabel}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.activeFlowCountLabel}</p>
+          <strong>{activeFlowCount}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.lastSavedLabel}</p>
+          <strong>{formatLocalizedDateTime(lastSavedAt, runtimeLocale, copy.noSaveHistory)}</strong>
+        </article>
+      </section>
 
-      <section className="panel-grid">
-        <article className="panel">
-          <h2>{copy.configTitle}</h2>
-          <p className="small muted">{copy.configDescription}</p>
+      {sessionError ? (
+        <p className="small fail workspace-inline-status">{formatUserFacingErrorMessage(sessionError, runtimeLocale)}</p>
+      ) : null}
+      {errorMessage ? <p className="small fail workspace-inline-status">{errorMessage}</p> : null}
+      {successMessage ? <p className="small ok workspace-inline-status">{successMessage}</p> : null}
 
-          <div className="input-grid">
-            <label>
-              {copy.urlLabel}
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
+          <div className="section-heading">
+            <div>
+              <h2>{copy.configTitle}</h2>
+              <p className="small muted">{copy.configDescription}</p>
+            </div>
+          </div>
+
+          <div className="form-grid">
+            <label className="stack gap-8">
+              <span>{copy.urlLabel}</span>
               <input
                 type="url"
                 placeholder={copy.urlPlaceholder}
@@ -299,8 +340,8 @@ export default function AdminOperatorAlertsPage() {
               />
             </label>
 
-            <label>
-              {copy.providerLabel}
+            <label className="stack gap-8">
+              <span>{copy.providerLabel}</span>
               <select
                 value={form.fallbackWebhook.provider ?? ""}
                 onChange={(event) =>
@@ -322,7 +363,7 @@ export default function AdminOperatorAlertsPage() {
               </select>
             </label>
 
-            <label>
+            <label className="stack gap-8">
               <span>{copy.approvalLabel}</span>
               <button
                 type="button"
@@ -342,7 +383,7 @@ export default function AdminOperatorAlertsPage() {
               </button>
             </label>
 
-            <label>
+            <label className="stack gap-8">
               <span>{copy.leavePromotionLabel}</span>
               <button
                 type="button"
@@ -363,10 +404,10 @@ export default function AdminOperatorAlertsPage() {
             </label>
           </div>
 
-          <ul className="simple-list">
-            <li>{copy.fallbackHint}</li>
-            <li>{copy.envFallbackHint}</li>
-          </ul>
+          <div className="stack gap-8">
+            <p className="small muted">{copy.fallbackHint}</p>
+            <p className="small muted">{copy.envFallbackHint}</p>
+          </div>
 
           <div className="panel-actions">
             <button className="btn btn-primary" type="button" onClick={() => void handleSave()} disabled={saving}>
@@ -375,20 +416,36 @@ export default function AdminOperatorAlertsPage() {
           </div>
         </article>
 
-        <article className="panel">
-          <h2>{copy.statusTitle}</h2>
-          <p className="small muted">{copy.statusDescription}</p>
-          <ul className="simple-list">
-            <li>
-              {copy.webhookStatusLabel}: {form.fallbackWebhook.url ? copy.configuredLabel : copy.unconfiguredLabel}
-            </li>
-            <li>
-              {copy.activeFlowCountLabel}: {activeFlowCount}
-            </li>
-            <li>
-              {copy.lastSavedLabel}: {formatLocalizedDateTime(lastSavedAt, runtimeLocale, copy.noSaveHistory)}
-            </li>
-          </ul>
+        <article className="panel workspace-section-card workspace-note-card">
+          <div className="section-heading">
+            <div>
+              <h2>{copy.statusTitle}</h2>
+              <p className="small muted">{copy.statusDescription}</p>
+            </div>
+          </div>
+
+          <dl className="definition-grid">
+            <div>
+              <dt>{copy.webhookStatusLabel}</dt>
+              <dd>{form.fallbackWebhook.url ? copy.configuredLabel : copy.unconfiguredLabel}</dd>
+            </div>
+            <div>
+              <dt>{copy.providerStatusLabel}</dt>
+              <dd>
+                {form.fallbackWebhook.provider
+                  ? copy.providerOptions[form.fallbackWebhook.provider]
+                  : copy.unconfiguredLabel}
+              </dd>
+            </div>
+            <div>
+              <dt>{copy.activeFlowCountLabel}</dt>
+              <dd>{activeFlowCount}</dd>
+            </div>
+            <div>
+              <dt>{copy.lastSavedLabel}</dt>
+              <dd>{formatLocalizedDateTime(lastSavedAt, runtimeLocale, copy.noSaveHistory)}</dd>
+            </div>
+          </dl>
         </article>
       </section>
     </main>
