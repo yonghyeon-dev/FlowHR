@@ -1,6 +1,6 @@
 import { AdminAggregateLeavePanels } from "@/components/admin-dashboard/AdminAggregateLeavePanels";
 import { AdminDebugLogsPanel } from "@/components/admin-dashboard/AdminDebugLogsPanel";
-import { AdminPayrollPanel } from "@/components/admin-dashboard/AdminPayrollPanel";
+import { AdminPayrollWorkspaceCard } from "@/components/admin-dashboard/AdminPayrollWorkspaceCard";
 import { type PayrollKrPresetShareLinkFeedback } from "@/components/payroll/PayrollKrPresetShareLinkFeedbackPanel";
 import { type PayrollKrIncomeSplitItemDraft } from "@/components/payroll/PayrollKrIncomeSplitItemsTable";
 import type {
@@ -144,56 +144,11 @@ export function AdminCompensationPanels(props: AdminCompensationPanelsProps) {
         onSettleLeaveAccrual={props.onSettleLeaveAccrual}
       />
 
-      <AdminPayrollPanel
+      <AdminPayrollWorkspaceCard
         isKoLocale={props.isKoLocale}
-        payrollPreviewMode={props.payrollPreviewMode}
-        employeeId={props.employeeId}
-        payrollHourlyRateKrw={props.payrollHourlyRateKrw}
-        payrollNonTaxableIncomeKrw={props.payrollNonTaxableIncomeKrw}
-        payrollTaxableIncomeKrw={props.payrollTaxableIncomeKrw}
-        payrollTaxableItems={props.payrollTaxableItems}
-        payrollNonTaxableItems={props.payrollNonTaxableItems}
-        payrollIncomeSplitItemPresetId={props.payrollIncomeSplitItemPresetId}
-        payrollOtherDeductionsKrw={props.payrollOtherDeductionsKrw}
-        payrollAdditionalTaxCreditKrw={props.payrollAdditionalTaxCreditKrw}
-        payrollDependentCount={props.payrollDependentCount}
-        payrollDependentTaxCreditPerPersonKrw={props.payrollDependentTaxCreditPerPersonKrw}
-        payrollIncomeTaxLookupPresetId={props.payrollIncomeTaxLookupPresetId}
-        payrollIncomeTaxLookupPresetAuto={props.payrollIncomeTaxLookupPresetAuto}
-        payrollIncomeTaxLookupAsOf={props.payrollIncomeTaxLookupAsOf}
-        payrollRequireMonthlyBoundary={props.payrollRequireMonthlyBoundary}
-        payrollNationalPensionCapKrw={props.payrollNationalPensionCapKrw}
-        payrollHealthInsuranceCapKrw={props.payrollHealthInsuranceCapKrw}
-        payrollEmploymentInsuranceCapKrw={props.payrollEmploymentInsuranceCapKrw}
-        payrollPresetShareLinkFeedback={props.payrollPresetShareLinkFeedback}
         previewedPayroll={props.previewedPayroll}
         lastPayrollRunId={props.lastPayrollRunId}
         formatDateTime={props.formatDateTimeByLocale}
-        onPayrollPreviewModeChange={props.onPayrollPreviewModeChange}
-        onEmployeeIdChange={props.onEmployeeIdChange}
-        onPayrollHourlyRateKrwChange={props.onPayrollHourlyRateKrwChange}
-        onPayrollNonTaxableIncomeKrwChange={props.onPayrollNonTaxableIncomeKrwChange}
-        onPayrollTaxableIncomeKrwChange={props.onPayrollTaxableIncomeKrwChange}
-        onPayrollTaxableItemsChange={props.onPayrollTaxableItemsChange}
-        onPayrollNonTaxableItemsChange={props.onPayrollNonTaxableItemsChange}
-        onPayrollIncomeSplitItemPresetIdChange={props.onPayrollIncomeSplitItemPresetIdChange}
-        onPayrollOtherDeductionsKrwChange={props.onPayrollOtherDeductionsKrwChange}
-        onPayrollAdditionalTaxCreditKrwChange={props.onPayrollAdditionalTaxCreditKrwChange}
-        onPayrollDependentCountChange={props.onPayrollDependentCountChange}
-        onPayrollDependentTaxCreditPerPersonKrwChange={props.onPayrollDependentTaxCreditPerPersonKrwChange}
-        onPayrollIncomeTaxLookupPresetIdChange={props.onPayrollIncomeTaxLookupPresetIdChange}
-        onPayrollIncomeTaxLookupPresetAutoChange={props.onPayrollIncomeTaxLookupPresetAutoChange}
-        onPayrollIncomeTaxLookupAsOfChange={props.onPayrollIncomeTaxLookupAsOfChange}
-        onPayrollRequireMonthlyBoundaryChange={props.onPayrollRequireMonthlyBoundaryChange}
-        onPayrollNationalPensionCapKrwChange={props.onPayrollNationalPensionCapKrwChange}
-        onPayrollHealthInsuranceCapKrwChange={props.onPayrollHealthInsuranceCapKrwChange}
-        onPayrollEmploymentInsuranceCapKrwChange={props.onPayrollEmploymentInsuranceCapKrwChange}
-        onLastPayrollRunIdChange={props.onLastPayrollRunIdChange}
-        onPreviewPayroll={props.onPreviewPayroll}
-        onConfirmPayroll={props.onConfirmPayroll}
-        onResetPayrollPresetShareContext={props.onResetPayrollPresetShareContext}
-        onReapplyPayrollPresetShareContext={props.onReapplyPayrollPresetShareContext}
-        onClearManualIncomeSplitItems={props.onClearManualIncomeSplitItems}
       />
 
       <AdminDebugLogsPanel

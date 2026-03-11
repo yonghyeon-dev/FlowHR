@@ -22,12 +22,11 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(
-    adminPage,
+    adminPanels,
     /import \{ buildAdminDashboardActions \} from "@\/app\/admin\/page-dashboard-actions";/
   );
-  assert.match(adminPage, /import \{ AdminDashboardPanels \} from "@\/app\/admin\/page-panels";/);
-  assert.match(adminPage, /const dashboardActions = buildAdminDashboardActions\(/);
-  assert.match(adminPage, /<AdminDashboardPanels/);
+  assert.match(adminPanels, /dashboardActions: ReturnType<typeof buildAdminDashboardActions>;/);
+  assert.match(adminPanels, /<AdminCompensationPanels/);
   assert.match(
     adminPanels,
     /import \{ AdminCompensationPanels \} from "@\/app\/admin\/page-compensation-panels";/
@@ -37,10 +36,8 @@ async function run() {
   assert.match(adminPanels, /onPreviewPayroll=\{\(\) => void dashboardActions\.previewPayroll\(\)\}/);
   assert.match(adminPanels, /onClearLogs=\{dashboardActions\.clearLogs\}/);
 
-  assert.doesNotMatch(adminPage, /const refreshInbox = useCallback\(/);
-  assert.doesNotMatch(adminPage, /const previewPayroll = useCallback\(/);
-  assert.doesNotMatch(adminPage, /const confirmPayroll = useCallback\(/);
-  assert.doesNotMatch(adminPage, /const listAttendanceAggregates = useCallback\(/);
+  assert.doesNotMatch(adminPage, /import \{ buildAdminDashboardActions \} from "@\/app\/admin\/page-dashboard-actions";/);
+  assert.doesNotMatch(adminPage, /const dashboardActions = buildAdminDashboardActions\(/);
 
   assert.match(dashboardActions, /export type BuildAdminDashboardActionsInput = \{/);
   assert.match(dashboardActions, /export function buildAdminDashboardActions\(/);
@@ -52,9 +49,11 @@ async function run() {
 
   assert.match(compensationPanels, /export function AdminCompensationPanels\(/);
   assert.match(compensationPanels, /<AdminAggregateLeavePanels/);
-  assert.match(compensationPanels, /<AdminPayrollPanel/);
+  assert.match(compensationPanels, /<AdminPayrollWorkspaceCard/);
+  assert.doesNotMatch(compensationPanels, /<AdminPayrollPanel/);
   assert.match(compensationPanels, /<AdminDebugLogsPanel/);
   assert.match(compensationPanels, /logStatusLabels: \{\s*success: string;\s*fail: string;\s*\}/);
+
 
   assert.ok(
     countLines(adminPage) < 800,
