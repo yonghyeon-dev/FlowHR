@@ -353,3 +353,6 @@ Latest planning reset:
 - Closed `WI-1143` with merge `5ce0812a87131090834dda1a270f42ab9826fb8e`.
 - Re-verified `WI-1143` on the delivery path and confirmed both `ci` (`22946958323`) and `vercel-production-deploy` (`22946958328`) stay green after the second shared workspace visual wave.
 - Started `WI-1144` to extend the shared workspace visual primitives onto admin payslip delivery and employee payslips route-first workspaces.
+- Closed `WI-1144` with merge `865d7e12ac4c3d92894c9113a6534e4201c3f5f5`.
+- Re-verified `WI-1144` on the delivery path and confirmed both `ci` (`22947674291`) and `vercel-production-deploy` (`22947674318`) stay green after the third shared workspace visual wave.
+- Started `WI-1145` to extend the shared workspace visual primitives onto admin and employee notices route-first workspaces.
