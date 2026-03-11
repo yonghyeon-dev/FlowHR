@@ -11,7 +11,6 @@ import { ApprovalQueuePanel } from "@/components/admin-approval/ApprovalQueuePan
 import { AdminOnboardingAccountPanels } from "@/components/admin-dashboard/AdminOnboardingAccountPanels";
 import { AdminPeopleInvitePanels } from "@/components/admin-dashboard/AdminPeopleInvitePanels";
 import { AdminSchedulingPanel } from "@/components/admin-dashboard/AdminSchedulingPanel";
-import { createEmptyPayrollKrIncomeSplitItemDraft } from "@/components/payroll/PayrollKrIncomeSplitItemsTable";
 import type { SupabaseSessionSnapshot } from "@/lib/client/useSupabaseSession";
 
 type AdminDashboardPanelsProps = {
@@ -233,62 +232,10 @@ export function AdminDashboardPanels({
         onLoadLeavePolicy={() => void dashboardActions.loadLeavePolicy()}
         onSaveLeavePolicy={() => void dashboardActions.saveLeavePolicy()}
         onSettleLeaveAccrual={() => void dashboardActions.settleLeaveAccrual()}
-        payrollPreviewMode={pageState.payrollPreviewMode}
-        payrollHourlyRateKrw={pageState.payrollHourlyRateKrw}
-        payrollNonTaxableIncomeKrw={pageState.payrollNonTaxableIncomeKrw}
-        payrollTaxableIncomeKrw={pageState.payrollTaxableIncomeKrw}
-        payrollTaxableItems={pageState.payrollTaxableItems}
-        payrollNonTaxableItems={pageState.payrollNonTaxableItems}
-        payrollIncomeSplitItemPresetId={pageState.payrollIncomeSplitItemPresetId}
-        payrollOtherDeductionsKrw={pageState.payrollOtherDeductionsKrw}
-        payrollAdditionalTaxCreditKrw={pageState.payrollAdditionalTaxCreditKrw}
-        payrollDependentCount={pageState.payrollDependentCount}
-        payrollDependentTaxCreditPerPersonKrw={pageState.payrollDependentTaxCreditPerPersonKrw}
-        payrollIncomeTaxLookupPresetId={pageState.payrollIncomeTaxLookupPresetId}
-        payrollIncomeTaxLookupPresetAuto={pageState.payrollIncomeTaxLookupPresetAuto}
-        payrollIncomeTaxLookupAsOf={pageState.payrollIncomeTaxLookupAsOf}
-        payrollRequireMonthlyBoundary={pageState.payrollRequireMonthlyBoundary}
-        payrollNationalPensionCapKrw={pageState.payrollNationalPensionCapKrw}
-        payrollHealthInsuranceCapKrw={pageState.payrollHealthInsuranceCapKrw}
-        payrollEmploymentInsuranceCapKrw={pageState.payrollEmploymentInsuranceCapKrw}
-        payrollPresetShareLinkFeedback={pageState.payrollPresetShareLinkFeedback}
         previewedPayroll={pageState.previewedPayroll}
         lastPayrollRunId={pageState.lastPayrollRunId}
         logs={pageState.logs}
         logStatusLabels={logStatusLabels}
-        onEmployeeIdChange={pageState.setEmployeeId}
-        onPayrollPreviewModeChange={pageState.setPayrollPreviewMode}
-        onPayrollHourlyRateKrwChange={pageState.setPayrollHourlyRateKrw}
-        onPayrollNonTaxableIncomeKrwChange={pageState.setPayrollNonTaxableIncomeKrw}
-        onPayrollTaxableIncomeKrwChange={pageState.setPayrollTaxableIncomeKrw}
-        onPayrollTaxableItemsChange={pageState.setPayrollTaxableItems}
-        onPayrollNonTaxableItemsChange={pageState.setPayrollNonTaxableItems}
-        onPayrollIncomeSplitItemPresetIdChange={pageState.setPayrollIncomeSplitItemPresetId}
-        onPayrollOtherDeductionsKrwChange={pageState.setPayrollOtherDeductionsKrw}
-        onPayrollAdditionalTaxCreditKrwChange={pageState.setPayrollAdditionalTaxCreditKrw}
-        onPayrollDependentCountChange={pageState.setPayrollDependentCount}
-        onPayrollDependentTaxCreditPerPersonKrwChange={pageState.setPayrollDependentTaxCreditPerPersonKrw}
-        onPayrollIncomeTaxLookupPresetIdChange={pageState.setPayrollIncomeTaxLookupPresetId}
-        onPayrollIncomeTaxLookupPresetAutoChange={(enabled) => {
-          pageState.setPayrollIncomeTaxLookupPresetAuto(enabled);
-          if (enabled) {
-            pageState.setPayrollIncomeTaxLookupPresetId("");
-          }
-        }}
-        onPayrollIncomeTaxLookupAsOfChange={pageState.setPayrollIncomeTaxLookupAsOf}
-        onPayrollRequireMonthlyBoundaryChange={pageState.setPayrollRequireMonthlyBoundary}
-        onPayrollNationalPensionCapKrwChange={pageState.setPayrollNationalPensionCapKrw}
-        onPayrollHealthInsuranceCapKrwChange={pageState.setPayrollHealthInsuranceCapKrw}
-        onPayrollEmploymentInsuranceCapKrwChange={pageState.setPayrollEmploymentInsuranceCapKrw}
-        onLastPayrollRunIdChange={pageState.setLastPayrollRunId}
-        onPreviewPayroll={() => void dashboardActions.previewPayroll()}
-        onConfirmPayroll={() => void dashboardActions.confirmPayroll(pageState.lastPayrollRunId)}
-        onResetPayrollPresetShareContext={pageState.resetPayrollPresetShareContext}
-        onReapplyPayrollPresetShareContext={pageState.reapplyPayrollPresetShareContext}
-        onClearManualIncomeSplitItems={() => {
-          pageState.setPayrollTaxableItems([createEmptyPayrollKrIncomeSplitItemDraft()]);
-          pageState.setPayrollNonTaxableItems([createEmptyPayrollKrIncomeSplitItemDraft()]);
-        }}
         onClearLogs={dashboardActions.clearLogs}
       />
     </section>

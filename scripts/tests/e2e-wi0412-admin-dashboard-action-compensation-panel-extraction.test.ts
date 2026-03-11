@@ -33,8 +33,9 @@ async function run() {
   );
   assert.match(adminPanels, /onRefreshInbox=\{\(\) => void dashboardActions\.refreshInbox\(\)\}/);
   assert.match(adminPanels, /onLoadLeavePolicy=\{\(\) => void dashboardActions\.loadLeavePolicy\(\)\}/);
-  assert.match(adminPanels, /onPreviewPayroll=\{\(\) => void dashboardActions\.previewPayroll\(\)\}/);
   assert.match(adminPanels, /onClearLogs=\{dashboardActions\.clearLogs\}/);
+  assert.doesNotMatch(adminPanels, /onPreviewPayroll=\{\(\) => void dashboardActions\.previewPayroll\(\)\}/);
+  assert.doesNotMatch(adminPanels, /onConfirmPayroll=\{\(\) => void dashboardActions\.confirmPayroll\(/);
 
   assert.doesNotMatch(adminPage, /import \{ buildAdminDashboardActions \} from "@\/app\/admin\/page-dashboard-actions";/);
   assert.doesNotMatch(adminPage, /const dashboardActions = buildAdminDashboardActions\(/);
@@ -51,6 +52,8 @@ async function run() {
   assert.match(compensationPanels, /<AdminAggregateLeavePanels/);
   assert.match(compensationPanels, /<AdminPayrollWorkspaceCard/);
   assert.doesNotMatch(compensationPanels, /<AdminPayrollPanel/);
+  assert.doesNotMatch(compensationPanels, /onPreviewPayroll:/);
+  assert.doesNotMatch(compensationPanels, /onConfirmPayroll:/);
   assert.match(compensationPanels, /<AdminDebugLogsPanel/);
   assert.match(compensationPanels, /logStatusLabels: \{\s*success: string;\s*fail: string;\s*\}/);
 

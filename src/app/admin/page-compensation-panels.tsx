@@ -1,8 +1,6 @@
 import { AdminAggregateLeavePanels } from "@/components/admin-dashboard/AdminAggregateLeavePanels";
 import { AdminDebugLogsPanel } from "@/components/admin-dashboard/AdminDebugLogsPanel";
 import { AdminPayrollWorkspaceCard } from "@/components/admin-dashboard/AdminPayrollWorkspaceCard";
-import { type PayrollKrPresetShareLinkFeedback } from "@/components/payroll/PayrollKrPresetShareLinkFeedbackPanel";
-import { type PayrollKrIncomeSplitItemDraft } from "@/components/payroll/PayrollKrIncomeSplitItemsTable";
 import type {
   ApiLog,
   AttendanceAggregateDto,
@@ -49,25 +47,6 @@ type AdminCompensationPanelsProps = {
   onLoadLeavePolicy: () => void;
   onSaveLeavePolicy: () => void;
   onSettleLeaveAccrual: () => void;
-  payrollPreviewMode: "gross" | "statutory_kr_baseline";
-  payrollHourlyRateKrw: string;
-  payrollNonTaxableIncomeKrw: string;
-  payrollTaxableIncomeKrw: string;
-  payrollTaxableItems: PayrollKrIncomeSplitItemDraft[];
-  payrollNonTaxableItems: PayrollKrIncomeSplitItemDraft[];
-  payrollIncomeSplitItemPresetId: string;
-  payrollOtherDeductionsKrw: string;
-  payrollAdditionalTaxCreditKrw: string;
-  payrollDependentCount: string;
-  payrollDependentTaxCreditPerPersonKrw: string;
-  payrollIncomeTaxLookupPresetId: string;
-  payrollIncomeTaxLookupPresetAuto: boolean;
-  payrollIncomeTaxLookupAsOf: string;
-  payrollRequireMonthlyBoundary: boolean;
-  payrollNationalPensionCapKrw: string;
-  payrollHealthInsuranceCapKrw: string;
-  payrollEmploymentInsuranceCapKrw: string;
-  payrollPresetShareLinkFeedback: PayrollKrPresetShareLinkFeedback | null;
   previewedPayroll: PayrollRunDto[];
   lastPayrollRunId: string;
   logs: ApiLog[];
@@ -75,31 +54,6 @@ type AdminCompensationPanelsProps = {
     success: string;
     fail: string;
   };
-  onEmployeeIdChange: (value: string) => void;
-  onPayrollPreviewModeChange: (value: "gross" | "statutory_kr_baseline") => void;
-  onPayrollHourlyRateKrwChange: (value: string) => void;
-  onPayrollNonTaxableIncomeKrwChange: (value: string) => void;
-  onPayrollTaxableIncomeKrwChange: (value: string) => void;
-  onPayrollTaxableItemsChange: (value: PayrollKrIncomeSplitItemDraft[]) => void;
-  onPayrollNonTaxableItemsChange: (value: PayrollKrIncomeSplitItemDraft[]) => void;
-  onPayrollIncomeSplitItemPresetIdChange: (value: string) => void;
-  onPayrollOtherDeductionsKrwChange: (value: string) => void;
-  onPayrollAdditionalTaxCreditKrwChange: (value: string) => void;
-  onPayrollDependentCountChange: (value: string) => void;
-  onPayrollDependentTaxCreditPerPersonKrwChange: (value: string) => void;
-  onPayrollIncomeTaxLookupPresetIdChange: (value: string) => void;
-  onPayrollIncomeTaxLookupPresetAutoChange: (enabled: boolean) => void;
-  onPayrollIncomeTaxLookupAsOfChange: (value: string) => void;
-  onPayrollRequireMonthlyBoundaryChange: (enabled: boolean) => void;
-  onPayrollNationalPensionCapKrwChange: (value: string) => void;
-  onPayrollHealthInsuranceCapKrwChange: (value: string) => void;
-  onPayrollEmploymentInsuranceCapKrwChange: (value: string) => void;
-  onLastPayrollRunIdChange: (value: string) => void;
-  onPreviewPayroll: () => void;
-  onConfirmPayroll: () => void;
-  onResetPayrollPresetShareContext: () => void;
-  onReapplyPayrollPresetShareContext: () => void;
-  onClearManualIncomeSplitItems: () => void;
   onClearLogs: () => void;
 };
 
