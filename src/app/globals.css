@@ -498,6 +498,12 @@ body {
   border-color: rgba(180, 203, 228, 0.4);
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
+.workspace-inline-status {
+  margin: 12px 0 0;
+}
+.workspace-source-banner {
+  margin-top: 4px;
+}
 .admin-hub-priority-panel,
 .admin-hub-queue-panel,
 .admin-hub-status-panel,
@@ -577,6 +583,16 @@ body {
 }
 .workspace-note-card {
   border-style: dashed;
+}
+.employee-workspace-status-header {
+  margin-bottom: 20px;
+}
+.employee-workspace-status-strip {
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+.employee-workspace-status-card strong {
+  color: var(--text-strong);
 }
 .admin-hub-workspace-card {
   background: linear-gradient(180deg, #ffffff 0%, #fffaf4 100%);

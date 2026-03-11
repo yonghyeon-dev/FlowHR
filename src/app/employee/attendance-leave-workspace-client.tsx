@@ -672,42 +672,18 @@ export default function EmployeeAttendanceLeaveWorkspaceClient({
           : "Leave requests, balances, and calendar-based draft handoff";
 
   return (
-    <main className="saas-content">
+    <main className="saas-content workspace-shell employee-workspace-shell">
       <EmployeeWorkspaceHero
         eyebrow={isKoLocale ? "직원 작업 워크스페이스" : "Employee workspace"}
-        title={
-          isAttendanceWorkspace
-            ? isKoLocale
-              ? "근태 작업 워크스페이스"
-              : "Attendance workspace"
-            : isKoLocale
-              ? "휴가 작업 워크스페이스"
-              : "Leave workspace"
-        }
-        description={
-          isAttendanceWorkspace
-            ? isKoLocale
-              ? "Today 홈과 분리된 전용 근태 작업면에서 출퇴근 기록과 정정 요청을 처리합니다."
-              : "Handle attendance records and correction requests from the dedicated route instead of the Today home."
-            : isKoLocale
-              ? "Today 홈과 분리된 전용 휴가 작업면에서 요청, 잔여 휴가, 캘린더 확인을 이어갑니다."
-              : "Continue leave requests, balances, and calendar review from the dedicated route instead of the Today home."
-        }
+        title={workspaceTitle}
+        description={workspaceDescription}
         sourceHint={workspaceSourceEntry?.hint ?? null}
         returnHref={workspaceSourceEntry?.returnHref ?? "/employee"}
         returnLabel={
           workspaceSourceEntry?.returnLabel ??
           (isKoLocale ? "Today로 돌아가기" : "Return to Today")
         }
-        metaLabel={
-          isAttendanceWorkspace
-            ? isKoLocale
-              ? "출퇴근 기록과 일정 기반 정정 초안 이어받기"
-              : "Check-in records and schedule-based correction handoff"
-            : isKoLocale
-              ? "휴가 요청, 잔여 휴가, 캘린더 기반 초안 이어받기"
-              : "Leave requests, balances, and calendar-based draft handoff"
-        }
+        metaLabel={workspaceMetaLabel}
         actions={[
           {
             href: "/employee/requests?source=employee-dashboard",
@@ -733,7 +709,7 @@ export default function EmployeeAttendanceLeaveWorkspaceClient({
         pendingLabel={pendingLabel}
       />
 
-      <section className="panel-grid">
+      <section className="panel-grid workspace-panel-grid">
         {isAttendanceWorkspace ? (
           <EmployeeAttendanceFormPanel {...sharedPanelProps} />
         ) : null}
