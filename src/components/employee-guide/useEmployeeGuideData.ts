@@ -179,6 +179,13 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
     () => employeeGuideProgressPercent(checklistItems),
     [checklistItems]
   );
+  const nextActionKey = useMemo(() => {
+    const firstPendingItem = checklistItems.find((item) => !item.done);
+    if (!firstPendingItem) {
+      return null;
+    }
+    return firstPendingItem.key;
+  }, [checklistItems]);
 
   const refreshDisabled =
     Boolean(pendingLabel) || requiresLoginSession || (!usesBearerToken && (!organizationId.trim() || !employeeId.trim()));
@@ -194,6 +201,7 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
     loadGuide,
     logs,
     organizationId,
+    nextActionKey,
     pendingLabel,
     progressPercent,
     productionSessionRequiredNotice,

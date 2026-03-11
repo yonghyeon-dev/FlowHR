@@ -8,6 +8,7 @@ import {
   EmployeeGuideQuickActionsPanel
 } from "@/components/employee-guide/EmployeeGuideSections";
 import { employeeGuideCopyByLocale } from "@/components/employee-guide/copy";
+import { EmployeeWorkspaceHero } from "@/components/employee-dashboard/EmployeeWorkspaceHero";
 import { useEmployeeGuideData } from "@/components/employee-guide/useEmployeeGuideData";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -21,25 +22,23 @@ export function EmployeeGuideDashboard() {
     runtimeLocale,
     requestLabels: copy.requestLabels
   });
+  const nextAction =
+    data.nextActionKey === null
+      ? null
+      : copy.quickActions.find((action) => action.key === data.nextActionKey) ?? null;
 
   return (
     <main className="saas-content workspace-shell employee-workspace-shell">
-      <header className="page-header workspace-page-header employee-workspace-status-header">
-        <div>
-          <p className="eyebrow">{copy.heroEyebrow}</p>
-          <h1 className="page-title">{copy.title}</h1>
-          <p className="page-subtitle">{copy.description}</p>
-          <p className="small muted workspace-source-banner">{copy.sourceHint}</p>
-        </div>
-        <div className="page-actions">
-          <Link className="btn btn-secondary" href="/employee">
-            {copy.backToHomeLabel}
-          </Link>
-          <Link className="btn btn-secondary" href="/employee/requests?source=employee-guide">
-            {copy.requestsHubLabel}
-          </Link>
-        </div>
-      </header>
+      <EmployeeWorkspaceHero
+        eyebrow={copy.heroEyebrow}
+        title={copy.title}
+        description={copy.description}
+        sourceHint={copy.sourceHint}
+        metaLabel={copy.heroMetaLabel}
+        returnHref="/employee/requests?source=employee-guide"
+        returnLabel={copy.requestsHubLabel}
+        actions={[{ href: "/employee", label: copy.backToHomeLabel, tone: "secondary" }]}
+      />
 
       <section className="kpi-strip workspace-summary-strip employee-workspace-status-strip">
         <article className="kpi-card workspace-summary-card employee-workspace-status-card">
@@ -69,6 +68,8 @@ export function EmployeeGuideDashboard() {
       <EmployeeGuideContextPanel
         copy={copy}
         employeeId={data.employeeId}
+        progressPercent={data.progressPercent}
+        nextAction={nextAction}
         showDevTools={data.showDevTools}
         pendingLabel={data.pendingLabel}
         refreshDisabled={data.refreshDisabled}

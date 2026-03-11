@@ -2,7 +2,10 @@ import Link from "next/link";
 
 import type { EmployeeGuideChecklistItem } from "@/features/employee-guide/checklist";
 
-import type { EmployeeGuideCopy } from "@/components/employee-guide/copy";
+import type {
+  EmployeeGuideActionLink,
+  EmployeeGuideCopy
+} from "@/components/employee-guide/copy";
 import { formatPublicEmployeeNumber } from "@/lib/product-language";
 
 export type EmployeeGuideApiLog = {
@@ -17,6 +20,8 @@ export type EmployeeGuideApiLog = {
 type ContextPanelProps = {
   copy: EmployeeGuideCopy;
   employeeId: string;
+  progressPercent: number;
+  nextAction: EmployeeGuideActionLink | null;
   showDevTools: boolean;
   pendingLabel: string | null;
   refreshDisabled: boolean;
@@ -25,14 +30,47 @@ type ContextPanelProps = {
 };
 
 export function EmployeeGuideContextPanel(props: ContextPanelProps) {
-  const { copy, employeeId, showDevTools, pendingLabel, refreshDisabled, isKoLocale, onRefresh } =
-    props;
+  const {
+    copy,
+    employeeId,
+    progressPercent,
+    nextAction,
+    showDevTools,
+    pendingLabel,
+    refreshDisabled,
+    isKoLocale,
+    onRefresh
+  } = props;
 
   return (
     <section className="panel-grid workspace-panel-grid">
-      <article className="panel workspace-section-card workspace-toolbar-card">
+      <article className="panel workspace-section-card workspace-toolbar-card employee-guide-status-panel">
         <h2>{copy.contextTitle}</h2>
+        <div className="employee-guide-progress-head">
+          <div>
+            <p className="small muted">{copy.progressLabel}</p>
+            <strong>{progressPercent}%</strong>
+          </div>
+          <span className="workspace-hero-chip">{copy.heroMetaLabel}</span>
+        </div>
+        <span className="progress-track employee-guide-progress-track" aria-hidden>
+          <span className="progress-fill" style={{ width: `${progressPercent}%` }} />
+        </span>
         <div className="employee-guide-context-grid">
+          <article className="employee-guide-context-card employee-guide-next-action-card">
+            <p className="small muted">
+              {nextAction ? copy.nextActionTitle : copy.nextActionEmptyTitle}
+            </p>
+            <strong>{nextAction?.label ?? copy.nextActionEmptyTitle}</strong>
+            <p>
+              {nextAction?.description ?? copy.nextActionEmptyDescription}
+            </p>
+            <div className="employee-guide-context-actions">
+              <Link className="btn btn-primary btn-small" href={nextAction?.href ?? "/employee/requests"}>
+                {nextAction?.ctaLabel ?? copy.requestsHubLabel}
+              </Link>
+            </div>
+          </article>
           {showDevTools ? (
             <article className="employee-guide-context-card">
               <p className="small muted">
@@ -57,6 +95,11 @@ export function EmployeeGuideContextPanel(props: ContextPanelProps) {
                   ? "\uCD5C\uADFC \uC0C1\uD0DC\uAC00 \uC900\uBE44\uB418\uC5C8\uC2B5\uB2C8\uB2E4."
                   : "Latest guide snapshot is ready.")}
             </strong>
+            <p>
+              {isKoLocale
+                ? "\uC9C4\uD589 \uC0C1\uD0DC\uB97C \uAC31\uC2E0\uD55C \uB4A4 \uBC14\uB85C \uC791\uC5C5\uC5D0 \uC774\uC5B4\uAC00\uC138\uC694."
+                : "Refresh once when needed, then move directly into the next workspace."}
+            </p>
           </article>
         </div>
         <div className="actions employee-guide-context-actions">
@@ -96,11 +139,12 @@ export function EmployeeGuideQuickActionsPanel(props: QuickActionsPanelProps) {
           {copy.quickActions.map((action) => (
             <li key={action.href} className="employee-guide-action-item">
               <div>
+                <span className="workspace-hero-chip">{action.supportLabel}</span>
                 <strong>{action.label}</strong>
                 <p>{action.description}</p>
               </div>
               <Link className="btn btn-secondary" href={action.href}>
-                {copy.loadButton}
+                {action.ctaLabel}
               </Link>
             </li>
           ))}
