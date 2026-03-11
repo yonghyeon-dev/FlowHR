@@ -26,7 +26,10 @@ async function run() {
   assert.match(payrollCloseConsole, /copy\.totalsDeltaTitle/);
   assert.match(payrollCloseConsole, /copy\.apiLogsTitle/);
   assert.match(payrollCloseConsole, /formatKrw\(result\.summary\.totalsKrw\.grossPayKrw, runtimeLocale\)/);
-  assert.match(payrollCloseConsole, /formatKrw\(parsed\.summary\.settlementKrw\.remittanceDeltaKrw, runtimeLocale\)/);
+  assert.match(
+    payrollCloseConsole,
+    /formatKrw\(\s*parsed\.summary\.settlementKrw\.remittanceDeltaKrw,\s*runtimeLocale\s*\)/
+  );
   assert.match(payrollCloseConsole, /new Date\(\)\.toLocaleString\(runtimeLocale\)/);
   assert.match(payrollCloseConsole, /copy\.okLabel/);
   assert.match(payrollCloseConsole, /copy\.failLabel/);

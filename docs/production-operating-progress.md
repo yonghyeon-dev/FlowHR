@@ -9,6 +9,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 2. Completed In This Wave
 
+- Closed `WI-1157` through the full GitHub flow and merged it to `main` as `2ccb48815efabd3c0058837210886c03971993cc`, then deleted the feature branch.
+- Re-verified `WI-1157` on the delivery path and confirmed both `ci` (`22962956425`) and `vercel-production-deploy` (`22962956442`) stay green after the approval-executions workspace visual pass.
+- Started `WI-1158` to align admin payroll operational consoles (`payroll-close`, `payroll-payslip-delivery`, `payroll-insurance`, `payroll-year-end preflight`) to the shared workspace shell and card rhythm baseline.
 - Executed the first implementation pass for `WI-1053` on the highest-risk product surfaces.
 - Added a shared surface-language helper:
   - `src/lib/product-language.ts`

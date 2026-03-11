@@ -3,15 +3,13 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { payrollInsuranceCopyByLocale } from "@/components/payroll-insurance/copy";
+import { PayrollInsuranceInputPanel } from "@/components/payroll-insurance/PayrollInsuranceSettlementInputPanel";
 import {
   PayrollInsuranceComponentsPanel,
   PayrollInsuranceLogsPanel,
   PayrollInsuranceSummaryPanel
 } from "@/components/payroll-insurance/PayrollInsuranceSettlementSections";
-import { PayrollInsuranceInputPanel } from "@/components/payroll-insurance/PayrollInsuranceSettlementInputPanel";
-import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useI18n } from "@/lib/i18n/provider";
+import { payrollInsuranceCopyByLocale } from "@/components/payroll-insurance/copy";
 import type { ApiLog, PayrollInsuranceSettlementResponse } from "@/components/payroll-insurance/types";
 import {
   defaultMonthRange,
@@ -21,6 +19,8 @@ import {
   toSeoulStartIso
 } from "@/components/payroll-insurance/types";
 import { normalizePayrollYearEndRuntimeMessage } from "@/components/payroll-year-end/runtime-copy-helpers";
+import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
+import { useI18n } from "@/lib/i18n/provider";
 
 function parseRequiredInt(value: string, fieldLabel: string, nonNegativeIntegerLabel: string) {
   const parsed = Number(value);
@@ -91,7 +91,6 @@ export default function PayrollInsuranceSettlementConsole() {
   const copy = payrollInsuranceCopyByLocale[locale];
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const adminActorId = (supabaseSession?.actorId ?? "PAY-1001").trim() || "PAY-1001";
-
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
@@ -110,10 +109,17 @@ export default function PayrollInsuranceSettlementConsole() {
       copy.statusRequestFailed
     );
   }, [copy.statusRequestFailed, locale, supabaseSessionError]);
+  const summaryStatusLabel = result
+    ? formatKrw(result.summary.settlementKrw.totalDeltaKrw, runtimeLocale)
+    : pendingLabel ?? copy.noResultYet;
 
   async function runPreview() {
     if (!organizationId.trim()) {
-      setStatusMessage(locale === "ko" ? "세션 조직 정보가 없어 조회할 수 없습니다." : "Missing session organization context; cannot preview.");
+      setStatusMessage(
+        locale === "ko"
+          ? "세션 조직 정보가 없어 정산 미리보기를 실행할 수 없습니다."
+          : "Missing session organization context; cannot preview."
+      );
       return;
     }
     if (!employeeId.trim()) {
@@ -175,9 +181,18 @@ export default function PayrollInsuranceSettlementConsole() {
               copy.statusPositiveInteger
             )
           },
-          nationalPensionCapKrw: parseOptionalInt(nationalPensionCapKrw, copy.statusOptionalCapInteger),
-          healthInsuranceCapKrw: parseOptionalInt(healthInsuranceCapKrw, copy.statusOptionalCapInteger),
-          employmentInsuranceCapKrw: parseOptionalInt(employmentInsuranceCapKrw, copy.statusOptionalCapInteger),
+          nationalPensionCapKrw: parseOptionalInt(
+            nationalPensionCapKrw,
+            copy.statusOptionalCapInteger
+          ),
+          healthInsuranceCapKrw: parseOptionalInt(
+            healthInsuranceCapKrw,
+            copy.statusOptionalCapInteger
+          ),
+          employmentInsuranceCapKrw: parseOptionalInt(
+            employmentInsuranceCapKrw,
+            copy.statusOptionalCapInteger
+          ),
           priorWithheldKrw: parseRequiredInt(
             priorWithheldKrw,
             copy.priorWithheldLabel,
@@ -240,7 +255,9 @@ export default function PayrollInsuranceSettlementConsole() {
       const parsed = body as PayrollInsuranceSettlementResponse;
       setResult(parsed);
       setStatusMessage(
-        `${copy.statusLoadedPrefix} ${formatKrw(parsed.summary.grossPayKrw, runtimeLocale)}, ${copy.statusTotalDeltaLabel} ${formatKrw(parsed.summary.settlementKrw.totalDeltaKrw, runtimeLocale)}`
+        `${copy.statusLoadedPrefix} ${formatKrw(parsed.summary.grossPayKrw, runtimeLocale)}, ${
+          copy.statusTotalDeltaLabel
+        } ${formatKrw(parsed.summary.settlementKrw.totalDeltaKrw, runtimeLocale)}`
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
@@ -255,14 +272,47 @@ export default function PayrollInsuranceSettlementConsole() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="hero">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
+        <p className="small muted workspace-source-banner">
+          {locale === "ko"
+            ? "급여 마감 전에 보험 기여금과 차액을 먼저 점검하는 운영 작업 화면입니다."
+            : "Review insurance contributions and settlement deltas before payroll close."}
+        </p>
+        <div className="page-actions" style={{ marginTop: 8 }}>
+          <Link href="/admin" className="btn btn-secondary btn-small">
+            {copy.backToAdmin}
+          </Link>
+        </div>
       </header>
 
-      <section className="panel-grid">
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.title}>
+        <article className="kpi">
+          <span>{copy.employeeIdLabel}</span>
+          <strong>{employeeId.trim() || "-"}</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.periodStartLabel}</span>
+          <strong>
+            {periodStartDate} ~ {periodEndDate}
+          </strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.apiLogsTotalLabel}</span>
+          <strong>
+            {stats.total} / {copy.apiLogsSuccessLabel} {stats.success}
+          </strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.totalDeltaLabel}</span>
+          <strong>{summaryStatusLabel}</strong>
+        </article>
+      </section>
+
+      <section className="panel-grid workspace-panel-grid">
         <PayrollInsuranceInputPanel
           copy={copy}
           employeeId={employeeId}
@@ -317,9 +367,14 @@ export default function PayrollInsuranceSettlementConsole() {
         <PayrollInsuranceSummaryPanel copy={copy} result={result} runtimeLocale={runtimeLocale} />
         <PayrollInsuranceComponentsPanel copy={copy} result={result} runtimeLocale={runtimeLocale} />
         {showDevTools ? (
-          <PayrollInsuranceLogsPanel copy={copy} stats={stats} pendingLabel={pendingLabel} logs={logs} />
+          <PayrollInsuranceLogsPanel
+            copy={copy}
+            stats={stats}
+            pendingLabel={pendingLabel}
+            logs={logs}
+          />
         ) : (
-          <article className="panel">
+          <article className="panel workspace-section-card workspace-note-card">
             <h2>{locale === "ko" ? "워크스페이스 이동" : "Workspace shortcuts"}</h2>
             <div className="panel-actions">
               <Link href="/admin" className="btn btn-secondary">

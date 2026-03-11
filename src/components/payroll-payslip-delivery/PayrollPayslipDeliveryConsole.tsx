@@ -4,21 +4,24 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { payrollPayslipDeliveryCopyByLocale } from "@/components/payroll-payslip-delivery/copy";
 import { isTruthyFlag } from "@/app/admin/page-helpers";
 import { isAdminHubSource } from "@/app/admin/source-context";
+import { payrollPayslipDeliveryCopyByLocale } from "@/components/payroll-payslip-delivery/copy";
+import type {
+  ApiLog,
+  PayrollPayslipDistributionResponse
+} from "@/components/payroll-payslip-delivery/types";
+import {
+  defaultMonthRange,
+  toSeoulEndIso,
+  toSeoulStartIso
+} from "@/components/payroll-payslip-delivery/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import {
   formatAdminSessionConnectionState,
   formatWorkspaceConnectionState
 } from "@/lib/product-language";
-import type { ApiLog, PayrollPayslipDistributionResponse } from "@/components/payroll-payslip-delivery/types";
-import {
-  defaultMonthRange,
-  toSeoulEndIso,
-  toSeoulStartIso
-} from "@/components/payroll-payslip-delivery/types";
 
 export type PayrollPayslipDeliveryQueueMode = "all" | "undistributed";
 
@@ -52,9 +55,7 @@ export default function PayrollPayslipDeliveryConsole({
   const copy = payrollPayslipDeliveryCopyByLocale[locale];
   const source = searchParams.get("source");
   const focusLabel =
-    queueMode === "undistributed"
-      ? copy.focusUndistributedLabel
-      : copy.focusAllLabel;
+    queueMode === "undistributed" ? copy.focusUndistributedLabel : copy.focusAllLabel;
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
@@ -63,6 +64,9 @@ export default function PayrollPayslipDeliveryConsole({
     const success = logs.filter((log) => log.ok).length;
     return { total, success, fail: total - success };
   }, [logs]);
+  const distributionStatusLabel = result
+    ? `${result.summary.distribution.newlyDistributedCount} ${copy.statusRunsSuffix}`
+    : pendingLabel ?? copy.noDistributionSummaryYet;
 
   async function runDistribution(dryRun: boolean) {
     try {
@@ -146,10 +150,40 @@ export default function PayrollPayslipDeliveryConsole({
             {copy.dashboardSourceBanner} · {copy.dashboardSourceFocusLabel}: {focusLabel}
           </p>
         ) : null}
+        <div className="page-actions" style={{ marginTop: 8 }}>
+          <Link href="/admin" className="btn btn-secondary btn-small">
+            {copy.backToAdminAction}
+          </Link>
+        </div>
       </header>
 
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.title}>
+        <article className="kpi">
+          <span>{copy.dashboardSourceFocusLabel}</span>
+          <strong>{focusLabel}</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.periodStartLabel}</span>
+          <strong>
+            {periodStartDate} ~ {periodEndDate}
+          </strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.deliveryChannelLabel}</span>
+          <strong>
+            {deliveryChannel === "in_app"
+              ? copy.deliveryChannelInAppLabel
+              : copy.deliveryChannelEmailLabel}
+          </strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.newlyDistributedLabel}</span>
+          <strong>{distributionStatusLabel}</strong>
+        </article>
+      </section>
+
       <section className="panel-grid workspace-panel-grid">
-        <article className="panel workspace-section-card">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.inputTitle}</h2>
           {showDevTools ? (
             <p className="small muted">
@@ -162,29 +196,54 @@ export default function PayrollPayslipDeliveryConsole({
           <div className="input-grid">
             <label>
               {copy.periodStartLabel}
-              <input type="date" value={periodStartDate} onChange={(event) => setPeriodStartDate(event.target.value)} />
+              <input
+                type="date"
+                value={periodStartDate}
+                onChange={(event) => setPeriodStartDate(event.target.value)}
+              />
             </label>
             <label>
               {copy.periodEndLabel}
-              <input type="date" value={periodEndDate} onChange={(event) => setPeriodEndDate(event.target.value)} />
+              <input
+                type="date"
+                value={periodEndDate}
+                onChange={(event) => setPeriodEndDate(event.target.value)}
+              />
             </label>
             <label>
               {copy.employeeIdOptionalLabel}
-              <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} placeholder={copy.employeeIdPlaceholder} />
+              <input
+                value={employeeId}
+                onChange={(event) => setEmployeeId(event.target.value)}
+                placeholder={copy.employeeIdPlaceholder}
+              />
             </label>
             <label>
               {copy.deliveryChannelLabel}
-              <select value={deliveryChannel} onChange={(event) => setDeliveryChannel(event.target.value as "in_app" | "email")}>
+              <select
+                value={deliveryChannel}
+                onChange={(event) =>
+                  setDeliveryChannel(event.target.value as "in_app" | "email")
+                }
+              >
                 <option value="in_app">{copy.deliveryChannelInAppLabel}</option>
                 <option value="email">{copy.deliveryChannelEmailLabel}</option>
               </select>
             </label>
           </div>
           <div className="panel-actions">
-            <button className="btn btn-secondary" onClick={() => void runDistribution(true)} disabled={pendingLabel !== null}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => void runDistribution(true)}
+              disabled={pendingLabel !== null}
+            >
               {copy.dryRunAction}
             </button>
-            <button className="btn btn-primary" onClick={() => void runDistribution(false)} disabled={pendingLabel !== null}>
+            <button
+              className="btn btn-primary"
+              onClick={() => void runDistribution(false)}
+              disabled={pendingLabel !== null}
+            >
               {copy.applyDeliveryAction}
             </button>
           </div>
@@ -202,10 +261,25 @@ export default function PayrollPayslipDeliveryConsole({
             <p className="small">{copy.noDistributionSummaryYet}</p>
           ) : (
             <ul className="simple-list">
-              <li><span>{copy.totalConfirmedPreviewedLabel}</span><strong>{result.summary.runStates.totalRuns} / {result.summary.runStates.confirmedRuns} / {result.summary.runStates.previewedRuns}</strong></li>
-              <li><span>{copy.targetCountLabel}</span><strong>{result.summary.distribution.targetCount}</strong></li>
-              <li><span>{copy.alreadyDistributedLabel}</span><strong>{result.summary.distribution.alreadyDistributedCount}</strong></li>
-              <li><span>{copy.newlyDistributedLabel}</span><strong>{result.summary.distribution.newlyDistributedCount}</strong></li>
+              <li>
+                <span>{copy.totalConfirmedPreviewedLabel}</span>
+                <strong>
+                  {result.summary.runStates.totalRuns} / {result.summary.runStates.confirmedRuns} /{" "}
+                  {result.summary.runStates.previewedRuns}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.targetCountLabel}</span>
+                <strong>{result.summary.distribution.targetCount}</strong>
+              </li>
+              <li>
+                <span>{copy.alreadyDistributedLabel}</span>
+                <strong>{result.summary.distribution.alreadyDistributedCount}</strong>
+              </li>
+              <li>
+                <span>{copy.newlyDistributedLabel}</span>
+                <strong>{result.summary.distribution.newlyDistributedCount}</strong>
+              </li>
             </ul>
           )}
         </article>
@@ -216,18 +290,28 @@ export default function PayrollPayslipDeliveryConsole({
             <p className="small">{copy.noRunIdsYet}</p>
           ) : (
             <ul className="simple-list">
-              <li><span>{copy.targetRunsLabel}</span><strong>{result.summary.distribution.targetRunIds.join(", ") || "-"}</strong></li>
-              <li><span>{copy.alreadyDistributedRunsLabel}</span><strong>{result.summary.distribution.alreadyDistributedRunIds.join(", ") || "-"}</strong></li>
-              <li><span>{copy.newlyDistributedRunsLabel}</span><strong>{result.summary.distribution.newlyDistributedRunIds.join(", ") || "-"}</strong></li>
+              <li>
+                <span>{copy.targetRunsLabel}</span>
+                <strong>{result.summary.distribution.targetRunIds.join(", ") || "-"}</strong>
+              </li>
+              <li>
+                <span>{copy.alreadyDistributedRunsLabel}</span>
+                <strong>{result.summary.distribution.alreadyDistributedRunIds.join(", ") || "-"}</strong>
+              </li>
+              <li>
+                <span>{copy.newlyDistributedRunsLabel}</span>
+                <strong>{result.summary.distribution.newlyDistributedRunIds.join(", ") || "-"}</strong>
+              </li>
             </ul>
           )}
         </article>
 
         {showDevTools ? (
-          <article className="panel workspace-side-panel">
+          <article className="panel workspace-section-card workspace-note-card workspace-side-panel">
             <h2>{copy.apiLogsTitle}</h2>
             <p className="small">
-              {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
+              {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} /{" "}
+              {copy.apiLogsFailLabel} {stats.fail}
               {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
             </p>
             {logs.length === 0 ? (
@@ -236,14 +320,17 @@ export default function PayrollPayslipDeliveryConsole({
               <ul className="log-list">
                 {logs.map((log) => (
                   <li key={log.id}>
-                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span>{" "}
+                    {log.label} / {log.status}
                     <time>{log.at}</time>
                   </li>
                 ))}
               </ul>
             )}
             <div className="panel-actions">
-              <Link href="/admin" className="btn btn-secondary">{copy.backToAdminAction}</Link>
+              <Link href="/admin" className="btn btn-secondary">
+                {copy.backToAdminAction}
+              </Link>
             </div>
           </article>
         ) : null}

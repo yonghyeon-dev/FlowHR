@@ -105,7 +105,7 @@ async function run() {
   );
   assert.match(
     payslipDeliveryConsole,
-    /className="panel workspace-side-panel"/
+    /className="panel workspace-section-card workspace-note-card workspace-side-panel"/
   );
 
   assert.match(globalsCss, /\.workspace-toolbar-card \{/);
