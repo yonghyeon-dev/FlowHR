@@ -101,12 +101,12 @@ export default function EmployeeBenefitsWorkspaceView({
     : `Session connected · Employee ${publicEmployeeNumber}`;
 
   return (
-    <main className="saas-content">
-      <header className="page-header">
+    <main className="saas-content workspace-shell employee-workspace-shell">
+      <header className="page-header workspace-page-header employee-workspace-status-header">
         <div>
           <h1 className="page-title">{copy.pageTitle}</h1>
           <p className="page-subtitle">{copy.pageSubtitle}</p>
-          {sourceEntry ? <p className="small muted">{sourceEntry.hint}</p> : null}
+          {sourceEntry ? <p className="small muted workspace-source-banner">{sourceEntry.hint}</p> : null}
         </div>
         <div className="page-actions">
           <Link className="btn btn-secondary" href="/employee">
@@ -120,15 +120,37 @@ export default function EmployeeBenefitsWorkspaceView({
         </div>
       </header>
       {requiresLoginSession ? (
-        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
+        <p className="small fail workspace-inline-status">
           {productionSessionRequiredNotice} <Link href="/login">/login</Link>
         </p>
       ) : null}
 
-      <section className="panel-grid">
-        <article className="panel">
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.sessionTitle}</h2>
-          {showDevTools ? <p className="small muted">{devSessionLabel}</p> : null}
+          {showDevTools ? <p className="small muted workspace-source-banner">{devSessionLabel}</p> : null}
+          <div className="kpi-strip workspace-summary-strip employee-workspace-status-strip">
+            <article className="kpi-card workspace-summary-card employee-workspace-status-card">
+              <p>{copy.requestSummaryLabel}</p>
+              <strong>{requestSummary.total}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card employee-workspace-status-card">
+              <p>{copy.filteredRequestSummaryLabel}</p>
+              <strong>{filteredRequests.length}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card employee-workspace-status-card">
+              <p>{copy.requestFilter.SUBMITTED}</p>
+              <strong>{requestSummary.submitted}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card employee-workspace-status-card">
+              <p>{copy.requestFilter.APPROVED}</p>
+              <strong>{requestSummary.approved}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card employee-workspace-status-card">
+              <p>{copy.pendingAgingRiskSummaryLabel}</p>
+              <strong>{pendingAgingRiskCount}</strong>
+            </article>
+          </div>
           <label>
             {copy.requestFilterLabel}
             <select
@@ -185,10 +207,10 @@ export default function EmployeeBenefitsWorkspaceView({
             {" · "}
             {copy.pendingAgingRiskSummaryLabel}: {pendingAgingRiskCount}
           </p>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
+          {statusMessage ? <p className="small workspace-inline-status">{statusMessage}</p> : null}
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.submitTitle}</h2>
           <label>
             {copy.benefitLabel}
@@ -219,7 +241,7 @@ export default function EmployeeBenefitsWorkspaceView({
                 {copy.estimatedRemainingLabel}: {(estimatedRemainingAmount ?? 0).toLocaleString(runtimeLocale)}
               </p>
               {isProjectedOverLimit ? (
-                <p className="small" style={{ color: "var(--danger)" }}>
+                <p className="small fail workspace-inline-status">
                   {copy.overLimitWarningLabel}
                 </p>
               ) : null}
@@ -237,7 +259,7 @@ export default function EmployeeBenefitsWorkspaceView({
           </div>
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card workspace-note-card">
           <h2>{copy.catalogTitle}</h2>
           {requestableCatalog.length === 0 ? (
             <p className="small muted">{copy.emptyCatalog}</p>
@@ -260,7 +282,7 @@ export default function EmployeeBenefitsWorkspaceView({
           )}
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.requestTitle}</h2>
           {requests.length === 0 ? (
             <p className="small muted">{copy.emptyRequests}</p>
@@ -291,7 +313,7 @@ export default function EmployeeBenefitsWorkspaceView({
                       {isPendingAgingRisk ? (
                         <>
                           <br />
-                          <span className="small" style={{ color: "var(--danger)" }}>
+                          <span className="small fail">
                             {copy.pendingAgingRiskBadgeLabel}
                           </span>
                         </>

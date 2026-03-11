@@ -129,12 +129,12 @@ export default function AdminBenefitsWorkspaceView({
     : "Admin session connected.";
 
   return (
-    <main className="saas-content">
-      <header className="page-header">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <div>
           <h1 className="page-title">{copy.pageTitle}</h1>
           <p className="page-subtitle">{copy.pageSubtitle}</p>
-          {sourceHint ? <p className="small muted">{sourceHint}</p> : null}
+          {sourceHint ? <p className="small muted workspace-source-banner">{sourceHint}</p> : null}
         </div>
         <div className="page-actions">
           {analyticsBackHref ? (
@@ -151,10 +151,32 @@ export default function AdminBenefitsWorkspaceView({
         </div>
       </header>
 
-      <section className="panel-grid">
-        <article className="panel">
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.sessionTitle}</h2>
-          {showDevTools ? <p className="small muted">{adminSessionLabel}</p> : null}
+          {showDevTools ? <p className="small muted workspace-source-banner">{adminSessionLabel}</p> : null}
+          <div className="kpi-strip workspace-summary-strip">
+            <article className="kpi-card workspace-summary-card">
+              <p>{copy.statsLabel}</p>
+              <strong>{catalogStats.total}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card">
+              <p>{copy.requestStatsLabel}</p>
+              <strong>{requestSummary.total}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card">
+              <p>{copy.requestStatus.SUBMITTED}</p>
+              <strong>{requestSummary.submitted}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card">
+              <p>{copy.overLimitRequestSummaryLabel}</p>
+              <strong>{overLimitRequestCount}</strong>
+            </article>
+            <article className="kpi-card workspace-summary-card">
+              <p>{copy.pendingAgingRiskSummaryLabel}</p>
+              <strong>{pendingAgingRiskCount}</strong>
+            </article>
+          </div>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={onLoadWorkspace}>
               {copy.refreshAction}
@@ -171,10 +193,10 @@ export default function AdminBenefitsWorkspaceView({
             {copy.pendingAgingRiskSummaryLabel}: {pendingAgingRiskCount}
             {pendingLabel ? ` · ${pendingLabel}` : ""}
           </p>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
+          {statusMessage ? <p className="small workspace-inline-status">{statusMessage}</p> : null}
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.createCatalogTitle}</h2>
           <label>
             {copy.nameLabel}
@@ -214,7 +236,7 @@ export default function AdminBenefitsWorkspaceView({
           </div>
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card workspace-note-card">
           <h2>{copy.catalogTitle}</h2>
           {catalog.length === 0 ? (
             <p className="small muted">{copy.emptyCatalog}</p>
@@ -270,7 +292,7 @@ export default function AdminBenefitsWorkspaceView({
           )}
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.requestTitle}</h2>
           <label>
             {copy.decisionNoteLabel}
@@ -395,7 +417,7 @@ export default function AdminBenefitsWorkspaceView({
         </article>
 
         {showDevTools ? (
-          <article className="panel">
+          <article className="panel workspace-side-panel">
             <h2>{copy.logsTitle}</h2>
             {logs.length === 0 ? (
               <p className="small muted">-</p>
