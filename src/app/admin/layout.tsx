@@ -47,12 +47,17 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
         navSections={navSections}
         footerLinks={mobileFooterLinks}
       />
-      <div className="saas-shell">
-        <aside className="saas-sidebar">
+      <div className="saas-shell admin-shell">
+        <aside className="saas-sidebar admin-sidebar">
           <div className="saas-brand">
             <Link href="/">FlowHR</Link>
             <span className="saas-badge">{t("admin.badge")}</span>
           </div>
+          <p className="admin-sidebar-copy">
+            {locale === "ko"
+              ? "고객사 운영자가 우선순위를 보고 전용 워크스페이스로 이동하는 허브입니다."
+              : "A hub for customer admins to review priorities and continue in dedicated workspaces."}
+          </p>
 
           <nav className="saas-nav" aria-label={t("admin.nav.aria")}>
             {navSections.map((section) => (
@@ -69,7 +74,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
             ))}
           </nav>
 
-          <div className="saas-sidebar-footer">
+          <div className="saas-sidebar-footer admin-sidebar-footer">
             <NotificationBell href="/admin/notifications" />
             <SessionMenu />
             <Link href="/employee">{t("admin.nav.employeePortal")}</Link>

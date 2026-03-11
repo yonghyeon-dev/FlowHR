@@ -309,15 +309,30 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="page-header">
-        <div>
+    <main className="saas-content admin-hub-shell">
+      <header className="page-header admin-hub-hero">
+        <div className="admin-hub-hero-copy">
+          <p className="eyebrow">admin hub</p>
           <h1 className="page-title">{isKoLocale ? "관리자 허브" : "Admin hub"}</h1>
           <p className="page-subtitle">
             {isKoLocale ? "핵심 지표와 대기 업무를 확인하고, 각 전용 워크스페이스로 이동해 작업하세요." : "Review key metrics and work queues, then continue in dedicated workspaces."}
           </p>
+          <div className="admin-hub-hero-meta">
+            <span className="admin-hub-chip">
+              {isKoLocale ? "결재 대기" : "Approvals"} · {summary.pendingApprovalExecutionCount}
+            </span>
+            <span className="admin-hub-chip">
+              {isKoLocale ? "급여 프리뷰" : "Payroll preview"} · {summary.previewedPayrollCount}
+            </span>
+            <span className="admin-hub-chip">
+              {isKoLocale ? "전자계약" : "Contracts"} · {summary.contractDecisionQueueCount}
+            </span>
+            <span className="admin-hub-chip">
+              {isKoLocale ? "직원 수" : "Employees"} · {summary.employeeCount}
+            </span>
+          </div>
         </div>
-        <div className="page-actions">
+        <div className="page-actions admin-hub-hero-actions">
           <button
             className="btn btn-primary"
             onClick={() => void refreshSummary()}
@@ -343,7 +358,7 @@ export default function AdminDashboardPage() {
       ) : null}
       {loadError ? <p className="small fail">{loadError}</p> : null}
 
-      <section className="panel">
+      <section className="panel admin-hub-priority-panel">
         <h2>{resolveAdminDashboardPriorityTitle(locale)}</h2>
         <p className="small muted">
           {resolveAdminDashboardPriorityDescription(locale)}
@@ -374,7 +389,7 @@ export default function AdminDashboardPage() {
       </section>
 
       {topFocusCard ? (
-        <section className="panel">
+        <section className="panel admin-hub-priority-panel">
           <h2>{isKoLocale ? "오늘의 우선 처리" : "Today's top priority"}</h2>
           <p className="small muted">
             {isKoLocale
@@ -396,16 +411,16 @@ export default function AdminDashboardPage() {
         </section>
       ) : null}
 
-      <section className="panel">
+      <section className="panel admin-hub-queue-panel">
         <h2>{isKoLocale ? "핵심 대기함 배지" : "Core queue badges"}</h2>
         <p className="small muted">
           {isKoLocale
             ? "결재·급여·계약 대기함의 총 건수와 위험 수준(긴급/주의)을 한 번에 확인하세요."
             : "Track approval, payroll, and contract queue load with critical/watch risk badges."}
         </p>
-        <div className="kpi-strip">
+        <div className="kpi-strip admin-hub-queue-grid">
           {queueBadges.map((badge) => (
-            <article className="kpi-card" key={badge.key}>
+            <article className="kpi-card admin-hub-queue-card" key={badge.key}>
               <p>{badge.label}</p>
               <strong>{badge.total}</strong>
               <small>
@@ -462,52 +477,52 @@ export default function AdminDashboardPage() {
         </div>
       </section>
 
-      <section className="panel">
+      <section className="panel admin-hub-status-panel">
         <h2>{isKoLocale ? "핵심 현황" : "Core status"}</h2>
-        <div className="kpi-strip">
-          <article className="kpi-card">
+        <div className="kpi-strip admin-hub-status-grid">
+          <article className="kpi-card admin-hub-status-card">
             <p>{isKoLocale ? "오늘 출근/퇴근" : "Today's clock-ins/outs"}</p>
             <strong>{todayClockInCount}</strong>
           </article>
-          <article className="kpi-card">
+          <article className="kpi-card admin-hub-status-card">
             <p>{isKoLocale ? "미퇴근 근로자" : "Open attendance records"}</p>
             <strong>{todayOpenAttendanceCount}</strong>
           </article>
-          <article className="kpi-card">
+          <article className="kpi-card admin-hub-status-card">
             <p>{isKoLocale ? "휴가 사용 일수" : "Leave days used"}</p>
             <strong>{monthlyApprovedLeaveCount}</strong>
           </article>
-          <article className="kpi-card">
+          <article className="kpi-card admin-hub-status-card">
             <p>{isKoLocale ? "연장 근로 시간" : "Overtime worked"}</p>
             <strong>{minutesToHours(todayOvertimeMinutes)}</strong>
           </article>
         </div>
       </section>
 
-      <section className="kpi-strip">
-        <article className="kpi-card">
+      <section className="kpi-strip admin-hub-summary-strip">
+        <article className="kpi-card admin-hub-summary-card">
           <p>{isKoLocale ? "출퇴근 승인 대기" : "Pending attendance approvals"}</p>
           <strong>{summary.pendingAttendanceCount}</strong>
         </article>
-        <article className="kpi-card">
+        <article className="kpi-card admin-hub-summary-card">
           <p>{isKoLocale ? "휴가 승인 대기" : "Pending leave approvals"}</p>
           <strong>{summary.pendingLeaveCount}</strong>
         </article>
-        <article className="kpi-card">
+        <article className="kpi-card admin-hub-summary-card">
           <p>{isKoLocale ? "급여 프리뷰 대기" : "Pending payroll previews"}</p>
           <strong>{summary.previewedPayrollCount}</strong>
         </article>
-        <article className="kpi-card">
+        <article className="kpi-card admin-hub-summary-card">
           <p>{isKoLocale ? "직원 수" : "Employees"}</p>
           <strong>{summary.employeeCount}</strong>
         </article>
-        <article className="kpi-card">
+        <article className="kpi-card admin-hub-summary-card">
           <p>{isKoLocale ? "최근 갱신" : "Last refreshed"}</p>
           <strong>{summary.refreshedAt ?? "-"}</strong>
         </article>
       </section>
 
-      <section className="panel">
+      <section className="panel admin-hub-workspace-panel">
         <h2>{isKoLocale ? "핵심 워크스페이스 허브" : "Core workspace hub"}</h2>
         <p className="small muted">
           {isKoLocale
@@ -523,9 +538,9 @@ export default function AdminDashboardPage() {
         </div>
       </section>
 
-      <section className="panel-grid">
+      <section className="panel-grid admin-hub-workspace-grid">
         {workspaceHubs.map((hub) => (
-          <article className="panel" key={hub.key}>
+          <article className="panel admin-hub-workspace-card" key={hub.key}>
             <h2>{hub.title}</h2>
             <p className="small muted">{hub.description}</p>
             <div className="actions">

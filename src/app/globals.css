@@ -41,6 +41,12 @@ body {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
 }
+.admin-shell {
+  background:
+    radial-gradient(900px 420px at 0% 0%, rgba(255, 228, 205, 0.52) 0%, transparent 58%),
+    radial-gradient(820px 420px at 100% 0%, rgba(255, 241, 226, 0.78) 0%, transparent 62%),
+    linear-gradient(180deg, #fffaf4 0%, #f7fbff 100%);
+}
 .saas-sidebar {
   padding: 22px 16px;
   border-right: 1px solid var(--line);
@@ -50,6 +56,10 @@ body {
   top: 0;
   height: 100vh;
   overflow: auto;
+}
+.admin-sidebar {
+  background: rgba(255, 251, 245, 0.88);
+  border-right-color: rgba(214, 190, 164, 0.42);
 }
 .saas-brand {
   display: flex;
@@ -121,6 +131,16 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.admin-sidebar-copy {
+  margin: 0 0 16px;
+  color: #7a5a3f;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.admin-sidebar-footer {
+  border-top-style: solid;
+  border-top-color: rgba(214, 190, 164, 0.42);
 }
 .notification-bell {
   display: inline-flex;
@@ -220,6 +240,10 @@ body {
   width: min(1160px, 100%);
   margin: 0 auto;
 }
+.admin-hub-shell {
+  display: grid;
+  gap: 18px;
+}
 .page-header {
   display: flex;
   align-items: flex-end;
@@ -242,6 +266,43 @@ body {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+}
+.admin-hub-hero {
+  align-items: stretch;
+  padding: 24px;
+  border: 1px solid rgba(214, 190, 164, 0.55);
+  border-radius: 24px;
+  background:
+    radial-gradient(540px 220px at 0% 0%, rgba(255, 224, 196, 0.72) 0%, transparent 70%),
+    linear-gradient(140deg, #fffaf2 0%, #fffdf9 52%, #f5f9ff 100%);
+  box-shadow: 0 24px 48px rgba(90, 62, 35, 0.08);
+}
+.admin-hub-hero-copy {
+  display: grid;
+  gap: 12px;
+}
+.admin-hub-hero .page-subtitle {
+  max-width: 62ch;
+}
+.admin-hub-hero-actions {
+  align-content: start;
+}
+.admin-hub-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.admin-hub-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(214, 190, 164, 0.52);
+  background: rgba(255, 255, 255, 0.9);
+  color: #704f34;
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 .details {
   border: 1px solid var(--line);
@@ -331,11 +392,37 @@ body {
 .kpi-card strong {
   font-size: 1.2rem;
 }
+.admin-hub-priority-panel,
+.admin-hub-queue-panel,
+.admin-hub-status-panel,
+.admin-hub-workspace-panel {
+  border-color: rgba(214, 190, 164, 0.38);
+}
+.admin-hub-queue-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.admin-hub-queue-card {
+  border-color: rgba(214, 190, 164, 0.4);
+  background: linear-gradient(180deg, #fffdf9 0%, #fff 100%);
+}
+.admin-hub-status-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.admin-hub-summary-strip {
+  margin-top: 0;
+}
+.admin-hub-status-card,
+.admin-hub-summary-card {
+  border-color: rgba(205, 221, 245, 0.82);
+}
 .panel-grid {
   margin-top: 18px;
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.admin-hub-workspace-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .panel {
   border: 1px solid var(--line);
@@ -357,6 +444,13 @@ body {
 .panel-focus-target .panel {
   border-color: #98bcfa;
   box-shadow: 0 0 0 2px rgba(152, 188, 250, 0.28), var(--shadow);
+}
+.admin-hub-workspace-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fffaf4 100%);
+  border-color: rgba(214, 190, 164, 0.34);
+}
+.admin-hub-workspace-card .actions {
+  margin-top: 12px;
 }
 .input-grid {
   display: grid;
@@ -4234,6 +4328,14 @@ button.queue-badge:hover {
   .panel-grid {
     grid-template-columns: 1fr;
   }
+  .admin-hub-hero {
+    padding: 20px;
+  }
+  .admin-hub-queue-grid,
+  .admin-hub-status-grid,
+  .admin-hub-workspace-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -4592,6 +4694,13 @@ button.queue-badge:hover {
     width: 100%;
     max-width: 100%;
     margin: 0;
+  }
+  .admin-hub-hero-meta {
+    gap: 8px;
+  }
+  .admin-hub-chip {
+    width: 100%;
+    justify-content: space-between;
   }
   .notification-bell {
     width: 44px;
