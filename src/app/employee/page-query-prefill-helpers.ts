@@ -34,10 +34,10 @@ const PROMOTED_ROUTE_SECTION_MAP: Record<string, string> = {
   leave: "/employee/leave#leave",
   "leave-calendar": "/employee/leave#leave-calendar",
   schedule: "/employee/schedule",
-  "request-feedback": "/employee/requests#request-feedback",
-  "request-search-sort": "/employee/requests#request-search-sort",
-  "request-timeline": "/employee/requests#request-timeline",
-  "request-resubmit": "/employee/requests#resubmit-workbench"
+  "request-feedback": "/employee/requests/monitoring",
+  "request-search-sort": "/employee/requests/monitoring",
+  "request-timeline": "/employee/requests/monitoring",
+  "request-resubmit": "/employee/requests/resubmit"
 };
 
 const RESUBMIT_CHANNEL_SET = new Set(["attendance", "leave"]);

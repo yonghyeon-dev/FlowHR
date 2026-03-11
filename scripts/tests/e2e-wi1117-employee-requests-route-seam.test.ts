@@ -10,6 +10,13 @@ function run() {
   const layout = readUtf8("src", "app", "employee", "layout.tsx");
   const guidePage = readUtf8("src", "app", "employee", "guide", "page.tsx");
   const requestsPage = readUtf8("src", "app", "employee", "requests", "page.tsx");
+  const requestsWorkspaceContent = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "requests",
+    "workspace-content.tsx"
+  );
   const workspaceHubs = readUtf8("src", "components", "employee-dashboard", "workspace-hubs.ts");
   const accountPanels = readUtf8(
     "src",
@@ -37,17 +44,13 @@ function run() {
 
   assert.match(accountPanels, /href: "\/employee\/attendance\?source=employee-dashboard"/);
   assert.match(accountPanels, /href: "\/employee\/leave\?source=employee-dashboard"/);
-  assert.match(accountPanels, /href: "\/employee\/requests\?source=employee-dashboard#request-monitoring"/);
-  assert.match(accountPanels, /href: "\/employee\/requests\?source=employee-dashboard#resubmit-workbench"/);
+  assert.match(accountPanels, /href: "\/employee\/requests\/monitoring\?source=employee-dashboard"/);
+  assert.match(accountPanels, /href: "\/employee\/requests\/resubmit\?source=employee-dashboard"/);
 
-  assert.match(requestsPage, /id: "attendance-actions"/);
-  assert.match(requestsPage, /id: "leave-actions"/);
-  assert.match(requestsPage, /id: "request-monitoring"/);
-  assert.match(requestsPage, /id: "resubmit-workbench"/);
-  assert.match(requestsPage, /\/employee\/requests#request-feedback/);
-  assert.match(requestsPage, /\/employee\/requests#request-search-sort/);
-  assert.match(requestsPage, /\/employee\/requests#request-timeline/);
-  assert.match(requestsPage, /\/employee\/requests#resubmit-workbench/);
+  assert.match(requestsWorkspaceContent, /id: "attendance-actions"/);
+  assert.match(requestsWorkspaceContent, /id: "leave-actions"/);
+  assert.match(requestsPage, /EmployeeRequestsWorkspaceContent/);
+  assert.match(requestsPage, /sectionMode="all"/);
 
   assert.match(workItem, /직원 요청 영역 라우트 승격 시임/);
 }

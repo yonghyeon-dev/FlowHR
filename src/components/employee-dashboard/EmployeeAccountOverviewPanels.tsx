@@ -119,12 +119,12 @@ function resolvePriorityWorkspaceTarget(
     case "request-search-sort":
     case "request-timeline":
       return {
-        href: "/employee/requests?source=employee-dashboard#request-monitoring",
+        href: "/employee/requests/monitoring?source=employee-dashboard",
         label: isKoLocale ? "요청 상태 센터 열기" : "Open request monitoring"
       };
     case "request-resubmit":
       return {
-        href: "/employee/requests?source=employee-dashboard#resubmit-workbench",
+        href: "/employee/requests/resubmit?source=employee-dashboard",
         label: isKoLocale ? "재제출 워크벤치 열기" : "Open resubmit workbench"
       };
     default:

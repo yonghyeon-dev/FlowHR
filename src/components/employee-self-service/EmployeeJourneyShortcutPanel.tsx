@@ -59,7 +59,7 @@ const SHORTCUTS = {
       key: "request-feedback",
       label: "요청 상태 센터",
       detail: "요청 피드백, 검색, 재제출 후속 조치를 전용 워크스페이스에서 이어갑니다.",
-      href: "/employee/requests?source=employee-dashboard#request-feedback"
+      href: "/employee/requests/monitoring?source=employee-dashboard"
     },
     {
       key: "schedule",
@@ -91,7 +91,7 @@ const SHORTCUTS = {
       key: "request-feedback",
       label: "Request status center",
       detail: "Continue feedback, search, and resubmit follow-up in the dedicated workspace.",
-      href: "/employee/requests?source=employee-dashboard#request-feedback"
+      href: "/employee/requests/monitoring?source=employee-dashboard"
     },
     {
       key: "schedule",

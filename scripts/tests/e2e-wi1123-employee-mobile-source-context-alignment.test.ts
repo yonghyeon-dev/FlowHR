@@ -9,6 +9,13 @@ function readUtf8(...parts: string[]) {
 function run() {
   const employeeLayout = readUtf8("src", "app", "employee", "layout.tsx");
   const requestsPage = readUtf8("src", "app", "employee", "requests", "page.tsx");
+  const requestsWorkspaceContent = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "requests",
+    "workspace-content.tsx"
+  );
   const sourceContext = readUtf8(
     "src",
     "components",
@@ -25,10 +32,18 @@ function run() {
   assert.match(employeeLayout, /\/employee\/leave\?source=employee-mobile-menu/);
   assert.match(employeeLayout, /\/employee\/schedule\?source=employee-mobile-menu/);
   assert.match(sourceContext, /case "employee-mobile-menu":/);
-  assert.match(requestsPage, /resolveEmployeeWorkspaceSourceEntry/);
-  assert.match(requestsPage, /sourceHint=\{workspaceSourceEntry\?\.hint \?\? null\}/);
-  assert.match(requestsPage, /returnHref=\{workspaceSourceEntry\?\.returnHref \?\? "\/employee"\}/);
-  assert.match(workItem, /모바일/);
+  assert.match(requestsPage, /EmployeeRequestsWorkspaceContent/);
+  assert.match(requestsWorkspaceContent, /resolveEmployeeWorkspaceSourceEntry/);
+  assert.match(
+    requestsWorkspaceContent,
+    /sourceHint=\{workspaceSourceEntry\?\.hint \?\? null\}/
+  );
+  assert.match(
+    requestsWorkspaceContent,
+    /returnHref=\{workspaceSourceEntry\?\.returnHref \?\? "\/employee\/requests"\}/
+  );
+  assert.match(workItem, /직원 모바일 진입 맥락 정렬/);
+  assert.match(workItem, /employee-mobile-menu/);
 }
 
 run();

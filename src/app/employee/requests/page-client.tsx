@@ -39,10 +39,14 @@ import { EmployeeRequestsResubmitWorkspacePanel } from "@/components/employee-da
 
 type EmployeeRequestsPageClientProps = {
   locale: "ko" | "en";
+  sectionMode?: "all" | "monitoring" | "resubmit";
 };
 
+export type EmployeeRequestsSectionMode = "all" | "monitoring" | "resubmit";
+
 export default function EmployeeRequestsPageClient({
-  locale
+  locale,
+  sectionMode = "all"
 }: EmployeeRequestsPageClientProps) {
   const isKoLocale = locale === "ko";
   const localeLabelBundle = useMemo(
@@ -393,7 +397,12 @@ export default function EmployeeRequestsPageClient({
       </section>
 
       <section className="panel-grid">
-        <div id="request-monitoring" className="panel-grid" style={{ gap: "var(--space-4)" }}>
+        {sectionMode !== "resubmit" ? (
+          <div
+            id="request-monitoring"
+            className="panel-grid"
+            style={{ gap: "var(--space-4)" }}
+          >
           <EmployeeRequestFeedbackPanels
             isKoLocale={isKoLocale}
             requestFeedbackStatusFilter={requestFeedbackStatusFilter}
@@ -426,18 +435,21 @@ export default function EmployeeRequestsPageClient({
             onTimelineChannelFilterChange={setTimelineChannelFilter}
             onTimelineStatusFilterChange={setTimelineStatusFilter}
           />
-        </div>
+          </div>
+        ) : null}
 
-        <EmployeeRequestsResubmitWorkspacePanel
-          isKoLocale={isKoLocale}
-          selectedResubmitCandidateKey={selectedResubmitCandidateKey}
-          resubmitCandidates={resubmitCandidates}
-          selectedResubmitCandidate={selectedResubmitCandidate}
-          listBadgeLabels={listBadgeLabels}
-          toRequestStatusLabel={toRequestStatusLabel}
-          onSelectedResubmitCandidateKeyChange={setSelectedResubmitCandidateKey}
-          resolveDraftHref={resolveDraftHref}
-        />
+        {sectionMode !== "monitoring" ? (
+          <EmployeeRequestsResubmitWorkspacePanel
+            isKoLocale={isKoLocale}
+            selectedResubmitCandidateKey={selectedResubmitCandidateKey}
+            resubmitCandidates={resubmitCandidates}
+            selectedResubmitCandidate={selectedResubmitCandidate}
+            listBadgeLabels={listBadgeLabels}
+            toRequestStatusLabel={toRequestStatusLabel}
+            onSelectedResubmitCandidateKeyChange={setSelectedResubmitCandidateKey}
+            resolveDraftHref={resolveDraftHref}
+          />
+        ) : null}
       </section>
     </>
   );

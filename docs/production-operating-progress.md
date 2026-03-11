@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1126` by removing the remaining dead attendance / leave mode logic from the employee home route and restore a clean home-only shell.
-2. Start the next employee shell pass that removes the remaining request/leave hash-only entry dependence where a stable route or workspace destination is more appropriate.
-3. Begin the first admin route-first extraction slice once the employee home surface no longer carries route-only workspace responsibility.
+1. Close `WI-1127` by promoting the remaining employee requests monitoring and resubmit entry points onto stable subroutes instead of hash-only destinations.
+2. Begin the first admin route-first extraction slice once the employee requests hub no longer depends on hidden subpage anchors for monitoring/resubmit work.
+3. Start the next employee requests follow-up pass that trims residual hash-only deep links inside route-first workspaces.
 
 ## 5. Blockers Or Watch Items
 
@@ -299,3 +299,6 @@ Latest planning reset:
 - Closed `WI-1125` through the full GitHub flow and merged it to `main` as `c3cba8f69f9814acc1a5c04cb6c9ffe1362077e7`, then deleted the feature branch.
 - Re-verified `WI-1125` on the delivery path and confirmed both `ci` (`22932415439`) and `vercel-production-deploy` (`22932415420`) stay green after the home-page export cleanup.
 - Started `WI-1126` to remove the remaining dead attendance / leave mode branches from `src/app/employee/page.tsx`, keep the employee home route home-only, and decouple `EmployeeApiLogsPanel` from attendance/leave workspace-only props.
+- Closed `WI-1126` through the full GitHub flow and merged it to `main` as `5eec94cabb9a676ac055d108f9896586a46aa15e`, then deleted the feature branch.
+- Re-verified `WI-1126` on the delivery path and confirmed both `ci` (`22934173121`) and `vercel-production-deploy` (`22934173130`) stay green after the employee home dead-mode cleanup.
+- Started `WI-1127` to promote employee request monitoring and resubmit follow-up into stable subroutes so dashboard, guide, and shortcut entry points no longer depend on `/employee/requests` hash targets.
