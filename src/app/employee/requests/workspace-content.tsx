@@ -41,7 +41,7 @@ function buildRequestActionCards(
             "근태 정정 초안과 확인 작업은 전용 근태 워크스페이스에서 시작하고, 요청 상태 확인은 이 허브에서 이어갑니다.",
           actions: [
             {
-              href: "/employee/attendance?source=employee-requests",
+              href: "/employee/attendance/correction?source=employee-requests",
               label: "근태 작업 열기",
               tone: "primary"
             },
@@ -59,7 +59,7 @@ function buildRequestActionCards(
             "휴가 초안과 일정 조정은 전용 휴가 워크스페이스에서 시작하고, 승인/재제출 후속 조치는 요청 허브에서 이어갑니다.",
           actions: [
             {
-              href: "/employee/leave?source=employee-requests",
+              href: "/employee/leave/request?source=employee-requests",
               label: "휴가 작업 열기",
               tone: "primary"
             },
@@ -115,7 +115,7 @@ function buildRequestActionCards(
             "Use the attendance workspace for drafts and corrections, then continue monitoring here.",
           actions: [
             {
-              href: "/employee/attendance?source=employee-requests",
+              href: "/employee/attendance/correction?source=employee-requests",
               label: "Open attendance workspace",
               tone: "primary"
             },
@@ -133,7 +133,7 @@ function buildRequestActionCards(
             "Use the leave workspace for leave drafts and continue request follow-up from this hub.",
           actions: [
             {
-              href: "/employee/leave?source=employee-requests",
+              href: "/employee/leave/request?source=employee-requests",
               label: "Open leave workspace",
               tone: "primary"
             },

@@ -51,11 +51,15 @@ import { useI18n } from "@/lib/i18n/provider";
 import { useSearchParams } from "next/navigation";
 
 type EmployeeAttendanceLeaveWorkspaceMode = "attendance" | "leave";
-export type EmployeeLeaveWorkspaceSectionMode = "all" | "calendar";
+export type EmployeeAttendanceLeaveWorkspaceSectionMode =
+  | "all"
+  | "correction"
+  | "request"
+  | "calendar";
 
 type EmployeeAttendanceLeaveWorkspaceClientProps = {
   mode: EmployeeAttendanceLeaveWorkspaceMode;
-  sectionMode?: EmployeeLeaveWorkspaceSectionMode;
+  sectionMode?: EmployeeAttendanceLeaveWorkspaceSectionMode;
 };
 
 export default function EmployeeAttendanceLeaveWorkspaceClient({
@@ -603,8 +607,69 @@ export default function EmployeeAttendanceLeaveWorkspaceClient({
   } as const;
 
   const isAttendanceWorkspace = mode === "attendance";
+  const isAttendanceCorrectionWorkspace =
+    isAttendanceWorkspace && sectionMode === "correction";
+  const isLeaveRequestWorkspace =
+    !isAttendanceWorkspace && sectionMode === "request";
   const isLeaveCalendarWorkspace =
     !isAttendanceWorkspace && sectionMode === "calendar";
+  const workspaceTitle = isAttendanceWorkspace
+    ? isAttendanceCorrectionWorkspace
+      ? isKoLocale
+        ? "근태 정정 작업면"
+        : "Attendance correction workspace"
+      : isKoLocale
+        ? "근태 작업 워크스페이스"
+        : "Attendance workspace"
+    : isLeaveCalendarWorkspace
+      ? isKoLocale
+        ? "휴가 캘린더 작업면"
+        : "Leave calendar workspace"
+      : isLeaveRequestWorkspace
+        ? isKoLocale
+          ? "휴가 요청 작업면"
+          : "Leave request workspace"
+        : isKoLocale
+          ? "휴가 작업 워크스페이스"
+          : "Leave workspace";
+  const workspaceDescription = isAttendanceWorkspace
+    ? isAttendanceCorrectionWorkspace
+      ? isKoLocale
+        ? "해시 목적지 대신 안정적인 경로에서 근태 정정 초안과 대상 기록을 바로 이어받습니다."
+        : "Continue attendance correction drafts and target-record review from a stable route instead of a hash destination."
+      : isKoLocale
+        ? "Today 홈과 분리된 전용 근태 작업면에서 출퇴근 기록과 정정 요청을 처리합니다."
+        : "Handle attendance records and correction requests from the dedicated route instead of the Today home."
+    : isLeaveCalendarWorkspace
+      ? isKoLocale
+        ? "휴가 캘린더를 독립 경로에서 열고 날짜 기반 휴가 초안을 바로 이어받습니다."
+        : "Open the leave calendar on its own route and continue date-based leave drafts from the same workspace."
+      : isLeaveRequestWorkspace
+        ? isKoLocale
+          ? "휴가 요청 본작업을 안정적인 경로로 열고 필요할 때 같은 화면에서 캘린더를 참고합니다."
+          : "Open the primary leave request flow on a stable route and keep calendar support in the same workspace."
+        : isKoLocale
+          ? "Today 홈과 분리된 전용 휴가 작업면에서 요청, 잔여 연차, 캘린더 확인을 이어갑니다."
+          : "Continue leave requests, balances, and calendar review from the dedicated route instead of the Today home.";
+  const workspaceMetaLabel = isAttendanceWorkspace
+    ? isAttendanceCorrectionWorkspace
+      ? isKoLocale
+        ? "대상 기록 선택과 일정 기반 정정 초안 이어받기"
+        : "Target-record selection and schedule-based correction handoff"
+      : isKoLocale
+        ? "출퇴근 기록과 일정 기반 정정 초안 이어받기"
+        : "Check-in records and schedule-based correction handoff"
+    : isLeaveCalendarWorkspace
+      ? isKoLocale
+        ? "캘린더 확인과 날짜 기반 휴가 초안 이어받기"
+        : "Calendar review and date-based leave draft handoff"
+      : isLeaveRequestWorkspace
+        ? isKoLocale
+          ? "휴가 요청 입력과 캘린더 기반 초안 이어받기"
+          : "Leave request input and calendar-based draft handoff"
+        : isKoLocale
+          ? "휴가 요청, 잔여 연차, 캘린더 기반 초안 이어받기"
+          : "Leave requests, balances, and calendar-based draft handoff";
 
   return (
     <main className="saas-content">

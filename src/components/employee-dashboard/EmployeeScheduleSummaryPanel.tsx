@@ -63,7 +63,7 @@ export function EmployeeScheduleSummaryPanel({
         <Link className="btn btn-primary" href={scheduleWorkspaceHref}>
           {isKoLocale ? "일정 워크스페이스 열기" : "Open schedule workspace"}
         </Link>
-        <Link className="btn btn-secondary" href="/employee/attendance?source=employee-dashboard">
+        <Link className="btn btn-secondary" href="/employee/attendance/correction?source=employee-dashboard">
           {isKoLocale ? "근태 작업 열기" : "Open attendance workspace"}
         </Link>
       </div>

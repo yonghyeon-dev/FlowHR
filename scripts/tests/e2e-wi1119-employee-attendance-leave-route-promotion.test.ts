@@ -11,6 +11,13 @@ function run() {
   const queryHelpers = readUtf8("src", "app", "employee", "page-query-prefill-helpers.ts");
   const employeeLayout = readUtf8("src", "app", "employee", "layout.tsx");
   const attendancePage = readUtf8("src", "app", "employee", "attendance", "page.tsx");
+  const attendancePageClient = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "attendance",
+    "page-client.tsx"
+  );
   const leavePage = readUtf8("src", "app", "employee", "leave", "page.tsx");
   const leavePageClient = readUtf8(
     "src",
@@ -48,8 +55,8 @@ function run() {
     "WI-1119-employee-attendance-leave-route-promotion.md"
   );
 
-  assert.match(queryHelpers, /attendance: "\/employee\/attendance#attendance"/);
-  assert.match(queryHelpers, /leave: "\/employee\/leave#leave"/);
+  assert.match(queryHelpers, /attendance: "\/employee\/attendance\/correction"/);
+  assert.match(queryHelpers, /leave: "\/employee\/leave\/request"/);
   assert.match(queryHelpers, /"leave-calendar": "\/employee\/leave\/calendar"/);
   assert.doesNotMatch(employeePage, /mode === "attendance"/);
   assert.doesNotMatch(employeePage, /mode === "leave"/);
@@ -57,8 +64,9 @@ function run() {
   assert.doesNotMatch(employeePage, /<EmployeeAttendanceLeavePanels/);
   assert.match(
     attendancePage,
-    /EmployeeAttendanceLeaveWorkspaceClient mode="attendance"/
+    /EmployeeAttendanceWorkspacePageClient/
   );
+  assert.match(attendancePageClient, /EmployeeAttendanceLeaveWorkspaceClient/);
   assert.match(leavePage, /EmployeeLeaveWorkspacePageClient/);
   assert.match(
     leavePageClient,
@@ -68,11 +76,11 @@ function run() {
   assert.match(workspaceClient, /EmployeeLeaveRequestPanel/);
   assert.match(employeeLayout, /\/employee\/attendance/);
   assert.match(employeeLayout, /\/employee\/leave/);
-  assert.match(shortcuts, /\/employee\/attendance\?source=employee-dashboard/);
+  assert.match(shortcuts, /\/employee\/attendance\/correction\?source=employee-dashboard/);
   assert.match(shortcuts, /\/employee\/leave\/calendar\?source=employee-dashboard/);
-  assert.match(workspaceHubs, /\/employee\/attendance\?source=employee-dashboard/);
-  assert.match(workspaceHubs, /\/employee\/leave\?source=employee-dashboard/);
-  assert.match(scheduleBoard, /\/employee\/attendance\?source=employee-schedule&attendanceSource=schedule/);
+  assert.match(workspaceHubs, /\/employee\/attendance\/correction\?source=employee-dashboard/);
+  assert.match(workspaceHubs, /\/employee\/leave\/request\?source=employee-dashboard/);
+  assert.match(scheduleBoard, /\/employee\/attendance\/correction\?source=employee-schedule&attendanceSource=schedule/);
   assert.match(workItem, /route/i);
 }
 

@@ -14,6 +14,13 @@ function run() {
     "attendance",
     "page.tsx"
   );
+  const attendancePageClient = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "attendance",
+    "page-client.tsx"
+  );
   const leavePage = readUtf8("src", "app", "employee", "leave", "page.tsx");
   const leavePageClient = readUtf8(
     "src",
@@ -35,7 +42,11 @@ function run() {
 
   assert.match(
     attendancePage,
-    /EmployeeAttendanceLeaveWorkspaceClient mode="attendance"/
+    /EmployeeAttendanceWorkspacePageClient/
+  );
+  assert.match(
+    attendancePageClient,
+    /EmployeeAttendanceLeaveWorkspaceClient[\s\S]*mode="attendance"/
   );
   assert.match(leavePage, /EmployeeLeaveWorkspacePageClient/);
   assert.match(

@@ -372,8 +372,8 @@ export default function EmployeeRequestsPageClient({
   const resolveDraftHref = useCallback((candidate: { channel: "attendance" | "leave"; recordId: string }) => {
     const basePath =
       candidate.channel === "attendance"
-        ? "/employee/attendance"
-        : "/employee/leave";
+        ? "/employee/attendance/correction"
+        : "/employee/leave/request";
     return `${basePath}?source=employee-requests&resubmitChannel=${candidate.channel}&resubmitRecordId=${encodeURIComponent(candidate.recordId)}`;
   }, []);
 
