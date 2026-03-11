@@ -181,6 +181,10 @@ export default function EmployeeNotificationSettingsPage() {
   const [resetting, setResetting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const sourceHint =
+    locale === "ko"
+      ? "개인 알림 선호는 조직 기본값 위에 덮어써지며 공지, 근태, 급여 흐름에 바로 반영됩니다."
+      : "Personal preferences override organization defaults and immediately affect notice, attendance, and payroll alerts.";
 
   const enabledCategoryCount = useMemo(() => {
     return Object.values(settings.categories).filter(Boolean).length;
@@ -302,31 +306,44 @@ export default function EmployeeNotificationSettingsPage() {
   }
 
   return (
-    <main className="saas-content">
-      <section className="hero-panel">
-        <p className="eyebrow">{copy.pageTitle}</p>
-        <h1>{copy.pageTitle}</h1>
-        <p className="hero-copy">{copy.pageSubtitle}</p>
-        <div className="hero-meta">
-          <span>
-            {copy.enabledTypeLabel}: {enabledCategoryCountLabel}
-          </span>
-          <span>
-            {copy.lastSavedLabel}: {formatLocalizedDateTime(lastSavedAt, runtimeLocale, copy.noSaveHistory)}
-          </span>
-          <span>{hasCustomPreferences ? copy.customSourceLabel : copy.defaultSourceLabel}</span>
+    <main className="saas-content workspace-shell employee-workspace-shell">
+      <header className="page-header workspace-page-header employee-workspace-status-header">
+        <div>
+          <h1 className="page-title">{copy.pageTitle}</h1>
+          <p className="page-subtitle">{copy.pageSubtitle}</p>
+          <p className="small muted workspace-source-banner">{sourceHint}</p>
+        </div>
+        <div className="page-actions">
           <Link href="/employee" className="btn btn-secondary">
             {copy.backToHome}
           </Link>
+          <Link href="/employee/settings" className="btn btn-secondary">
+            {locale === "ko" ? "개인 설정" : "Personal Settings"}
+          </Link>
         </div>
+      </header>
+
+      <section className="kpi-strip workspace-summary-strip employee-workspace-status-strip" aria-label={copy.pageTitle}>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.enabledTypeLabel}</p>
+          <strong>{enabledCategoryCountLabel}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.lastSavedLabel}</p>
+          <strong>{formatLocalizedDateTime(lastSavedAt, runtimeLocale, copy.noSaveHistory)}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{locale === "ko" ? "적용 기준" : "Source"}</p>
+          <strong>{hasCustomPreferences ? copy.customSourceLabel : copy.defaultSourceLabel}</strong>
+        </article>
       </section>
 
-      {sessionError ? <p className="small fail">{formatUserFacingErrorMessage(sessionError, runtimeLocale)}</p> : null}
-      {errorMessage ? <p className="small fail">{errorMessage}</p> : null}
-      {successMessage ? <p className="small ok">{successMessage}</p> : null}
+      {sessionError ? <p className="small fail workspace-inline-status">{formatUserFacingErrorMessage(sessionError, runtimeLocale)}</p> : null}
+      {errorMessage ? <p className="small fail workspace-inline-status">{errorMessage}</p> : null}
+      {successMessage ? <p className="small ok workspace-inline-status">{successMessage}</p> : null}
 
-      <section className="panel-grid">
-        <article className="panel">
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.channelSectionTitle}</h2>
           <p className="small">{copy.channelSectionDescription}</p>
           <div className="actions">
@@ -359,7 +376,7 @@ export default function EmployeeNotificationSettingsPage() {
           </div>
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.categorySectionTitle}</h2>
           <p className="small">{copy.categorySectionDescription}</p>
           <div className="actions">
@@ -421,7 +438,7 @@ export default function EmployeeNotificationSettingsPage() {
           </div>
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card workspace-note-card">
           <h2>{copy.adminDefaultTitle}</h2>
           <p className="small muted">{copy.adminDefaultDescription}</p>
           <ul className="simple-list">
