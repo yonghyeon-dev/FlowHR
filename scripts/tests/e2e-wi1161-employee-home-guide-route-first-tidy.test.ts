@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { employeeGuideCopyByLocale } from "@/components/employee-guide/copy";
+
 function readUtf8(...parts: string[]) {
   return readFileSync(join(process.cwd(), ...parts), "utf8");
 }
@@ -42,8 +44,14 @@ function run() {
   assert.match(dashboard, /requestsHubLabel/);
 
   assert.match(sections, /workspace-section-card workspace-toolbar-card/);
-  assert.match(sections, /workspace-section-card workspace-note-card/);
-  assert.match(copy, /직원 인앱 가이드/);
+  assert.match(sections, /employee-guide-actions-card|workspace-section-card workspace-note-card/);
+
+  assert.equal(employeeGuideCopyByLocale.ko.title, "직원 이용 가이드");
+  assert.equal(
+    employeeGuideCopyByLocale.ko.loadingLabel,
+    "가이드 상태를 불러오는 중입니다..."
+  );
+  assert.doesNotMatch(copy, /吏곸썝|濡쒓렇|媛\?|몃맂/);
 }
 
 run();

@@ -54,59 +54,59 @@ export type EmployeeGuideCopy = {
 
 const defaultCopy: EmployeeGuideCopy = {
   heroEyebrow: "FlowHR Employee",
-  title: "Employee In-App Guide",
+  title: "Employee Guide",
   description:
-    "Follow the first-login path for attendance correction, leave requests, and payslip checks.",
+    "Use the shortest route into attendance corrections, leave requests, and payroll documents.",
   sourceHint:
-    "Use this guide as the shortest path into attendance, leave, and document workspaces.",
+    "This guide keeps first-run employee work focused on route-first workspaces instead of hidden home sections.",
   productionWarning:
-    "Production runtime requires a bearer token session for API calls.",
-  loginCta: "Open /login",
+    "Production runtime requires a bearer-token login session before API requests can load.",
+  loginCta: "Open login",
   backToHomeLabel: "Employee home",
   requestsHubLabel: "Requests hub",
-  contextTitle: "Workspace context",
+  contextTitle: "Current guide status",
   organizationIdLabel: "Organization",
-  employeeIdLabel: "Employee number",
-  accessTokenLabel: "Connection token (optional)",
+  employeeIdLabel: "Signed-in employee number",
+  accessTokenLabel: "Connection token",
   loadButton: "Refresh guide status",
   loadingLabel: "Loading guide status...",
   progressLabel: "Guide progress",
   journeyTitle: "Recommended first path",
   journeySteps: [
-    "1) Verify account context (organization and employee number).",
-    "2) Submit one attendance correction to learn approval flow.",
-    "3) Submit one leave request and verify request status.",
-    "4) Open payslips and confirm the latest confirmed payroll."
+    "Verify that your employee account context is ready.",
+    "Open the attendance correction workspace and review one request path.",
+    "Move into leave request work and check request status.",
+    "Open payslips and receipt documents to confirm the latest payroll trail."
   ],
-  quickActionsTitle: "Quick actions",
+  quickActionsTitle: "Start a task now",
   quickActions: [
     {
-      label: "Attendance",
+      label: "Attendance correction",
       href: "/employee/attendance/correction?source=employee-guide",
-      description: "Check-in/check-out and correction request."
+      description: "Review attendance records and open a correction request."
     },
     {
-      label: "Leave",
+      label: "Leave request",
       href: "/employee/leave/request?source=employee-guide",
-      description: "Submit leave request and track status."
+      description: "Draft a leave request and follow its approval state."
     },
     {
       label: "Payslips",
       href: "/employee/payslips",
-      description: "Review confirmed payroll details."
+      description: "Review confirmed payroll documents and monthly changes."
     },
     {
-      label: "Receipts",
+      label: "Receipt confirmations",
       href: "/employee/payslip-receipts",
-      description: "Track payslip receipt status."
+      description: "Check whether recent payroll receipts were acknowledged."
     }
   ],
   checklistTitle: "Onboarding checklist",
   checklist: {
-    profile: "Profile context is ready",
-    attendance: "At least one attendance record exists (last 14 days)",
-    leave: "At least one leave request exists (last 14 days)",
-    payslip: "At least one confirmed payslip exists (last 14 days)"
+    profile: "Employee account context is ready",
+    attendance: "At least one attendance record exists in the last 14 days",
+    leave: "At least one leave request exists in the last 14 days",
+    payslip: "At least one confirmed payslip exists in the last 14 days"
   },
   summaryTitle: "Recent activity summary",
   summary: {
@@ -114,8 +114,8 @@ const defaultCopy: EmployeeGuideCopy = {
     leave: "Leave requests",
     payslip: "Confirmed payslips"
   },
-  logsTitle: "API logs",
-  logsEmpty: "No logs yet.",
+  logsTitle: "Guide request logs",
+  logsEmpty: "No guide requests have been recorded yet.",
   doneLabel: "DONE",
   todoLabel: "TODO",
   okLabel: "OK",
@@ -130,77 +130,77 @@ const defaultCopy: EmployeeGuideCopy = {
 export const employeeGuideCopyByLocale: Record<FlowLocale, EmployeeGuideCopy> = {
   ko: {
     ...defaultCopy,
-    heroEyebrow: "FlowHR 직원",
-    title: "직원 인앱 가이드",
+    heroEyebrow: "FlowHR \uC9C1\uC6D0",
+    title: "\uC9C1\uC6D0 \uC774\uC6A9 \uAC00\uC774\uB4DC",
     description:
-      "첫 로그인 이후 가장 많이 쓰는 근태, 휴가, 명세서 경로를 한 번에 익힐 수 있게 정리했습니다.",
+      "\uCCAB \uB85C\uADF8\uC778 \uC774\uD6C4 \uAC00\uC7A5 \uC790\uC8FC \uC4F0\uB294 \uADFC\uD0DC, \uD734\uAC00, \uAE09\uC5EC \uBB38\uC11C \uC791\uC5C5\uC744 \uD55C \uBC88\uC5D0 \uC775\uD790 \uC218 \uC788\uB3C4\uB85D \uC815\uB9AC\uD55C \uC548\uB0B4 \uD654\uBA74\uC785\uB2C8\uB2E4.",
     sourceHint:
-      "오늘 처리할 요청과 문서 작업을 빠르게 찾고, route-first 워크스페이스로 바로 이동할 수 있습니다.",
+      "\uC228\uACA8\uC9C4 \uD648 \uC139\uC158 \uB300\uC2E0, \uC2E4\uC81C \uC5C5\uBB34\uAC00 \uC5F4\uB9AC\uB294 route-first \uC6CC\uD06C\uC2A4\uD398\uC774\uC2A4\uB85C \uBC14\uB85C \uC774\uB3D9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
     productionWarning:
-      "운영 환경에서 API를 호출하려면 로그인 세션이 필요합니다.",
-    loginCta: "로그인하기",
-    backToHomeLabel: "직원 홈",
-    requestsHubLabel: "요청 허브",
-    contextTitle: "가이드 상태",
-    organizationIdLabel: "소속 조직",
-    employeeIdLabel: "직원 번호",
-    accessTokenLabel: "연결 토큰",
-    loadButton: "가이드 상태 새로고침",
-    loadingLabel: "가이드 상태를 불러오는 중입니다...",
-    progressLabel: "가이드 진행률",
-    journeyTitle: "권장 시작 순서",
+      "\uC6B4\uC601 \uD658\uACBD\uC5D0\uC11C \uAC00\uC774\uB4DC \uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uB824\uBA74 \uB85C\uADF8\uC778 \uC138\uC158\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.",
+    loginCta: "\uB85C\uADF8\uC778\uC73C\uB85C \uC774\uB3D9",
+    backToHomeLabel: "\uC9C1\uC6D0 \uD648\uC73C\uB85C \uB3CC\uC544\uAC00\uAE30",
+    requestsHubLabel: "\uC694\uCCAD \uD5C8\uBE0C \uC5F4\uAE30",
+    contextTitle: "\uD604\uC7AC \uAC00\uC774\uB4DC \uC0C1\uD0DC",
+    organizationIdLabel: "\uC18C\uC18D \uC6CC\uD06C\uC2A4\uD398\uC774\uC2A4",
+    employeeIdLabel: "\uB85C\uADF8\uC778\uB41C \uC9C1\uC6D0 \uBC88\uD638",
+    accessTokenLabel: "\uC5F0\uACB0 \uC138\uC158",
+    loadButton: "\uAC00\uC774\uB4DC \uC0C1\uD0DC \uC0C8\uB85C\uACE0\uCE68",
+    loadingLabel: "\uAC00\uC774\uB4DC \uC0C1\uD0DC\uB97C \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4...",
+    progressLabel: "\uAC00\uC774\uB4DC \uC9C4\uD589\uB960",
+    journeyTitle: "\uAD8C\uC7A5 \uC2DC\uC791 \uC21C\uC11C",
     journeySteps: [
-      "1) 계정과 직원 번호가 정상인지 먼저 확인합니다.",
-      "2) 출퇴근 정정 요청을 한 번 열어 승인 흐름을 익힙니다.",
-      "3) 휴가 요청과 요청 상태 확인 경로를 한 번씩 점검합니다.",
-      "4) 급여 명세서와 수신 확인 문서를 열어 최근 지급 내역을 확인합니다."
+      "\uACC4\uC815\uACFC \uC9C1\uC6D0 \uBC88\uD638\uAC00 \uC62C\uBC14\uB978\uC9C0 \uBA3C\uC800 \uD655\uC778\uD569\uB2C8\uB2E4.",
+      "\uADFC\uD0DC \uC815\uC815 \uC6CC\uD06C\uC2A4\uD398\uC774\uC2A4\uB97C \uC5F4\uC5B4 \uC2B9\uC778 \uD750\uB984\uC744 \uD55C \uBC88 \uC0B4\uD3B4\uBD05\uB2C8\uB2E4.",
+      "\uD734\uAC00 \uC694\uCCAD \uC791\uC5C5\uC73C\uB85C \uC774\uB3D9\uD574 \uC791\uC131\uACFC \uC0C1\uD0DC \uD655\uC778 \uD750\uB984\uC744 \uC775\uD799\uB2C8\uB2E4.",
+      "\uAE09\uC5EC \uBA85\uC138\uC11C\uC640 \uC218\uC2E0 \uD655\uC778 \uBB38\uC11C\uB97C \uC5F4\uC5B4 \uCD5C\uADFC \uAE09\uC5EC \uC774\uB825\uC744 \uD655\uC778\uD569\uB2C8\uB2E4."
     ],
-    quickActionsTitle: "빠른 이동",
+    quickActionsTitle: "\uBC14\uB85C \uC2DC\uC791\uD560 \uC791\uC5C5",
     quickActions: [
       {
-        label: "근태 작업",
+        label: "\uADFC\uD0DC \uC815\uC815",
         href: "/employee/attendance/correction?source=employee-guide",
-        description: "출퇴근 기록과 정정 요청 작업으로 이동합니다."
+        description: "\uCD9C\uD1F4\uADFC \uAE30\uB85D\uC744 \uD655\uC778\uD558\uACE0 \uC815\uC815 \uC694\uCCAD \uD654\uBA74\uC73C\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4."
       },
       {
-        label: "휴가 작업",
+        label: "\uD734\uAC00 \uC694\uCCAD",
         href: "/employee/leave/request?source=employee-guide",
-        description: "휴가 요청 작성과 상태 확인으로 이동합니다."
+        description: "\uD734\uAC00 \uC694\uCCAD\uC744 \uC791\uC131\uD558\uACE0 \uC2B9\uC778 \uC0C1\uD0DC\uB97C \uD655\uC778\uD569\uB2C8\uB2E4."
       },
       {
-        label: "급여 명세서",
+        label: "\uAE09\uC5EC \uBA85\uC138\uC11C",
         href: "/employee/payslips",
-        description: "확정된 급여 명세서를 확인합니다."
+        description: "\uD655\uC815\uB41C \uAE09\uC5EC \uBA85\uC138\uC640 \uC804\uC6D4 \uBE44\uAD50 \uC815\uBCF4\uB97C \uD655\uC778\uD569\uB2C8\uB2E4."
       },
       {
-        label: "수신 확인",
+        label: "\uC218\uC2E0 \uD655\uC778",
         href: "/employee/payslip-receipts",
-        description: "명세서 수신 확인 상태를 점검합니다."
+        description: "\uBA85\uC138\uC11C \uC218\uC2E0 \uD655\uC778 \uC0C1\uD0DC\uC640 \uCD5C\uADFC \uBB38\uC11C \uC774\uB825\uC744 \uC810\uAC80\uD569\uB2C8\uB2E4."
       }
     ],
-    checklistTitle: "온보딩 체크리스트",
+    checklistTitle: "\uC628\uBCF4\uB529 \uCCB4\uD06C\uB9AC\uC2A4\uD2B8",
     checklist: {
-      profile: "프로필과 계정 맥락 확인",
-      attendance: "최근 14일 내 근태 기록 1건 이상",
-      leave: "최근 14일 내 휴가 요청 1건 이상",
-      payslip: "최근 14일 내 확정 명세서 1건 이상"
+      profile: "\uD504\uB85C\uD544\uACFC \uACC4\uC815 \uB9E5\uB77D \uD655\uC778",
+      attendance: "\uCD5C\uADFC 14\uC77C \uB0B4 \uADFC\uD0DC \uAE30\uB85D 1\uAC74 \uC774\uC0C1",
+      leave: "\uCD5C\uADFC 14\uC77C \uB0B4 \uD734\uAC00 \uC694\uCCAD 1\uAC74 \uC774\uC0C1",
+      payslip: "\uCD5C\uADFC 14\uC77C \uB0B4 \uD655\uC815 \uBA85\uC138\uC11C 1\uAC74 \uC774\uC0C1"
     },
-    summaryTitle: "최근 작업 요약",
+    summaryTitle: "\uCD5C\uADFC \uC791\uC5C5 \uC694\uC57D",
     summary: {
-      attendance: "근태 기록",
-      leave: "휴가 요청",
-      payslip: "확정 명세서"
+      attendance: "\uADFC\uD0DC \uAE30\uB85D",
+      leave: "\uD734\uAC00 \uC694\uCCAD",
+      payslip: "\uD655\uC815 \uBA85\uC138\uC11C"
     },
-    logsTitle: "요청 로그",
-    logsEmpty: "아직 기록된 요청 로그가 없습니다.",
-    doneLabel: "완료",
-    todoLabel: "진행 필요",
-    okLabel: "성공",
-    failLabel: "실패",
+    logsTitle: "\uAC00\uC774\uB4DC \uC694\uCCAD \uB85C\uADF8",
+    logsEmpty: "\uC544\uC9C1 \uAE30\uB85D\uB41C \uAC00\uC774\uB4DC \uC694\uCCAD \uB85C\uADF8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    doneLabel: "\uC644\uB8CC",
+    todoLabel: "\uC9C4\uD589 \uD544\uC694",
+    okLabel: "\uC131\uACF5",
+    failLabel: "\uC2E4\uD328",
     requestLabels: {
-      attendanceRecords: "근태 기록 조회",
-      leaveRequests: "휴가 요청 조회",
-      confirmedPayslips: "확정 명세서 조회"
+      attendanceRecords: "\uADFC\uD0DC \uAE30\uB85D \uC870\uD68C",
+      leaveRequests: "\uD734\uAC00 \uC694\uCCAD \uC870\uD68C",
+      confirmedPayslips: "\uD655\uC815 \uBA85\uC138\uC11C \uC870\uD68C"
     }
   },
   en: defaultCopy
