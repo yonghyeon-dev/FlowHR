@@ -230,8 +230,8 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Begin the first shared workspace implementation slice now that employee request / attendance / leave / schedule seams all route directly through dedicated workspaces.
-2. Align employee mobile entry points with the route-first Today / Requests / Attendance / Leave / Schedule model.
+1. Align employee mobile entry points with the route-first Today / Requests / Attendance / Leave / Schedule model.
+2. Begin the first shared workspace implementation slice now that employee request / attendance / leave / schedule seams all route directly through dedicated workspaces.
 3. Start the next employee shell pass that removes the remaining request/leave hash-only entry dependence where a stable route or workspace destination is more appropriate.
 
 ## 5. Blockers Or Watch Items
@@ -287,3 +287,6 @@ Latest planning reset:
 - Closed `WI-1121` through the full GitHub flow and merged it to `main` as `b835618b9ca007df5febfa0e86cb1a493523d8cc`, then deleted the feature branch.
 - Re-verified `WI-1121` on the delivery path and confirmed both `ci` (`22930076868`) and `vercel-production-deploy` (`22930076871`) stay green after the employee workspace hero alignment.
 - Started `WI-1122` to remove the last requests-workspace resubmit handoff that still returned through the hidden home `?focus=` path.
+- Closed `WI-1122` through the full GitHub flow and merged it to `main` as `9c0d6354ae65c03e5efe173c7e74a4e498406638`, then deleted the feature branch.
+- Re-verified `WI-1122` on the delivery path and confirmed both `ci` (`22930562197`) and `vercel-production-deploy` (`22930562196`) stay green after the requests resubmit route promotion.
+- Started `WI-1123` to align mobile-menu entry context with the same employee route-first source model already used by dashboard, guide, requests, and schedule surfaces.

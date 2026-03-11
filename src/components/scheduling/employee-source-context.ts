@@ -11,7 +11,7 @@ export function resolveEmployeeWorkspaceSourceEntry(
   switch (source) {
     case "employee-dashboard":
       return {
-        hint: isKoLocale ? "Today 홈에서 이동했습니다." : "Opened from Today home.",
+        hint: isKoLocale ? "Today 화면에서 이동했습니다." : "Opened from Today home.",
         returnHref: "/employee",
         returnLabel: isKoLocale ? "Today로 돌아가기" : "Back to Today"
       };
@@ -40,6 +40,14 @@ export function resolveEmployeeWorkspaceSourceEntry(
         returnLabel: isKoLocale
           ? "일정 워크스페이스로 돌아가기"
           : "Back to schedule workspace"
+      };
+    case "employee-mobile-menu":
+      return {
+        hint: isKoLocale
+          ? "모바일 메뉴에서 이동했습니다."
+          : "Opened from the mobile menu.",
+        returnHref: "/employee",
+        returnLabel: isKoLocale ? "Today로 돌아가기" : "Back to Today"
       };
     default:
       return null;
