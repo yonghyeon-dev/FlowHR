@@ -31,6 +31,12 @@ async function run() {
     "contracts",
     "EmployeeContractsInboxHeader.tsx"
   );
+  const employeeContractsKpiStrip = readUtf8(
+    "src",
+    "components",
+    "contracts",
+    "EmployeeContractsInboxKpiStrip.tsx"
+  );
   const employeeContractsResponsePanel = readUtf8(
     "src",
     "components",
@@ -84,7 +90,7 @@ async function run() {
     /workspace-section-card workspace-toolbar-card/
   );
   assert.match(
-    employeeContractsInbox,
+    employeeContractsKpiStrip,
     /className="kpi-strip workspace-summary-strip employee-workspace-status-strip"/
   );
   assert.match(

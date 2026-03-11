@@ -32,6 +32,7 @@ import {
   normalizeContractsEntityTitle
 } from "@/components/contracts/runtime-copy-helpers";
 import { resolveContractApprovalStatusLabel, resolveContractDocumentStatusLabel } from "@/components/contracts/status-label-helpers";
+import { resolveContractsWorkspaceMessageToneClass } from "@/components/contracts/workspace-visual-helpers";
 import { formatEmployeeIdForLocaleDisplay, normalizeEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -111,10 +112,7 @@ export default function AdminContractsWorkspace({ accessToken }: { accessToken: 
     }
   });
   const dashboardFocusLabel = decisionQueueOnly ? copy.decisionQueueCountLabel : documentStatusFilter === "SENT" ? copy.pendingResponseQueueLabel : slaRiskFilter === "OVERDUE" ? copy.overdueSlaCountLabel : copy.documentsKpiLabel;
-  const messageToneClass =
-    error || (message && message.toLowerCase().includes("fail"))
-      ? "small fail workspace-inline-status"
-      : "small workspace-inline-status";
+  const messageToneClass = resolveContractsWorkspaceMessageToneClass(message, error);
   useEffect(() => {
     setContractsRuntimeLocale(locale);
     return () => {

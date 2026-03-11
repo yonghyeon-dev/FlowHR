@@ -4,8 +4,7 @@ import { useSearchParams } from "next/navigation";
 import {
   contractApprovalStatusLabelByLocale,
   contractDocumentStatusLabelByLocale,
-  employeeContractsCopyByLocale,
-  toDateText
+  employeeContractsCopyByLocale
 } from "@/components/contracts/copy";
 import { EmployeeContractsInboxHeader } from "@/components/contracts/EmployeeContractsInboxHeader";
 import { EmployeeContractsInboxList } from "@/components/contracts/EmployeeContractsInboxList";
@@ -34,6 +33,14 @@ import {
 } from "@/components/contracts/http";
 import { type ContractSignatureEvidenceResponse, type EmployeeContractDocument as ContractDocument } from "@/components/contracts/types";
 import { resolveEmployeeContractsSourceEntry } from "@/components/contracts/employee-source-context";
+import {
+  copyContractEvidenceMetadata,
+  downloadContractEvidence,
+  loadContractSignatureEvidence
+} from "@/components/contracts/evidence-actions";
+import { EmployeeContractsInboxKpiStrip } from "@/components/contracts/EmployeeContractsInboxKpiStrip";
+import { EmployeeContractsInboxQuickFilters } from "@/components/contracts/EmployeeContractsInboxQuickFilters";
+import { resolveContractsWorkspaceMessageToneClass } from "@/components/contracts/workspace-visual-helpers";
 import { useI18n } from "@/lib/i18n/provider";
 
 type EmployeeContractsInboxProps = {
@@ -79,10 +86,7 @@ export default function EmployeeContractsInbox({ accessToken }: EmployeeContract
   const actionNeededCount = useMemo(() => countActionNeededPending(filteredDocuments), [filteredDocuments]);
   const dueSoonCount = useMemo(() => filteredDocuments.filter((document) => isDueSoonPendingDocument(document)).length, [filteredDocuments]);
   const overdueCount = useMemo(() => filteredDocuments.filter((document) => isOverduePendingDocument(document)).length, [filteredDocuments]);
-  const messageToneClass =
-    error || (message && message.toLowerCase().includes("error"))
-      ? "small fail workspace-inline-status"
-      : "small workspace-inline-status";
+  const messageToneClass = resolveContractsWorkspaceMessageToneClass(message, error);
   const canRespondDocument = useCallback((document: ContractDocument) => canEmployeeRespondToContractDocument(document.status), []);
   const selected = useMemo(
     () => filteredDocuments.find((document) => document.id === selectedDocumentId) ?? filteredDocuments[0] ?? null,
@@ -151,46 +155,22 @@ export default function EmployeeContractsInbox({ accessToken }: EmployeeContract
       );
     }
   }
-  function downloadEvidence(evidence: ContractSignatureEvidenceResponse["evidence"], downloadFileName: string) {
-    const blob = new Blob([evidence.content], { type: evidence.contentType });
-    const objectUrl = URL.createObjectURL(blob);
-    const anchor = window.document.createElement("a");
-    anchor.href = objectUrl;
-    anchor.download = downloadFileName;
-    window.document.body.appendChild(anchor);
-    anchor.click();
-    window.document.body.removeChild(anchor);
-    URL.revokeObjectURL(objectUrl);
-  }
   async function copyEvidenceMetadata(evidence: ContractSignatureEvidenceResponse["evidence"], displayFileName: string) {
-    const metadataText = [
-      `${copy.evidenceFileLabel}: ${displayFileName}`,
-      `${copy.generatedAtLabel}: ${toDateText(evidence.generatedAt, runtimeLocale)}`,
-      `${copy.contentShaLabel}: ${evidence.contentSha256}`
-    ].join("\n");
-    try {
-      await navigator.clipboard.writeText(metadataText);
-      setError(null);
-      setMessage(copy.copiedEvidenceMetadataStatus);
-    } catch {
-      setMessage(null);
-      setError(copy.copyEvidenceMetadataError);
-    }
+    const result = await copyContractEvidenceMetadata({ copy, evidence, displayFileName, runtimeLocale });
+    setError(result.error);
+    setMessage(result.message);
   }
   async function loadSignatureEvidence(format: "json" | "text") {
     if (!selected) return;
     setError(null);
     setMessage(null);
     try {
-      const sessionToken = requireContractsAccessToken(accessToken);
-      const response = await fetch(
-        `/api/contracts/documents/${selected.id}/signature-evidence?format=${format}`,
-        {
-          method: "GET",
-          headers: { authorization: `Bearer ${sessionToken}` }
-        }
-      );
-      const body = (await readJson(response, copy.evidenceLoadError)) as ContractSignatureEvidenceResponse;
+      const body = await loadContractSignatureEvidence({
+        accessToken,
+        documentId: selected.id,
+        format,
+        evidenceLoadError: copy.evidenceLoadError
+      });
       setSignatureEvidence(body.evidence);
       setMessage(isKoLocale ? copy.evidenceLoadedPrefix : `${copy.evidenceLoadedPrefix}: ${body.evidence.fileName}`);
     } catch (loadError) {
@@ -214,28 +194,18 @@ export default function EmployeeContractsInbox({ accessToken }: EmployeeContract
       <section className="panel-grid workspace-panel-grid">
         <article className="panel panel-contract-template-library workspace-section-card workspace-toolbar-card">
           <h2>{copy.inboxTitle}</h2>
-          <div className="kpi-strip workspace-summary-strip employee-workspace-status-strip">
-            <article className="kpi-card">
-              <span>{copy.visibleCountLabel}</span>
-              <strong>{filteredDocuments.length}</strong>
-            </article>
-            <article className="kpi-card">
-              <span>{copy.actionNeededCountLabel}</span>
-              <strong>{actionNeededCount}</strong>
-            </article>
-            <article className="kpi-card">
-              <span>{copy.pendingResponseCountLabel}</span>
-              <strong>{pendingResponseCount}</strong>
-            </article>
-            <article className="kpi-card">
-              <span>{copy.dueSoonCountLabel}</span>
-              <strong>{dueSoonCount}</strong>
-            </article>
-            <article className="kpi-card">
-              <span>{copy.overdueCountLabel}</span>
-              <strong>{overdueCount}</strong>
-            </article>
-          </div>
+          <EmployeeContractsInboxKpiStrip
+            visibleCountLabel={copy.visibleCountLabel}
+            actionNeededCountLabel={copy.actionNeededCountLabel}
+            pendingResponseCountLabel={copy.pendingResponseCountLabel}
+            dueSoonCountLabel={copy.dueSoonCountLabel}
+            overdueCountLabel={copy.overdueCountLabel}
+            visibleCount={filteredDocuments.length}
+            actionNeededCount={actionNeededCount}
+            pendingResponseCount={pendingResponseCount}
+            dueSoonCount={dueSoonCount}
+            overdueCount={overdueCount}
+          />
           <label>
             {copy.inboxSearchLabel}
             <input
@@ -270,21 +240,29 @@ export default function EmployeeContractsInbox({ accessToken }: EmployeeContract
               <option value="overdue">{copy.inboxDeadlineFilterOverdueOption}</option>
             </select>
           </label>
-          <div className="contract-action-row">
-            <span className="small muted" title={`${copy.dueSoonBadgeLabel} / ${copy.overdueBadgeLabel}`}>{copy.riskQuickFilterLabel}</span>
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => setInboxDeadlineFilter("all")}>{copy.riskQuickAllAction}</button>
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => setInboxDeadlineFilter("action_needed")}>{copy.riskQuickActionNeededAction}</button>
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => setInboxDeadlineFilter("due_soon")}>{copy.riskQuickDueSoonAction}</button>
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => setInboxDeadlineFilter("overdue")}>{copy.riskQuickOverdueAction}</button>
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => setSearchQuery("")}>
-              {copy.clearSearchAction}
-            </button>
-            <p className="small muted">{copy.visibleCountLabel}: {filteredDocuments.length} / {documents.length}</p>
-            <p className="small muted">{copy.actionNeededCountLabel}: {actionNeededCount}</p>
-            <p className="small muted">{copy.pendingResponseCountLabel}: {pendingResponseCount}</p>
-            <p className="small muted">{copy.dueSoonCountLabel}: {dueSoonCount}</p>
-            <p className="small muted">{copy.overdueCountLabel}: {overdueCount}</p>
-          </div>
+          <EmployeeContractsInboxQuickFilters
+            dueSoonBadgeLabel={copy.dueSoonBadgeLabel}
+            overdueBadgeLabel={copy.overdueBadgeLabel}
+            riskQuickFilterLabel={copy.riskQuickFilterLabel}
+            riskQuickAllAction={copy.riskQuickAllAction}
+            riskQuickActionNeededAction={copy.riskQuickActionNeededAction}
+            riskQuickDueSoonAction={copy.riskQuickDueSoonAction}
+            riskQuickOverdueAction={copy.riskQuickOverdueAction}
+            clearSearchAction={copy.clearSearchAction}
+            visibleCountLabel={copy.visibleCountLabel}
+            actionNeededCountLabel={copy.actionNeededCountLabel}
+            pendingResponseCountLabel={copy.pendingResponseCountLabel}
+            dueSoonCountLabel={copy.dueSoonCountLabel}
+            overdueCountLabel={copy.overdueCountLabel}
+            filteredCount={filteredDocuments.length}
+            totalCount={documents.length}
+            actionNeededCount={actionNeededCount}
+            pendingResponseCount={pendingResponseCount}
+            dueSoonCount={dueSoonCount}
+            overdueCount={overdueCount}
+            onChangeDeadlineFilter={setInboxDeadlineFilter}
+            onClearSearch={() => setSearchQuery("")}
+          />
           {selected && !canRespondSelected ? <p className="small muted">{copy.responseDisabledHint}</p> : null}
           <EmployeeContractsInboxList
             documents={documents}
@@ -314,7 +292,7 @@ export default function EmployeeContractsInbox({ accessToken }: EmployeeContract
           onRespond={respond}
           onLoadSignatureEvidence={loadSignatureEvidence}
           signatureEvidence={signatureEvidence}
-          onDownloadEvidence={downloadEvidence}
+          onDownloadEvidence={downloadContractEvidence}
           onCopyEvidenceMetadata={copyEvidenceMetadata}
         />
       </section>
