@@ -38,6 +38,12 @@ async function run() {
     "admin-dashboard",
     "AdminAggregateLeavePanels.tsx"
   );
+  const adminPayrollWorkspaceCard = readUtf8(
+    "src",
+    "components",
+    "admin-dashboard",
+    "AdminPayrollWorkspaceCard.tsx"
+  );
   const adminPayrollPanel = readUtf8("src", "components", "admin-dashboard", "AdminPayrollPanel.tsx");
   const adminCompensationPanels = readUtf8("src", "app", "admin", "page-compensation-panels.tsx");
   const adminPanels = readUtf8("src", "app", "admin", "page-panels.tsx");
@@ -118,11 +124,13 @@ async function run() {
   assert.match(adminPanels, /<AdminCompensationPanels/);
   assert.match(adminAggregateLeavePanels, /id="aggregates"/);
   assert.match(adminAggregateLeavePanels, /id="leave-policy"/);
+  assert.match(adminPayrollWorkspaceCard, /id="payroll-workspace-card"/);
   assert.match(adminPayrollPanel, /id="payroll"/);
   assert.match(adminCompensationPanels, /from "@\/components\/admin-dashboard\/AdminAggregateLeavePanels"/);
-  assert.match(adminCompensationPanels, /from "@\/components\/admin-dashboard\/AdminPayrollPanel"/);
+  assert.match(adminCompensationPanels, /from "@\/components\/admin-dashboard\/AdminPayrollWorkspaceCard"/);
   assert.match(adminCompensationPanels, /<AdminAggregateLeavePanels/);
-  assert.match(adminCompensationPanels, /<AdminPayrollPanel/);
+  assert.match(adminCompensationPanels, /<AdminPayrollWorkspaceCard/);
+  assert.doesNotMatch(adminCompensationPanels, /<AdminPayrollPanel/);
 
   assert.match(employeePage, /from "@\/components\/employee-dashboard\/EmployeeDashboardChrome"/);
   assert.match(employeePage, /from "@\/components\/employee-dashboard\/EmployeeAccountOverviewPanels"/);
