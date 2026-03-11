@@ -389,3 +389,6 @@ Latest planning reset:
 - Closed `WI-1155` with merge `3434b80ab7a8333762cb7f864de5c84cd89a6bda`.
 - Re-verified `WI-1155` on the delivery path and confirmed both `ci` (`22960816247`) and `vercel-production-deploy` (`22960816148`) stay green after the fourteenth shared workspace visual wave.
 - Started `WI-1156` to extend the same route-first workspace shell onto admin approval insight surfaces covering approval history, approval policy, and approval templates.
+- Closed `WI-1156` with merge `ab0cdfed371b7445f9d9de07dab109ed653f9ef4`.
+- Re-verified `WI-1156` on the delivery path and confirmed both `ci` (`22961807115`) and `vercel-production-deploy` (`22961807153`) stay green after the fifteenth shared workspace visual wave.
+- Started `WI-1157` to extend the same route-first workspace shell onto the admin approval execution workspace and its related operational panels.

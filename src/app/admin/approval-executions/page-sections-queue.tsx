@@ -22,7 +22,6 @@ import type {
 } from "@/app/admin/approval-executions/page-types";
 import {
   formatActorRoleLabel,
-  formatApprovalDomainLabel,
   formatApprovalEntityTypeLabel,
   formatApprovalStageResolutionLabel
 } from "@/lib/product-language";
@@ -106,10 +105,19 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
   }
 
   return (
-    <article className="panel">
-      <h2>
-        {isKoLocale ? "실행 상태" : "Execution status"} ({executions.length})
-      </h2>
+    <article className="panel workspace-section-card">
+      <div className="section-heading">
+        <div>
+          <h2>
+            {isKoLocale ? "실행 상태" : "Execution status"} ({executions.length})
+          </h2>
+          <p className="small muted">
+            {isKoLocale
+              ? "현재 승인 대기열을 선택하고 승인, 반려, 원본 요청 이동을 바로 처리합니다."
+              : "Select the active approval queue item and take approve, reject, or jump actions directly."}
+          </p>
+        </div>
+      </div>
       {executions.length === 0 ? (
         <p className="small">{isKoLocale ? "조회된 결재 실행 데이터가 없습니다." : "No execution data found."}</p>
       ) : (
@@ -237,11 +245,20 @@ export function ApprovalExecutionHistoryPanel({
   const locale = isKoLocale ? "ko-KR" : "en-US";
 
   return (
-    <article className="panel">
-      <h2>
-        {isKoLocale ? "단계 이력" : "Stage history"}{" "}
-        {selectedExecution ? `(${formatApprovalEntityTypeLabel(selectedExecution.targetEntityType, locale)})` : ""}
-      </h2>
+    <article className="panel workspace-section-card workspace-note-card">
+      <div className="section-heading">
+        <div>
+          <h2>
+            {isKoLocale ? "단계 이력" : "Stage history"}{" "}
+            {selectedExecution ? `(${formatApprovalEntityTypeLabel(selectedExecution.targetEntityType, locale)})` : ""}
+          </h2>
+          <p className="small muted">
+            {isKoLocale
+              ? "선택한 실행 항목의 단계별 평가 결과와 역할 매칭 이력을 확인합니다."
+              : "Inspect stage-level evaluation results and role matches for the selected execution."}
+          </p>
+        </div>
+      </div>
       {selectedExecution === null ? (
         <p className="small">
           {isKoLocale ? "실행 항목을 선택하면 단계별 처리 이력을 보여줍니다." : "Select an execution to view stage history."}
@@ -286,12 +303,21 @@ type LogsPanelProps = {
 
 export function ApprovalExecutionLogsPanel({ isKoLocale, stats, pendingLabel, logs }: LogsPanelProps) {
   return (
-    <article className="panel">
-      <h2>{isKoLocale ? "요청 로그" : "Request logs"}</h2>
+    <article className="panel workspace-section-card workspace-note-card">
+      <div className="section-heading">
+        <div>
+          <h2>{isKoLocale ? "요청 로그" : "Request logs"}</h2>
+          <p className="small muted">
+            {isKoLocale
+              ? "개발 모드에서만 승인 실행 조회와 액션 요청 이력을 확인합니다."
+              : "Inspect approval execution request history in dev mode only."}
+          </p>
+        </div>
+      </div>
       <p className="small">
         {isKoLocale ? "총" : "Total"} {stats.total}
-        {isKoLocale ? "건 / 성공" : " / success"} {stats.success}
-        {isKoLocale ? "건 / 실패" : " / fail"} {stats.fail}
+        {isKoLocale ? "건/ 성공" : " / success"} {stats.success}
+        {isKoLocale ? "건/ 실패" : " / fail"} {stats.fail}
         {isKoLocale ? "건" : ""}
         {pendingLabel ? ` / ${isKoLocale ? "진행 중" : "Running"}: ${pendingLabel}` : ""}
       </p>
@@ -315,7 +341,7 @@ export function ApprovalExecutionLogsPanel({ isKoLocale, stats, pendingLabel, lo
           {isKoLocale ? "결재 단계 이력" : "Approval stage history"}
         </Link>
         <Link href="/admin" className="btn btn-secondary">
-          {isKoLocale ? "관리자 홈" : "Admin home"}
+          {isKoLocale ? "관리자 허브" : "Admin hub"}
         </Link>
       </div>
     </article>
@@ -324,14 +350,23 @@ export function ApprovalExecutionLogsPanel({ isKoLocale, stats, pendingLabel, lo
 
 export function ApprovalExecutionRelatedWorkspacesPanel({ isKoLocale }: { isKoLocale: boolean }) {
   return (
-    <article className="panel">
-      <h2>{isKoLocale ? "관련 화면 이동" : "Related workspaces"}</h2>
+    <article className="panel workspace-section-card workspace-note-card">
+      <div className="section-heading">
+        <div>
+          <h2>{isKoLocale ? "관련 화면 이동" : "Related workspaces"}</h2>
+          <p className="small muted">
+            {isKoLocale
+              ? "결재 단계 이력과 관리자 허브로 이어지는 승인 운영 흐름을 바로 엽니다."
+              : "Open the connected approval history workspace and return to the admin hub."}
+          </p>
+        </div>
+      </div>
       <div className="panel-actions">
         <Link href="/admin/approval-history" className="btn btn-secondary">
           {isKoLocale ? "결재 단계 이력" : "Approval stage history"}
         </Link>
         <Link href="/admin" className="btn btn-secondary">
-          {isKoLocale ? "관리자 홈" : "Admin home"}
+          {isKoLocale ? "관리자 허브" : "Admin hub"}
         </Link>
       </div>
     </article>
