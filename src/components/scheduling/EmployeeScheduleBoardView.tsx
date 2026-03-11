@@ -110,8 +110,14 @@ export default function EmployeeScheduleBoardView({
   const attendanceCorrectionHref = `/employee/attendance/correction?source=employee-schedule&attendanceSource=schedule&fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}`;
   const hasWorkspaceSession = sessionOrganizationId.trim().length > 0;
   const hasEmployeeSession = sessionEmployeeId.trim().length > 0;
+  const statusToneClass =
+    requiresLoginSession || statusMessage.startsWith(copy.loadErrorPrefix)
+      ? "small fail workspace-inline-status"
+      : statusMessage
+        ? "small workspace-inline-status"
+        : "";
   return (
-    <main className="saas-content">
+    <main className="saas-content workspace-shell employee-workspace-shell">
       <EmployeeWorkspaceHero
         eyebrow={copy.eyebrow}
         title={copy.title}
@@ -129,21 +135,43 @@ export default function EmployeeScheduleBoardView({
         ]}
       />
       {requiresLoginSession ? (
-        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
+        <p className="small fail workspace-inline-status">
           {productionSessionRequiredNotice} <Link href="/login">/login</Link>
         </p>
       ) : null}
-      <section className="panel-grid">
-        <article className="panel">
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.filtersTitle}</h2>
           {showDevTools ? (
-            <p className="small muted">
+            <p className="small muted workspace-source-banner">
               {copy.organizationIdLabel}:{" "}
               <strong>{formatWorkspaceConnectionState(hasWorkspaceSession, runtimeLocale)}</strong> /{" "}
               {copy.employeeIdLabel}:{" "}
               <strong>{formatEmployeeSessionConnectionState(hasEmployeeSession, runtimeLocale)}</strong>
             </p>
           ) : null}
+          <div className="kpi-strip workspace-summary-strip employee-workspace-status-strip">
+            <article className="kpi-card">
+              <span>{copy.summaryTotalShifts}</span>
+              <strong>{summary.totalShifts}</strong>
+            </article>
+            <article className="kpi-card">
+              <span>{copy.visibleCountLabel}</span>
+              <strong>{visibleScheduleCount}</strong>
+            </article>
+            <article className="kpi-card">
+              <span>{copy.summaryUpcomingShifts}</span>
+              <strong>{summary.upcomingShifts}</strong>
+            </article>
+            <article className="kpi-card">
+              <span>{copy.summaryInProgressShifts}</span>
+              <strong>{summary.inProgressShifts}</strong>
+            </article>
+            <article className="kpi-card">
+              <span>{copy.summaryHolidayShifts}</span>
+              <strong>{summary.holidayShifts}</strong>
+            </article>
+          </div>
           <div className="input-grid">
             <label>
               {copy.fromDateLabel}
@@ -207,10 +235,10 @@ export default function EmployeeScheduleBoardView({
             <a className="btn btn-secondary" href={attendanceCorrectionHref}>{copy.statusQuickCorrectionAction}</a>
           </div>
           <p className="small muted">{copy.visibleCountLabel}: {visibleScheduleCount} / {allScheduleCount}</p>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
+          {statusMessage ? <p className={statusToneClass}>{statusMessage}</p> : null}
           {statusMessage.includes(copy.statusConflictCandidatesLabel) && !statusMessage.includes(`${copy.statusConflictCandidatesLabel}: 0`) ? <a className="btn btn-secondary btn-small" href={attendanceCorrectionHref}>{copy.statusQuickCorrectionAction}</a> : null}
         </article>
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.summaryTitle}</h2>
           <ul className="simple-list">
             <li>
@@ -243,7 +271,7 @@ export default function EmployeeScheduleBoardView({
             </li>
           </ul>
         </article>
-        <article className="panel">
+        <article className="panel workspace-section-card workspace-note-card">
           <h2>{copy.nextShiftTitle}</h2>
           {!nextSchedule ? (
             <p className="small muted">{copy.nextShiftEmpty}</p>
@@ -261,7 +289,7 @@ export default function EmployeeScheduleBoardView({
               </ul>
             )}
           </article>
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.listTitle}</h2>
           {allScheduleCount === 0 ? (
             <p className="small muted">{copy.listEmpty}</p>
@@ -291,7 +319,7 @@ export default function EmployeeScheduleBoardView({
           )}
         </article>
         {showDevTools ? (
-          <article className="panel">
+          <article className="panel workspace-side-panel">
             <h2>{copy.logsTitle}</h2>
             <p className="small">
               {copy.logTotals} {logStats.total} / {copy.logSuccess} {logStats.success} / {copy.logFail}{" "}

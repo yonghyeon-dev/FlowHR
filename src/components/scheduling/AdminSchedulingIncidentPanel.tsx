@@ -94,7 +94,7 @@ export default function AdminSchedulingIncidentPanel({
   ];
 
   return (
-    <article className="panel">
+    <article className="panel workspace-section-card">
       <h2>{copy.incidentQueueTitle}</h2>
       <div className="input-grid">
         <label>
