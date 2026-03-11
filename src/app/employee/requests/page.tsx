@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { EmployeeWorkspaceHero } from "@/components/employee-dashboard/EmployeeWorkspaceHero";
 import { createTranslator } from "@/lib/i18n/messages";
 import { getRequestLocale } from "@/lib/i18n/server";
 
@@ -26,7 +27,7 @@ function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
           "출퇴근 정정 초안은 홈의 근태 작업면에서 이어지고, 이곳에서는 요청 상태와 후속 조치를 관리합니다.",
         actions: [
           {
-            href: "/employee/attendance",
+            href: "/employee/attendance?source=employee-requests",
             label: "출퇴근 정정 열기",
             tone: "primary"
           },
@@ -44,12 +45,12 @@ function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
           "휴가 신청 초안은 홈의 휴가 작업면에서 이어지고, 이곳에서는 요청 상태와 재제출 준비를 모읍니다.",
         actions: [
           {
-            href: "/employee/leave",
+            href: "/employee/leave?source=employee-requests",
             label: "휴가 신청 열기",
             tone: "primary"
           },
           {
-            href: "/employee/leave#leave-calendar",
+            href: "/employee/leave?source=employee-requests#leave-calendar",
             label: "휴가 캘린더 보기",
             tone: "secondary"
           }
@@ -103,7 +104,7 @@ function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
         "Attendance correction drafts stay on the Today work surface, while this route handles request status and follow-up.",
       actions: [
         {
-          href: "/employee/attendance",
+          href: "/employee/attendance?source=employee-requests",
           label: "Open attendance correction",
           tone: "primary"
         },
@@ -121,12 +122,12 @@ function buildRequestActionCards(locale: "ko" | "en"): RequestActionCard[] {
         "Leave drafts continue on the Today work surface, while this route gathers request state and resubmit follow-up.",
       actions: [
         {
-          href: "/employee/leave",
+          href: "/employee/leave?source=employee-requests",
           label: "Open leave request",
           tone: "primary"
         },
         {
-          href: "/employee/leave#leave-calendar",
+            href: "/employee/leave?source=employee-requests#leave-calendar",
           label: "Open leave calendar",
           tone: "secondary"
         }
@@ -179,30 +180,29 @@ export default async function EmployeeRequestsPage() {
 
   return (
     <main className="saas-content">
-      <section className="hero-panel">
-        <p className="eyebrow">
-          {locale === "ko" ? "직원 요청 허브" : "Employee requests"}
-        </p>
-        <h1>{locale === "ko" ? "요청 워크스페이스" : "Requests workspace"}</h1>
-        <p className="hero-copy">
-          {locale === "ko"
+      <EmployeeWorkspaceHero
+        eyebrow={locale === "ko" ? "직원 요청 허브" : "Employee requests"}
+        title={locale === "ko" ? "요청 워크스페이스" : "Requests workspace"}
+        description={
+          locale === "ko"
             ? "Today 홈은 요약과 우선순위에 집중하고, 요청 상태 확인과 재제출 후속 조치는 이 전용 경로에서 이어갑니다."
-            : "Keep the Today home focused on summary and priorities, then continue request monitoring and resubmit follow-up from this dedicated route."}
-        </p>
-        <div className="hero-meta">
-          <span>
-            {locale === "ko"
-              ? "요청 상태와 재제출 후속 조치 전용"
-              : "Dedicated for request monitoring and resubmit follow-up"}
-          </span>
-          <Link className="btn btn-primary" href="/employee">
-            {locale === "ko" ? "Today로 이동" : "Go to Today"}
-          </Link>
-          <Link className="btn btn-secondary" href="/employee/guide">
-            {locale === "ko" ? "가이드 보기" : "Open guide"}
-          </Link>
-        </div>
-      </section>
+            : "Keep the Today home focused on summary and priorities, then continue request monitoring and resubmit follow-up from this dedicated route."
+        }
+        returnHref="/employee"
+        returnLabel={locale === "ko" ? "Today로 이동" : "Go to Today"}
+        metaLabel={
+          locale === "ko"
+            ? "요청 상태와 재제출 후속 조치 전용"
+            : "Dedicated for request monitoring and resubmit follow-up"
+        }
+        actions={[
+          {
+            href: "/employee/guide?source=employee-requests",
+            label: locale === "ko" ? "가이드 보기" : "Open guide",
+            tone: "secondary"
+          }
+        ]}
+      />
 
       <section className="panel-grid">
         {requestCards.map((card) => (

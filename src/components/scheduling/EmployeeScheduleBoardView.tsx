@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { EmployeeWorkspaceHero } from "@/components/employee-dashboard/EmployeeWorkspaceHero";
 import type { EmployeeScheduleCopy } from "@/components/scheduling/copy";
 import { resolveEmployeeScheduleSourceEntry } from "@/components/scheduling/employee-source-context";
 import {
@@ -106,20 +107,27 @@ export default function EmployeeScheduleBoardView({
 }: EmployeeScheduleBoardViewProps) {
   const searchParams = useSearchParams();
   const sourceEntry = resolveEmployeeScheduleSourceEntry(searchParams.get("source"), runtimeLocale === "ko-KR");
-  const attendanceCorrectionHref = `/employee/attendance?attendanceSource=schedule&fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}`;
+  const attendanceCorrectionHref = `/employee/attendance?source=employee-schedule&attendanceSource=schedule&fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}`;
   const hasWorkspaceSession = sessionOrganizationId.trim().length > 0;
   const hasEmployeeSession = sessionEmployeeId.trim().length > 0;
   return (
     <main className="saas-content">
-      <header className="hero">
-        <p className="eyebrow">{copy.eyebrow}</p>
-        <h1>{copy.title}</h1>
-        <p>{copy.description}</p>
-        {sourceEntry ? <p className="small muted">{sourceEntry.hint}</p> : null}
-        <div className="page-actions">
-          <Link className="btn btn-secondary" href="/employee">{sourceEntry ? sourceEntry.returnLabel : "/employee"}</Link>
-        </div>
-      </header>
+      <EmployeeWorkspaceHero
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        description={copy.description}
+        sourceHint={sourceEntry?.hint ?? null}
+        returnHref={sourceEntry?.returnHref ?? "/employee"}
+        returnLabel={sourceEntry?.returnLabel ?? "/employee"}
+        metaLabel={copy.statusQuickCorrectionAction}
+        actions={[
+          {
+            href: attendanceCorrectionHref,
+            label: copy.statusQuickCorrectionAction,
+            tone: "secondary"
+          }
+        ]}
+      />
       {requiresLoginSession ? (
         <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
           {productionSessionRequiredNotice} <Link href="/login">/login</Link>

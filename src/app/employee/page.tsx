@@ -57,6 +57,8 @@ import { EmployeeDashboardChrome } from "@/components/employee-dashboard/Employe
 import { EmployeeLeaveCalendarPanel } from "@/components/employee-dashboard/EmployeeLeaveCalendarPanel";
 import { EmployeeLeaveRequestPanel } from "@/components/employee-dashboard/EmployeeLeaveRequestPanel";
 import { EmployeeScheduleSummaryPanel } from "@/components/employee-dashboard/EmployeeScheduleSummaryPanel";
+import { EmployeeWorkspaceHero } from "@/components/employee-dashboard/EmployeeWorkspaceHero";
+import { resolveEmployeeWorkspaceSourceEntry } from "@/components/scheduling/employee-source-context";
 import { useI18n } from "@/lib/i18n/provider";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -79,6 +81,10 @@ export function EmployeeSelfServicePage({
   const localeLabelBundle = useMemo(() => resolveEmployeeLocaleLabelBundle(isKoLocale), [isKoLocale]);
   const { attendanceNotePresets, callApiLabels, correctionRequestNote, defaultCancelReason, leaveCalendarWeekdays, leaveTypeLabels, listBadgeLabels, notConfiguredLabel, preSubmitStatusLabels, requestStatusLabels, runtimeLocale, surfaceCopy, validationCopy, summaryCopy } = localeLabelBundle;
   const searchParams = useSearchParams();
+  const workspaceSourceEntry = useMemo(
+    () => resolveEmployeeWorkspaceSourceEntry(searchParams.get("source"), isKoLocale),
+    [searchParams, isKoLocale]
+  );
   const attendanceSchedulePrefill = useMemo(() => resolveAttendanceCorrectionSchedulePrefill({ searchParams, correctionRequestNote, isKoLocale }), [searchParams, correctionRequestNote, isKoLocale]);
   const focusSectionId = useMemo(() => resolveEmployeeFocusSectionId(searchParams), [searchParams]);
   const promotedRouteForFocusSection = useMemo(
@@ -578,36 +584,49 @@ export function EmployeeSelfServicePage({
   return (
     <main className="saas-content">
       {!showsHomeHub ? (
-        <section className="hero-panel">
-          <p className="eyebrow">{isKoLocale ? "직원 작업 워크스페이스" : "Employee workspace"}</p>
-          <h1>{showsAttendanceWorkspace ? (isKoLocale ? "근태 작업 워크스페이스" : "Attendance workspace") : isKoLocale ? "휴가 작업 워크스페이스" : "Leave workspace"}</h1>
-          <p className="hero-copy">
-            {showsAttendanceWorkspace
+        <EmployeeWorkspaceHero
+          eyebrow={isKoLocale ? "직원 작업 워크스페이스" : "Employee workspace"}
+          title={
+            showsAttendanceWorkspace
               ? isKoLocale
-                ? "Today 홈에서 분리한 출퇴근 기록과 정정 요청을 이 전용 경로에서 처리합니다."
-                : "Handle check-in, check-out, and correction work from this dedicated route instead of the Today home."
+                ? "근태 작업 워크스페이스"
+                : "Attendance workspace"
               : isKoLocale
-                ? "Today 홈에서 분리한 휴가 요청과 캘린더 확인을 이 전용 경로에서 처리합니다."
-                : "Handle leave requests and calendar review from this dedicated route instead of the Today home."}
-          </p>
-          <div className="hero-meta">
-            <span>
-              {showsAttendanceWorkspace
-                ? isKoLocale
-                  ? "출퇴근 기록과 일정 기반 정정 초안 이어받기"
-                  : "Check-in records and schedule-based correction handoff"
-                : isKoLocale
-                  ? "휴가 요청, 잔여 연차, 캘린더 기반 초안 이어받기"
-                  : "Leave requests, balances, and calendar-based draft handoff"}
-            </span>
-            <button className="btn btn-primary" type="button" onClick={() => router.push("/employee")}>
-              {isKoLocale ? "Today로 돌아가기" : "Return to Today"}
-            </button>
-            <button className="btn btn-secondary" type="button" onClick={() => router.push("/employee/requests")}>
-              {isKoLocale ? "요청 워크스페이스 열기" : "Open requests workspace"}
-            </button>
-          </div>
-        </section>
+                ? "휴가 작업 워크스페이스"
+                : "Leave workspace"
+          }
+          description={
+            showsAttendanceWorkspace
+              ? isKoLocale
+                ? "Today 홈과 분리된 전용 근태 작업면에서 출퇴근 기록과 정정 요청을 처리합니다."
+                : "Handle attendance records and correction requests from the dedicated route instead of the Today home."
+              : isKoLocale
+                ? "Today 홈과 분리된 전용 휴가 작업면에서 요청, 잔여 연차, 캘린더 확인을 이어갑니다."
+                : "Continue leave requests, balances, and calendar review from the dedicated route instead of the Today home."
+          }
+          sourceHint={workspaceSourceEntry?.hint ?? null}
+          returnHref={workspaceSourceEntry?.returnHref ?? "/employee"}
+          returnLabel={
+            workspaceSourceEntry?.returnLabel ??
+            (isKoLocale ? "Today로 돌아가기" : "Return to Today")
+          }
+          metaLabel={
+            showsAttendanceWorkspace
+              ? isKoLocale
+                ? "출퇴근 기록과 일정 기반 정정 초안 이어받기"
+                : "Check-in records and schedule-based correction handoff"
+              : isKoLocale
+                ? "휴가 요청, 잔여 연차, 캘린더 기반 초안 이어받기"
+                : "Leave requests, balances, and calendar-based draft handoff"
+          }
+          actions={[
+            {
+              href: "/employee/requests?source=employee-dashboard",
+              label: isKoLocale ? "요청 워크스페이스 열기" : "Open requests workspace",
+              tone: "secondary"
+            }
+          ]}
+        />
       ) : null}
       <EmployeeDashboardChrome
         showDevTools={showDevTools}
