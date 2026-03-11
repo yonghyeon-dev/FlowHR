@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
@@ -64,6 +65,9 @@ type LeavePromotionEmailCopy = {
   noSaveHistory: string;
   envFallbackHint: string;
   secretHint: string;
+  sourceHint: string;
+  backToHubLabel: string;
+  settingsLabel: string;
 };
 
 const DEFAULT_FORM: LeavePromotionEmailUpdatePayload = {
@@ -80,8 +84,7 @@ function getCopy(locale: string): LeavePromotionEmailCopy {
   if (locale === "ko") {
     return {
       pageTitle: "연차 촉진 이메일 설정",
-      pageSubtitle:
-        "연차 촉진 공지의 이메일 템플릿 채널 설정을 조직 단위로 관리합니다.",
+      pageSubtitle: "연차 촉진 공지와 이메일 발송에 쓰는 조직 기본 채널을 관리합니다.",
       reloadLabel: "새로고침",
       reloadLoadingLabel: "불러오는 중...",
       saveLabel: "설정 저장",
@@ -90,11 +93,9 @@ function getCopy(locale: string): LeavePromotionEmailCopy {
       saveFailed: "연차 촉진 이메일 설정을 저장하지 못했습니다.",
       saveSuccess: "연차 촉진 이메일 설정을 저장했습니다.",
       settingsTitle: "이메일 템플릿 설정",
-      settingsDescription:
-        "여기서 저장한 URL, 발신 주소, 기본 템플릿 ID는 연차 촉진 발송과 재시도에 기본값으로 사용됩니다.",
+      settingsDescription: "여기에 저장한 URL, 발신 주소, 기본 템플릿 ID는 연차 촉진 발송과 재시도에 기본값으로 사용됩니다.",
       statusTitle: "현재 상태",
-      statusDescription:
-        "조직에 저장된 연차 촉진 이메일 채널 구성을 확인합니다.",
+      statusDescription: "현재 조직에 저장된 연차 촉진 이메일 채널 구성을 확인합니다.",
       urlLabel: "템플릿 호출 URL",
       urlPlaceholder: "https://example.com/email-template",
       fromLabel: "발신 주소",
@@ -102,27 +103,27 @@ function getCopy(locale: string): LeavePromotionEmailCopy {
       templateIdLabel: "기본 템플릿 ID",
       templateIdPlaceholder: "leave-promotion-default",
       tokenLabel: "템플릿 인증 토큰",
-      tokenPlaceholder: "변경할 때만 새 토큰 입력",
-      clearTokenLabel: "저장된 토큰 삭제",
-      clearTokenHint: "토큰 입력 없이 저장하면 기존 토큰을 유지합니다.",
-      tokenConfiguredLabel: "토큰 저장 상태",
+      tokenPlaceholder: "교체할 때만 새 토큰 입력",
+      clearTokenLabel: "저장된 토큰 제거",
+      clearTokenHint: "새 토큰 없이 저장하면 기존 토큰은 유지됩니다.",
+      tokenConfiguredLabel: "저장된 토큰 상태",
       configuredLabel: "설정됨",
       unconfiguredLabel: "미설정",
-      endpointConfiguredLabel: "발송 엔드포인트",
+      endpointConfiguredLabel: "전송 엔드포인트",
       templateConfiguredLabel: "기본 템플릿 ID",
       lastSavedLabel: "마지막 저장",
       noSaveHistory: "저장 이력 없음",
-      envFallbackHint:
-        "조직 설정이 비어 있으면 기존 서버 환경변수 fallback이 계속 사용됩니다.",
-      secretHint:
-        "보안상 저장된 토큰 값은 다시 표시되지 않습니다. 새 값을 입력하면 교체됩니다."
+      envFallbackHint: "조직 설정이 비어 있으면 기존 서버 환경 fallback이 계속 적용됩니다.",
+      secretHint: "보안을 위해 저장된 토큰 값은 다시 표시되지 않습니다. 새 값을 입력하면 교체됩니다.",
+      sourceHint: "연차 촉진 이메일 채널 설정은 발송, 재시도, 안내 메시지 흐름에 즉시 반영됩니다.",
+      backToHubLabel: "관리자 허브",
+      settingsLabel: "조직 설정"
     };
   }
 
   return {
     pageTitle: "Leave Promotion Email Settings",
-    pageSubtitle:
-      "Manage the organization-level email template configuration used by leave promotion notice delivery.",
+    pageSubtitle: "Manage the organization-level email template configuration used by leave promotion notice delivery.",
     reloadLabel: "Reload",
     reloadLoadingLabel: "Loading...",
     saveLabel: "Save settings",
@@ -131,11 +132,9 @@ function getCopy(locale: string): LeavePromotionEmailCopy {
     saveFailed: "Failed to save leave promotion email settings.",
     saveSuccess: "Leave promotion email settings were saved.",
     settingsTitle: "Email template configuration",
-    settingsDescription:
-      "The URL, sender, and default template ID saved here are used as organization defaults for leave promotion dispatch and retry.",
+    settingsDescription: "The URL, sender, and default template ID saved here are used as organization defaults for leave promotion dispatch and retry.",
     statusTitle: "Current status",
-    statusDescription:
-      "Review the saved organization configuration for the leave promotion email channel.",
+    statusDescription: "Review the saved organization configuration for the leave promotion email channel.",
     urlLabel: "Template endpoint URL",
     urlPlaceholder: "https://example.com/email-template",
     fromLabel: "From address",
@@ -153,10 +152,11 @@ function getCopy(locale: string): LeavePromotionEmailCopy {
     templateConfiguredLabel: "Default template ID",
     lastSavedLabel: "Last saved",
     noSaveHistory: "No save history",
-    envFallbackHint:
-      "If the organization settings are left blank, the existing server environment fallback still applies.",
-    secretHint:
-      "For security, the stored token value is never shown again. Entering a new token replaces it."
+    envFallbackHint: "If the organization settings are left blank, the existing server environment fallback still applies.",
+    secretHint: "For security, the stored token value is never shown again. Entering a new token replaces it.",
+    sourceHint: "Leave promotion email settings directly affect send, retry, and operator recovery flows.",
+    backToHubLabel: "Admin hub",
+    settingsLabel: "Organization settings"
   };
 }
 
@@ -290,36 +290,59 @@ export default function AdminLeavePromotionEmailPage() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="page-header">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <div>
           <h1 className="page-title">{copy.pageTitle}</h1>
           <p className="page-subtitle">{copy.pageSubtitle}</p>
+          <p className="small muted workspace-source-banner">{copy.sourceHint}</p>
         </div>
         <div className="page-actions">
-          <button
-            className="btn btn-secondary"
-            type="button"
-            onClick={() => void loadWorkspace()}
-            disabled={workspaceLoading}
-          >
+          <Link className="btn btn-secondary" href="/admin">
+            {copy.backToHubLabel}
+          </Link>
+          <Link className="btn btn-secondary" href="/admin/settings">
+            {copy.settingsLabel}
+          </Link>
+          <button className="btn btn-secondary" type="button" onClick={() => void loadWorkspace()} disabled={workspaceLoading || saving}>
             {workspaceLoading ? copy.reloadLoadingLabel : copy.reloadLabel}
           </button>
         </div>
       </header>
 
-      {sessionError ? <p className="small fail">{formatUserFacingErrorMessage(sessionError, runtimeLocale)}</p> : null}
-      {errorMessage ? <p className="small fail">{errorMessage}</p> : null}
-      {successMessage ? <p className="small ok">{successMessage}</p> : null}
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.pageTitle}>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.endpointConfiguredLabel}</p>
+          <strong>{endpointConfigured ? copy.configuredLabel : copy.unconfiguredLabel}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.tokenConfiguredLabel}</p>
+          <strong>{tokenConfigured ? copy.configuredLabel : copy.unconfiguredLabel}</strong>
+        </article>
+        <article className="kpi-card workspace-summary-card">
+          <p>{copy.lastSavedLabel}</p>
+          <strong>{formatLocalizedDateTime(lastSavedAt, runtimeLocale, copy.noSaveHistory)}</strong>
+        </article>
+      </section>
 
-      <section className="panel-grid">
-        <article className="panel">
-          <h2>{copy.settingsTitle}</h2>
-          <p className="small muted">{copy.settingsDescription}</p>
+      {sessionError ? (
+        <p className="small fail workspace-inline-status">{formatUserFacingErrorMessage(sessionError, runtimeLocale)}</p>
+      ) : null}
+      {errorMessage ? <p className="small fail workspace-inline-status">{errorMessage}</p> : null}
+      {successMessage ? <p className="small ok workspace-inline-status">{successMessage}</p> : null}
 
-          <div className="input-grid">
-            <label>
-              {copy.urlLabel}
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
+          <div className="section-heading">
+            <div>
+              <h2>{copy.settingsTitle}</h2>
+              <p className="small muted">{copy.settingsDescription}</p>
+            </div>
+          </div>
+
+          <div className="form-grid">
+            <label className="stack gap-8">
+              <span>{copy.urlLabel}</span>
               <input
                 type="url"
                 placeholder={copy.urlPlaceholder}
@@ -335,8 +358,8 @@ export default function AdminLeavePromotionEmailPage() {
               />
             </label>
 
-            <label>
-              {copy.fromLabel}
+            <label className="stack gap-8">
+              <span>{copy.fromLabel}</span>
               <input
                 type="email"
                 placeholder={copy.fromPlaceholder}
@@ -352,8 +375,8 @@ export default function AdminLeavePromotionEmailPage() {
               />
             </label>
 
-            <label>
-              {copy.templateIdLabel}
+            <label className="stack gap-8">
+              <span>{copy.templateIdLabel}</span>
               <input
                 type="text"
                 placeholder={copy.templateIdPlaceholder}
@@ -369,8 +392,8 @@ export default function AdminLeavePromotionEmailPage() {
               />
             </label>
 
-            <label>
-              {copy.tokenLabel}
+            <label className="stack gap-8">
+              <span>{copy.tokenLabel}</span>
               <input
                 type="password"
                 placeholder={copy.tokenPlaceholder}
@@ -401,14 +424,15 @@ export default function AdminLeavePromotionEmailPage() {
                   }
                 }))
               }
-            />
-            {" "}
+            />{" "}
             {copy.clearTokenLabel}
           </label>
 
-          <p className="small muted">{copy.clearTokenHint}</p>
-          <p className="small muted">{copy.secretHint}</p>
-          <p className="small muted">{copy.envFallbackHint}</p>
+          <div className="stack gap-8">
+            <p className="small muted">{copy.clearTokenHint}</p>
+            <p className="small muted">{copy.secretHint}</p>
+            <p className="small muted">{copy.envFallbackHint}</p>
+          </div>
 
           <div className="panel-actions">
             <button className="btn btn-primary" type="button" onClick={() => void handleSave()} disabled={saving}>
@@ -417,27 +441,32 @@ export default function AdminLeavePromotionEmailPage() {
           </div>
         </article>
 
-        <article className="panel">
-          <h2>{copy.statusTitle}</h2>
-          <p className="small muted">{copy.statusDescription}</p>
-          <ul className="simple-list">
-            <li>
-              <span>{copy.endpointConfiguredLabel}</span>
-              <strong>{endpointConfigured ? copy.configuredLabel : copy.unconfiguredLabel}</strong>
-            </li>
-            <li>
-              <span>{copy.templateConfiguredLabel}</span>
-              <strong>{templateConfigured ? copy.configuredLabel : copy.unconfiguredLabel}</strong>
-            </li>
-            <li>
-              <span>{copy.tokenConfiguredLabel}</span>
-              <strong>{tokenConfigured ? copy.configuredLabel : copy.unconfiguredLabel}</strong>
-            </li>
-            <li>
-              <span>{copy.lastSavedLabel}</span>
-              <strong>{formatLocalizedDateTime(lastSavedAt, runtimeLocale, copy.noSaveHistory)}</strong>
-            </li>
-          </ul>
+        <article className="panel workspace-section-card workspace-note-card">
+          <div className="section-heading">
+            <div>
+              <h2>{copy.statusTitle}</h2>
+              <p className="small muted">{copy.statusDescription}</p>
+            </div>
+          </div>
+
+          <dl className="definition-grid">
+            <div>
+              <dt>{copy.endpointConfiguredLabel}</dt>
+              <dd>{endpointConfigured ? copy.configuredLabel : copy.unconfiguredLabel}</dd>
+            </div>
+            <div>
+              <dt>{copy.templateConfiguredLabel}</dt>
+              <dd>{templateConfigured ? copy.configuredLabel : copy.unconfiguredLabel}</dd>
+            </div>
+            <div>
+              <dt>{copy.tokenConfiguredLabel}</dt>
+              <dd>{tokenConfigured ? copy.configuredLabel : copy.unconfiguredLabel}</dd>
+            </div>
+            <div>
+              <dt>{copy.lastSavedLabel}</dt>
+              <dd>{formatLocalizedDateTime(lastSavedAt, runtimeLocale, copy.noSaveHistory)}</dd>
+            </div>
+          </dl>
         </article>
       </section>
     </main>
