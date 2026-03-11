@@ -205,7 +205,7 @@ export function EmployeeAccountOverviewPanels({
 
   return (
     <>
-      <EmployeeJourneyShortcutPanel onJumpToSection={onJumpToSection} />
+      <EmployeeJourneyShortcutPanel />
 
       <article className="panel employee-home-workspace-panel" id="workspace-hub">
         <h2>{isKoLocale ? "핵심 워크스페이스 허브" : "Core workspace hub"}</h2>
@@ -217,12 +217,19 @@ export function EmployeeAccountOverviewPanels({
         <div className="panel-grid employee-home-workspace-grid">
           {workspaceHubs.map((hub) => (
             <article className="panel employee-home-workspace-card" key={hub.key}>
-              <h3>{hub.title}</h3>
-              <p className="small muted">{hub.description}</p>
-              <div className="actions">
-                {hub.links.map((link, index) => (
+              <div className="employee-home-workspace-card-copy">
+                <h3>{hub.title}</h3>
+                <p className="small muted">{hub.description}</p>
+              </div>
+              <div className="employee-home-workspace-primary">
+                <Link className="btn btn-primary" href={hub.primaryLink.href}>
+                  {hub.primaryLink.label}
+                </Link>
+              </div>
+              <div className="employee-home-workspace-secondary">
+                {hub.secondaryLinks.map((link) => (
                   <Link
-                    className={index === 0 ? "btn btn-primary" : "btn btn-secondary"}
+                    className="btn btn-secondary btn-small"
                     href={link.href}
                     key={`${hub.key}-${link.href}`}
                   >
@@ -242,14 +249,14 @@ export function EmployeeAccountOverviewPanels({
             ? "제출 체크리스트를 기준으로 지금 바로 처리할 다음 작업을 제안합니다."
             : "Based on checklist readiness, this suggests the next action to process now."}
         </p>
-        <div className="actions">
-          {actionPriorityBadges.map((badge) => (
+        <div className="actions employee-home-priority-badge-strip">
+          {actionPriorityBadges.slice(0, 3).map((badge) => (
             (() => {
               const actionTarget = resolveChecklistActionTarget(
                 badge.targetSectionId,
                 isKoLocale
               );
-              const badgeLabel = `${badge.label} (${badge.remainingCount}/${badge.totalCount}) / ${
+              const badgeLabel = `${badge.label} ${badge.remainingCount}/${badge.totalCount} ${
                 badge.severity === "critical"
                   ? isKoLocale
                     ? "긴급"
@@ -283,8 +290,15 @@ export function EmployeeAccountOverviewPanels({
             })()
           ))}
         </div>
+        {actionPriorityBadges.length > 3 ? (
+          <p className="small muted">
+            {isKoLocale
+              ? `추가로 확인할 항목 ${actionPriorityBadges.length - 3}개가 더 있습니다.`
+              : `${actionPriorityBadges.length - 3} more items are available in the checklist.`}
+          </p>
+        ) : null}
         {priorityChecklistCard ? (
-          <>
+          <div className="employee-home-priority-body">
             <p className="small">
               <strong>{priorityChecklistCard.label}</strong> / {" "}
               {priorityChecklistCard.passCount}/{priorityChecklistCard.totalCount}
@@ -328,7 +342,7 @@ export function EmployeeAccountOverviewPanels({
                 </Link>
               ) : null}
             </div>
-          </>
+          </div>
         ) : (
           <p className="small muted">
             {isKoLocale

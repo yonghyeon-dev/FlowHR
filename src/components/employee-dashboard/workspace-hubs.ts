@@ -1,11 +1,14 @@
-﻿export type EmployeeWorkspaceHub = {
+export type EmployeeWorkspaceLink = {
+  href: string;
+  label: string;
+};
+
+export type EmployeeWorkspaceHub = {
   key: string;
   title: string;
   description: string;
-  links: {
-    href: string;
-    label: string;
-  }[];
+  primaryLink: EmployeeWorkspaceLink;
+  secondaryLinks: EmployeeWorkspaceLink[];
 };
 
 export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspaceHub[] {
@@ -15,8 +18,11 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
         key: "worktime",
         title: "출퇴근/근무",
         description: "오늘 출퇴근 기록과 개인 근무 일정을 확인합니다.",
-        links: [
-          { href: "/employee/attendance/correction?source=employee-dashboard", label: "출퇴근 정정 요청" },
+        primaryLink: {
+          href: "/employee/attendance/correction?source=employee-dashboard",
+          label: "출퇴근 정정 요청"
+        },
+        secondaryLinks: [
           { href: "/employee/schedule?source=employee-dashboard", label: "내 근무 일정" }
         ]
       },
@@ -24,8 +30,12 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
         key: "leave",
         title: "휴가",
         description: "휴가 요청 상태를 확인하고 잔여 연차를 관리합니다.",
-        links: [
-          { href: "/employee/leave/request?source=employee-dashboard", label: "휴가 요청 센터" },
+        primaryLink: {
+          href: "/employee/leave/request?source=employee-dashboard",
+          label: "휴가 요청 센터"
+        },
+        secondaryLinks: [
+          { href: "/employee/leave/calendar?source=employee-dashboard", label: "휴가 캘린더" },
           { href: "/employee/year-end-input?source=employee-dashboard", label: "연말정산 입력" }
         ]
       },
@@ -33,8 +43,11 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
         key: "pay",
         title: "급여/원천징수",
         description: "급여 명세서와 원천징수 문서를 조회합니다.",
-        links: [
-          { href: "/employee/payslips?source=employee-dashboard", label: "급여 명세서" },
+        primaryLink: {
+          href: "/employee/payslips?source=employee-dashboard",
+          label: "급여 명세서"
+        },
+        secondaryLinks: [
           {
             href: "/employee/payslip-receipts?source=employee-dashboard",
             label: "명세서 수신 확인"
@@ -49,8 +62,11 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
         key: "documents",
         title: "전자문서",
         description: "전자계약, 공지, 복리후생, 채용 화면으로 바로 이동합니다.",
-        links: [
-          { href: "/employee/contracts?source=employee-dashboard", label: "전자계약" },
+        primaryLink: {
+          href: "/employee/contracts?source=employee-dashboard",
+          label: "전자계약"
+        },
+        secondaryLinks: [
           {
             href: "/employee/contracts?status=pending_response&source=employee-dashboard",
             label: "계약 응답 필요"
@@ -82,17 +98,22 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
       key: "worktime",
       title: "Attendance and schedule",
       description: "Review today's attendance logs and personal schedule.",
-      links: [
-        { href: "/employee/attendance/correction?source=employee-dashboard", label: "Attendance requests" },
-        { href: "/employee/schedule?source=employee-dashboard", label: "My schedule" }
-      ]
+      primaryLink: {
+        href: "/employee/attendance/correction?source=employee-dashboard",
+        label: "Attendance requests"
+      },
+      secondaryLinks: [{ href: "/employee/schedule?source=employee-dashboard", label: "My schedule" }]
     },
     {
       key: "leave",
       title: "Leave",
       description: "Track leave requests and remaining balance.",
-      links: [
-        { href: "/employee/leave/request?source=employee-dashboard", label: "Leave requests hub" },
+      primaryLink: {
+        href: "/employee/leave/request?source=employee-dashboard",
+        label: "Leave requests hub"
+      },
+      secondaryLinks: [
+        { href: "/employee/leave/calendar?source=employee-dashboard", label: "Leave calendar" },
         { href: "/employee/year-end-input?source=employee-dashboard", label: "Year-end input" }
       ]
     },
@@ -100,8 +121,8 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
       key: "pay",
       title: "Payroll and withholding",
       description: "Open payslips and withholding receipts.",
-      links: [
-        { href: "/employee/payslips?source=employee-dashboard", label: "Payslips" },
+      primaryLink: { href: "/employee/payslips?source=employee-dashboard", label: "Payslips" },
+      secondaryLinks: [
         {
           href: "/employee/payslip-receipts?source=employee-dashboard",
           label: "Payslip receipt"
@@ -116,8 +137,8 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
       key: "documents",
       title: "Documents",
       description: "Check contracts, notices, benefits queue, and recruitment queue.",
-      links: [
-        { href: "/employee/contracts?source=employee-dashboard", label: "Contracts" },
+      primaryLink: { href: "/employee/contracts?source=employee-dashboard", label: "Contracts" },
+      secondaryLinks: [
         {
           href: "/employee/contracts?status=pending_response&source=employee-dashboard",
           label: "Contracts action needed"
