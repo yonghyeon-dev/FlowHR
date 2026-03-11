@@ -45,8 +45,14 @@ function run() {
     requestsClient,
     /\/employee\?focus=/
   );
-  assert.match(attendancePage, /EmployeeSelfServicePage mode="attendance"/);
-  assert.match(leavePage, /EmployeeSelfServicePage mode="leave"/);
+  assert.match(
+    attendancePage,
+    /EmployeeAttendanceLeaveWorkspaceClient mode="attendance"/
+  );
+  assert.match(
+    leavePage,
+    /EmployeeAttendanceLeaveWorkspaceClient mode="leave"/
+  );
   assert.match(workItem, /route/i);
 }
 

@@ -69,6 +69,12 @@ async function run() {
     "leave",
     "page.tsx"
   );
+  const employeeAttendanceLeaveWorkspaceClient = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "attendance-leave-workspace-client.tsx"
+  );
   const employeeResubmitPanel = readUtf8(
     "src",
     "components",
@@ -133,8 +139,18 @@ async function run() {
   assert.match(employeeRequestFeedbackPanels, /id="request-search-sort"/);
   assert.match(employeeRequestFeedbackPanels, /id="request-timeline"/);
   assert.match(employeeRequestFeedbackPanels, /Math\.round\(row\.pendingHours\)/);
-  assert.match(employeeAttendancePage, /EmployeeSelfServicePage mode="attendance"/);
-  assert.match(employeeLeavePage, /EmployeeSelfServicePage mode="leave"/);
+  assert.match(
+    employeeAttendancePage,
+    /EmployeeAttendanceLeaveWorkspaceClient mode="attendance"/
+  );
+  assert.match(
+    employeeLeavePage,
+    /EmployeeAttendanceLeaveWorkspaceClient mode="leave"/
+  );
+  assert.match(
+    employeeAttendanceLeaveWorkspaceClient,
+    /export default function EmployeeAttendanceLeaveWorkspaceClient/
+  );
   assert.match(employeeResubmitPanel, /id="request-resubmit"/);
 
   assert.match(workItem, /WI-0305/i);

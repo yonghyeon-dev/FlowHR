@@ -1,5 +1,5 @@
-import { EmployeeSelfServicePage } from "@/app/employee/page";
+import EmployeeAttendanceLeaveWorkspaceClient from "@/app/employee/attendance-leave-workspace-client";
 
 export default function EmployeeAttendanceWorkspacePage() {
-  return <EmployeeSelfServicePage mode="attendance" />;
+  return <EmployeeAttendanceLeaveWorkspaceClient mode="attendance" />;
 }
