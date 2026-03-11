@@ -44,8 +44,9 @@ function run() {
   assert.match(queryHelpers, /attendance: "\/employee\/attendance#attendance"/);
   assert.match(queryHelpers, /leave: "\/employee\/leave#leave"/);
   assert.match(queryHelpers, /"leave-calendar": "\/employee\/leave#leave-calendar"/);
-  assert.match(employeePage, /mode === "attendance"/);
-  assert.match(employeePage, /mode === "leave"/);
+  assert.doesNotMatch(employeePage, /mode === "attendance"/);
+  assert.doesNotMatch(employeePage, /mode === "leave"/);
+  assert.doesNotMatch(employeePage, /EmployeeWorkspaceHero/);
   assert.doesNotMatch(employeePage, /<EmployeeAttendanceLeavePanels/);
   assert.match(
     attendancePage,

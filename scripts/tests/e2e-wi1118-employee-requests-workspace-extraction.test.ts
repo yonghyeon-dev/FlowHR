@@ -48,7 +48,7 @@ function run() {
   assert.doesNotMatch(homePage, /<EmployeeRequestFeedbackPanels/);
   assert.doesNotMatch(homePage, /<EmployeeResubmitPanel/);
   assert.match(homePage, /resolveEmployeePromotedRouteForFocusSection/);
-  assert.match(homePage, /resolveEmployeeResubmitDraftPrefill/);
+  assert.doesNotMatch(homePage, /resolveEmployeeResubmitDraftPrefill/);
   assert.match(homePage, /router\.replace\(promotedRouteForFocusSection\)/);
 
   assert.match(

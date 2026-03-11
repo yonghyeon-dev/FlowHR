@@ -106,10 +106,11 @@ async function run() {
   assert.match(employeeRequestFeedbackPanels, /Request search and sort list/);
   assert.match(employeeResubmitPanel, /Resubmit flow checks/);
   assert.match(employeePage, /from "@\/app\/employee\/page-locale-helpers"/);
-  assert.match(
-    employeePage,
-    /const localeLabelBundle = useMemo\(\(\) => resolveEmployeeLocaleLabelBundle\(isKoLocale\), \[isKoLocale\]\);/
-  );
+  assert.match(employeePage, /resolveEmployeeLocaleLabelBundle\(isKoLocale\)/);
+  assert.match(employeePage, /EmployeeScheduleSummaryPanel/);
+  assert.doesNotMatch(employeePage, /EmployeeAttendanceFormPanel/);
+  assert.doesNotMatch(employeePage, /EmployeeLeaveRequestPanel/);
+  assert.doesNotMatch(employeePage, /EmployeeLeaveCalendarPanel/);
   assert.match(employeeLocaleHelpers, /success:\s*"Success"/);
 
   assert.match(workItem, /WI-0310/i);

@@ -25,7 +25,7 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(employeePage, /summaryCopy/);
-  assert.match(employeePage, /const \{ leaveBalance: leaveBalanceCopy, leaveUnits: leaveUnitCopy \} = summaryCopy;/);
+  assert.match(employeePage, /leaveBalance: leaveBalanceCopy,\s*leaveUnits: leaveUnitCopy/);
   assert.match(employeePage, /leaveBalanceCopy,/);
   assert.match(employeePage, /leaveUnitCopy,/);
 
@@ -35,7 +35,8 @@ async function run() {
   assert.match(employeeSummarySources, /label: leaveBalanceCopy\.cardLabels\.remaining/);
   assert.match(employeeSummarySources, /leaveBalanceCopy\.projectedRemaining/);
   assert.match(employeeSummarySources, /leaveUnitCopy\.hourUnit\(request\.hours\.toFixed\(2\)\)/);
-  assert.match(employeePage, /leaveBalanceLabel=\{leaveBalance \? leaveBalanceCopy\.dayUnit\(formatDays\(leaveBalance\.remainingDays\)\) : "-"\}/);
+  assert.match(employeePage, /leaveBalanceLabel=\{/);
+  assert.match(employeePage, /leaveBalanceCopy\.dayUnit\(formatDays\(leaveBalance\.remainingDays\)\)/);
 
   assert.match(employeeLocaleHelpers, /const EMPLOYEE_SUMMARY_COPY_BY_LOCALE =/);
   assert.match(employeeLocaleHelpers, /summaryCopy: EMPLOYEE_SUMMARY_COPY_BY_LOCALE\[localeKey\]/);

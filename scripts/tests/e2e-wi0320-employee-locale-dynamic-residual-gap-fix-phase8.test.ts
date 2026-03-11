@@ -8,6 +8,12 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeAttendanceLeaveWorkspaceClient = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "attendance-leave-workspace-client.tsx"
+  );
   const employeeAttendanceLeavePanels = readUtf8(
     "src",
     "components",
@@ -59,9 +65,10 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(employeePage, /surfaceCopy/);
+  assert.match(employeePage, /const \{ sectionTitles, apiLogs: apiLogsCopy \} = surfaceCopy;/);
   assert.match(
-    employeePage,
-    /const \{\s*sectionTitles,\s*attendance: attendanceCopy,\s*leave: leaveCopy,\s*leaveCalendar: leaveCalendarCopy,\s*schedule: scheduleCopy,\s*apiLogs: apiLogsCopy\s*\} = surfaceCopy;/
+    employeeAttendanceLeaveWorkspaceClient,
+    /const \{\s*attendance: attendanceCopy,\s*leave: leaveCopy,\s*leaveCalendar: leaveCalendarCopy,\s*schedule: scheduleCopy,\s*apiLogs: apiLogsCopy,\s*sectionTitles\s*\}\s*=/
   );
   assert.match(employeeSurfaceSources, /\{attendanceCopy\.checkInTime\}/);
   assert.match(employeeSurfaceSources, /\{leaveCopy\.requestUnit\}/);

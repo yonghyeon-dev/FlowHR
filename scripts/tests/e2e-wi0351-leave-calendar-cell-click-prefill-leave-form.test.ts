@@ -8,6 +8,12 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const attendanceLeaveWorkspaceClient = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "attendance-leave-workspace-client.tsx"
+  );
   const attendanceLeavePanels = readUtf8(
     "src",
     "components",
@@ -28,8 +34,12 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(employeePage, /prefillLeaveFormFromCalendarDate/);
-  assert.match(employeePage, /onPrefillLeaveFromCalendarDate: prefillLeaveFormFromCalendarDate,/);
+  assert.doesNotMatch(employeePage, /prefillLeaveFormFromCalendarDate/);
+  assert.match(attendanceLeaveWorkspaceClient, /prefillLeaveFormFromCalendarDate/);
+  assert.match(
+    attendanceLeaveWorkspaceClient,
+    /onPrefillLeaveFromCalendarDate: prefillLeaveFormFromCalendarDate,/
+  );
   assert.match(attendanceLeavePanels, /onPrefillLeaveFromCalendarDate: \(dateKey: string\) => void/);
   assert.match(leaveCalendarPanel, /clickToPrefill/);
   assert.match(leaveCalendarPanel, /is-clickable/);
