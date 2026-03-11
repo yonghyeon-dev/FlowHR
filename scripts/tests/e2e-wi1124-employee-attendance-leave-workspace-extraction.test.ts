@@ -15,6 +15,13 @@ function run() {
     "page.tsx"
   );
   const leavePage = readUtf8("src", "app", "employee", "leave", "page.tsx");
+  const leavePageClient = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "leave",
+    "page-client.tsx"
+  );
   const workspaceClient = readUtf8(
     "src",
     "app",
@@ -30,9 +37,10 @@ function run() {
     attendancePage,
     /EmployeeAttendanceLeaveWorkspaceClient mode="attendance"/
   );
+  assert.match(leavePage, /EmployeeLeaveWorkspacePageClient/);
   assert.match(
-    leavePage,
-    /EmployeeAttendanceLeaveWorkspaceClient mode="leave"/
+    leavePageClient,
+    /EmployeeAttendanceLeaveWorkspaceClient[\s\S]*mode="leave"/
   );
   assert.doesNotMatch(attendancePage, /EmployeeSelfServicePage/);
   assert.doesNotMatch(leavePage, /EmployeeSelfServicePage/);

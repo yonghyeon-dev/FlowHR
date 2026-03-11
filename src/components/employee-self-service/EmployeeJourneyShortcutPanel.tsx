@@ -53,7 +53,7 @@ const SHORTCUTS = {
       key: "leave-calendar",
       label: "휴가 캘린더",
       detail: "팀 휴가 밀도를 확인하고 날짜별 일정을 살펴봅니다.",
-      href: "/employee/leave?source=employee-dashboard#leave-calendar"
+      href: "/employee/leave/calendar?source=employee-dashboard"
     },
     {
       key: "request-feedback",
@@ -85,7 +85,7 @@ const SHORTCUTS = {
       key: "leave-calendar",
       label: "Leave calendar",
       detail: "Check team leave density and open the date-based calendar view.",
-      href: "/employee/leave?source=employee-dashboard#leave-calendar"
+      href: "/employee/leave/calendar?source=employee-dashboard"
     },
     {
       key: "request-feedback",

@@ -32,7 +32,7 @@ const EMPLOYEE_FOCUS_ALIASES: Record<string, string> = {
 const PROMOTED_ROUTE_SECTION_MAP: Record<string, string> = {
   attendance: "/employee/attendance#attendance",
   leave: "/employee/leave#leave",
-  "leave-calendar": "/employee/leave#leave-calendar",
+  "leave-calendar": "/employee/leave/calendar",
   schedule: "/employee/schedule",
   "request-feedback": "/employee/requests/monitoring",
   "request-search-sort": "/employee/requests/monitoring",
