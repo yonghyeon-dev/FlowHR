@@ -207,16 +207,16 @@ export function EmployeeAccountOverviewPanels({
     <>
       <EmployeeJourneyShortcutPanel onJumpToSection={onJumpToSection} />
 
-      <article className="panel" id="workspace-hub">
+      <article className="panel employee-home-workspace-panel" id="workspace-hub">
         <h2>{isKoLocale ? "핵심 워크스페이스 허브" : "Core workspace hub"}</h2>
         <p className="small">
           {isKoLocale
             ? "요약은 홈 화면에서 확인하고, 상세 작업은 전용 워크스페이스에서 진행하세요."
             : "Use the home dashboard for summary, then continue in dedicated workspaces."}
         </p>
-        <div className="panel-grid">
+        <div className="panel-grid employee-home-workspace-grid">
           {workspaceHubs.map((hub) => (
-            <article className="panel" key={hub.key}>
+            <article className="panel employee-home-workspace-card" key={hub.key}>
               <h3>{hub.title}</h3>
               <p className="small muted">{hub.description}</p>
               <div className="actions">
@@ -235,7 +235,7 @@ export function EmployeeAccountOverviewPanels({
         </div>
       </article>
 
-      <article className="panel" id="priority-action">
+      <article className="panel employee-home-priority-panel" id="priority-action">
         <h2>{isKoLocale ? "오늘의 우선 처리" : "Today's priority"}</h2>
         <p className="small">
           {isKoLocale
@@ -338,7 +338,7 @@ export function EmployeeAccountOverviewPanels({
         )}
       </article>
 
-      <article className="panel" id="account">
+      <article className="panel employee-home-account-panel" id="account">
         <h2>{isKoLocale ? "내 계정" : "My Account"}</h2>
         {isProductionRuntime ? (
           <p className="small">
@@ -405,7 +405,10 @@ export function EmployeeAccountOverviewPanels({
         </div>
       </article>
 
-      <article className="panel panel-self-service-overview" id="self-service-overview">
+      <article
+        className="panel panel-self-service-overview employee-home-summary-panel"
+        id="self-service-overview"
+      >
         <h2>{isKoLocale ? "근태/휴가 통합 요약 카드" : "Attendance/Leave Summary Cards"}</h2>
         <p className="small">
           {isKoLocale
@@ -423,7 +426,10 @@ export function EmployeeAccountOverviewPanels({
         </div>
       </article>
 
-      <article className="panel panel-submit-checklist" id="submit-checklist">
+      <article
+        className="panel panel-submit-checklist employee-home-checklist-panel"
+        id="submit-checklist"
+      >
         <h2>{isKoLocale ? "정정/휴가 제출 체크리스트 통합" : "Correction/Leave Submit Checklist"}</h2>
         <p className="small">
           {isKoLocale

@@ -47,6 +47,12 @@ body {
     radial-gradient(820px 420px at 100% 0%, rgba(255, 241, 226, 0.78) 0%, transparent 62%),
     linear-gradient(180deg, #fffaf4 0%, #f7fbff 100%);
 }
+.employee-shell {
+  background:
+    radial-gradient(840px 360px at 0% 0%, rgba(221, 244, 233, 0.72) 0%, transparent 58%),
+    radial-gradient(760px 340px at 100% 0%, rgba(229, 241, 255, 0.86) 0%, transparent 62%),
+    linear-gradient(180deg, #f8fffb 0%, #f5f9ff 100%);
+}
 .saas-sidebar {
   padding: 22px 16px;
   border-right: 1px solid var(--line);
@@ -60,6 +66,10 @@ body {
 .admin-sidebar {
   background: rgba(255, 251, 245, 0.88);
   border-right-color: rgba(214, 190, 164, 0.42);
+}
+.employee-sidebar {
+  background: rgba(248, 255, 251, 0.9);
+  border-right-color: rgba(176, 209, 195, 0.45);
 }
 .saas-brand {
   display: flex;
@@ -138,9 +148,19 @@ body {
   font-size: 0.82rem;
   line-height: 1.5;
 }
+.employee-sidebar-copy {
+  margin: 0 0 16px;
+  color: #43665a;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
 .admin-sidebar-footer {
   border-top-style: solid;
   border-top-color: rgba(214, 190, 164, 0.42);
+}
+.employee-sidebar-footer {
+  border-top-style: solid;
+  border-top-color: rgba(176, 209, 195, 0.45);
 }
 .notification-bell {
   display: inline-flex;
@@ -244,6 +264,10 @@ body {
   display: grid;
   gap: 18px;
 }
+.employee-home-shell {
+  display: grid;
+  gap: 18px;
+}
 .page-header {
   display: flex;
   align-items: flex-end;
@@ -277,17 +301,42 @@ body {
     linear-gradient(140deg, #fffaf2 0%, #fffdf9 52%, #f5f9ff 100%);
   box-shadow: 0 24px 48px rgba(90, 62, 35, 0.08);
 }
+.employee-home-hero {
+  align-items: stretch;
+  padding: 24px;
+  border: 1px solid rgba(176, 209, 195, 0.58);
+  border-radius: 24px;
+  background:
+    radial-gradient(480px 220px at 0% 0%, rgba(221, 244, 233, 0.85) 0%, transparent 72%),
+    linear-gradient(140deg, #f7fffb 0%, #fbfffd 48%, #f3f8ff 100%);
+  box-shadow: 0 24px 48px rgba(56, 92, 78, 0.08);
+}
 .admin-hub-hero-copy {
+  display: grid;
+  gap: 12px;
+}
+.employee-home-hero-copy {
   display: grid;
   gap: 12px;
 }
 .admin-hub-hero .page-subtitle {
   max-width: 62ch;
 }
+.employee-home-hero .page-subtitle {
+  max-width: 58ch;
+}
 .admin-hub-hero-actions {
   align-content: start;
 }
+.employee-home-hero-actions {
+  align-content: start;
+}
 .admin-hub-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.employee-home-hero-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -301,6 +350,18 @@ body {
   border: 1px solid rgba(214, 190, 164, 0.52);
   background: rgba(255, 255, 255, 0.9);
   color: #704f34;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.employee-home-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(176, 209, 195, 0.52);
+  background: rgba(255, 255, 255, 0.92);
+  color: #3d6254;
   font-size: 0.82rem;
   font-weight: 600;
 }
@@ -398,6 +459,13 @@ body {
 .admin-hub-workspace-panel {
   border-color: rgba(214, 190, 164, 0.38);
 }
+.employee-home-workspace-panel,
+.employee-home-priority-panel,
+.employee-home-account-panel,
+.employee-home-summary-panel,
+.employee-home-checklist-panel {
+  border-color: rgba(176, 209, 195, 0.38);
+}
 .admin-hub-queue-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -411,9 +479,16 @@ body {
 .admin-hub-summary-strip {
   margin-top: 0;
 }
+.employee-home-status-strip {
+  margin-top: 0;
+}
 .admin-hub-status-card,
 .admin-hub-summary-card {
   border-color: rgba(205, 221, 245, 0.82);
+}
+.employee-home-status-card {
+  border-color: rgba(176, 209, 195, 0.48);
+  background: linear-gradient(180deg, #ffffff 0%, #f7fffb 100%);
 }
 .panel-grid {
   margin-top: 18px;
@@ -423,6 +498,9 @@ body {
 }
 .admin-hub-workspace-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.employee-home-workspace-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .panel {
   border: 1px solid var(--line);
@@ -449,8 +527,18 @@ body {
   background: linear-gradient(180deg, #ffffff 0%, #fffaf4 100%);
   border-color: rgba(214, 190, 164, 0.34);
 }
+.employee-home-workspace-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fffb 100%);
+  border-color: rgba(176, 209, 195, 0.34);
+}
 .admin-hub-workspace-card .actions {
   margin-top: 12px;
+}
+.employee-home-workspace-card .actions {
+  margin-top: 12px;
+}
+.employee-home-panel-grid {
+  align-items: start;
 }
 .input-grid {
   display: grid;
@@ -4331,10 +4419,16 @@ button.queue-badge:hover {
   .admin-hub-hero {
     padding: 20px;
   }
+  .employee-home-hero {
+    padding: 20px;
+  }
   .admin-hub-queue-grid,
   .admin-hub-status-grid,
   .admin-hub-workspace-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .employee-home-workspace-grid {
+    grid-template-columns: 1fr;
   }
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4698,7 +4792,14 @@ button.queue-badge:hover {
   .admin-hub-hero-meta {
     gap: 8px;
   }
+  .employee-home-hero-meta {
+    gap: 8px;
+  }
   .admin-hub-chip {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .employee-home-chip {
     width: 100%;
     justify-content: space-between;
   }

@@ -458,7 +458,7 @@ function EmployeeSelfServicePage() {
   } as const;
 
   return (
-    <main className="saas-content">
+    <main className="saas-content employee-home-shell">
       <EmployeeDashboardChrome
         showDevTools={showDevTools}
         isKoLocale={isKoLocale}
@@ -473,8 +473,9 @@ function EmployeeSelfServicePage() {
         pendingLeaveCount={pendingLeaveCount}
         stats={stats}
         pendingLabel={pendingLabel}
+        variant="home"
       />
-      <section className="panel-grid">
+      <section className="panel-grid employee-home-panel-grid">
         <EmployeeAccountOverviewPanels
           isKoLocale={isKoLocale}
           showDevTools={showDevTools}

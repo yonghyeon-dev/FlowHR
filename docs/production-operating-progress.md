@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1140` by landing the first admin hub visual shell baseline on the grouped route-first model.
-2. Continue the next admin visual wave only after the hub-specific hero, metric, and workspace grid baseline is stable.
-3. Start the employee visual shell baseline only after the admin visual language proves stable on `main`.
+1. Close `WI-1141` by landing the first employee home visual shell baseline on the grouped route-first model.
+2. Continue the next employee visual wave only after the home-specific hero, status chip, and panel hierarchy baseline is stable.
+3. Start the next shared workspace visual wave only after both admin and employee root shell language are stable on `main`.
 
 ## 5. Blockers Or Watch Items
 
@@ -341,3 +341,6 @@ Latest planning reset:
 - Closed `WI-1139` with merge `c38c96d5ee28029e3a4c154f350b980d469ff0fc`.
 - Re-verified `WI-1139` on the delivery path and confirmed both `ci` (`22943681560`) and `vercel-production-deploy` (`22943681558`) stay green after the admin hub top-level title alignment.
 - Started `WI-1140` to land the first visual shell baseline for the admin hub without changing route semantics or role boundaries.
+- Closed `WI-1140` with merge `79aa83fb1a44c70c3a8d4f154fe747792ef44c6f`.
+- Re-verified `WI-1140` on the delivery path and confirmed both `ci` (`22944493878`) and `vercel-production-deploy` (`22944493898`) stay green after the admin hub visual shell baseline.
+- Started `WI-1141` to land the first employee home visual shell baseline without changing route semantics or workspace boundaries.
