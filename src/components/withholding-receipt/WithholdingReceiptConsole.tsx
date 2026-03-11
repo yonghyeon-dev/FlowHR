@@ -208,27 +208,59 @@ export default function WithholdingReceiptConsole() {
         locale
       )
     : "-";
+  const completedWorkspacePanels = [
+    receipt,
+    receiptDocument,
+    finalizedSettlement
+  ].filter(Boolean).length;
+  const returnToEmployeeLabel =
+    locale === "ko" ? "직원 홈으로 돌아가기" : "Back to employee home";
   return (
-    <main className="saas-content">
-      <header className="hero">
+    <main className="saas-content workspace-shell employee-workspace-shell">
+      <header className="page-header workspace-page-header">
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
-        {sourceContextLabel ? <p className="small muted">{sourceContextLabel}</p> : null}
-        {sourceContextReturnLabel ? (
-          <div className="actions" style={{ marginTop: 8 }}>
-            <Link className="btn btn-secondary" href="/employee">
+        {sourceContextLabel ? <p className="small muted workspace-source-banner">{sourceContextLabel}</p> : null}
+        <div className="page-actions" style={{ marginTop: 8 }}>
+          {sourceContextReturnLabel ? (
+            <Link className="btn btn-secondary btn-small" href="/employee">
               {sourceContextReturnLabel}
             </Link>
-          </div>
-        ) : null}
+          ) : null}
+          <Link className="btn btn-secondary btn-small" href="/employee">
+            {returnToEmployeeLabel}
+          </Link>
+        </div>
       </header>
+
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.title}>
+        <article className="kpi">
+          <span>{copy.yearLabel}</span>
+          <strong>{year}</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.documentFormatLabel}</span>
+          <strong>{resolveDocumentFormatLabel(documentFormat)}</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.apiLogsTotalLabel}</span>
+          <strong>
+            {stats.total} / {copy.apiLogsSuccessLabel} {stats.success}
+          </strong>
+        </article>
+        <article className="kpi">
+          <span>{locale === "ko" ? "준비 패널" : "Loaded panels"}</span>
+          <strong>{completedWorkspacePanels} / 3</strong>
+        </article>
+      </section>
+
       {requiresLoginSession ? (
-        <p className="small fail">
+        <p className="small fail workspace-inline-status">
           {copy.productionSessionRequiredNotice} <Link href="/login">/login</Link>
         </p>
       ) : null}
-      <section className="panel-grid">
+      <section className="panel-grid workspace-panel-grid">
         <WithholdingReceiptInputPanel
           copy={copy}
           locale={locale}

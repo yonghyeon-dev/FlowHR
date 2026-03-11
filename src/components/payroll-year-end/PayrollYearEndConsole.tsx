@@ -159,6 +159,12 @@ export default function PayrollYearEndConsole() {
       "인증 세션 상태를 확인하지 못했습니다."
     );
   }, [locale, supabaseSessionError]);
+  const completedWorkspacePanels = [
+    settlement,
+    recalculation,
+    insuranceReconciliationReport,
+    receipt
+  ].filter(Boolean).length;
 
   function buildHeaders() {
     const headers: Record<string, string> = {
@@ -501,18 +507,55 @@ export default function PayrollYearEndConsole() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="hero">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
+        <p className="small muted workspace-source-banner">
+          {locale === "ko"
+            ? "연말정산, 재계산, 보험 정산, 원천징수 발급 상태를 한 작업면에서 점검하는 관리자 콘솔입니다."
+            : "Review settlement, recalculation, insurance reconciliation, and withholding readiness from one admin workspace."}
+        </p>
+        <div className="page-actions" style={{ marginTop: 8 }}>
+          <Link href="/admin/payroll-year-end/preflight" className="btn btn-secondary btn-small">
+            {copy.openPreflightChecklistAction}
+          </Link>
+          <Link href="/admin" className="btn btn-secondary btn-small">
+            {copy.backToAdminAction}
+          </Link>
+        </div>
       </header>
-      <section className="panel-grid">
-        <article className="panel">
+
+      <section className="kpi-strip workspace-summary-strip" aria-label={copy.title}>
+        <article className="kpi">
+          <span>{copy.yearLabel}</span>
+          <strong>{year}</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.employeeIdLabel}</span>
+          <strong>{employeeId.trim() || "-"}</strong>
+        </article>
+        <article className="kpi">
+          <span>{copy.apiLogsTotalLabel}</span>
+          <strong>
+            {stats.total} / {copy.apiLogsSuccessLabel} {stats.success}
+          </strong>
+        </article>
+        <article className="kpi">
+          <span>{locale === "ko" ? "완료 패널" : "Loaded panels"}</span>
+          <strong>{completedWorkspacePanels} / 4</strong>
+        </article>
+      </section>
+
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card workspace-toolbar-card">
           <h2>{copy.inputTitle}</h2>
           {showDevTools ? (
-            <p className="small muted">
+            <p className="small muted workspace-source-banner">
+              {locale === "ko" ? "세션 조직" : "Session organization"}:{" "}
               <strong>{formatWorkspaceConnectionState(Boolean(organizationId.trim()), runtimeLocale)}</strong> /{" "}
+              {locale === "ko" ? "세션 관리자" : "Session admin"}:{" "}
               <strong>{formatAdminSessionConnectionState(Boolean(adminActorId.trim()), runtimeLocale)}</strong>
             </p>
           ) : null}
@@ -546,14 +589,14 @@ export default function PayrollYearEndConsole() {
             <button className="btn btn-secondary" onClick={() => void runReceipt(false)} disabled={pendingLabel !== null}>{copy.previewReceiptAction}</button>
             <button className="btn btn-primary" onClick={() => void runReceipt(true)} disabled={pendingLabel !== null}>{copy.issueReceiptAction}</button>
           </div>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
+          {statusMessage ? <p className="small workspace-inline-status">{statusMessage}</p> : null}
           {normalizedSupabaseSessionError ? (
-            <p className="small fail">
+            <p className="small fail workspace-inline-status">
               {copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}
             </p>
           ) : null}
         </article>
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.settlementTitle}</h2>
           {!settlement ? <p className="small">{copy.noSettlementYet}</p> : (
             <ul className="simple-list">
@@ -570,7 +613,7 @@ export default function PayrollYearEndConsole() {
             </ul>
           )}
         </article>
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.recalculationTitle}</h2>
           {!recalculation ? <p className="small">{copy.noRecalculationYet}</p> : (
             <ul className="simple-list">
@@ -593,7 +636,7 @@ export default function PayrollYearEndConsole() {
             </ul>
           )}
         </article>
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.insuranceReconciliationTitle}</h2>
           {!insuranceReconciliationReport ? <p className="small">{copy.noInsuranceReconciliationReportYet}</p> : (
             <ul className="simple-list">
@@ -606,7 +649,7 @@ export default function PayrollYearEndConsole() {
             </ul>
           )}
         </article>
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.withholdingReceiptTitle}</h2>
           {!receipt ? <p className="small">{copy.noReceiptSummaryYet}</p> : (
             <ul className="simple-list">
@@ -626,7 +669,7 @@ export default function PayrollYearEndConsole() {
           insuranceReconciliationReport={insuranceReconciliationReport}
         />
         {showDevTools ? (
-          <article className="panel">
+          <article className="panel workspace-section-card workspace-note-card">
             <h2>{copy.apiLogsTitle}</h2>
             <p className="small">{copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}{pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}</p>
             {logs.length === 0 ? <p className="small">{copy.noApiCallYet}</p> : (

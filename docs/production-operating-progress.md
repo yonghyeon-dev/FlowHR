@@ -395,3 +395,9 @@ Latest planning reset:
 - Closed `WI-1156` with merge `ab0cdfed371b7445f9d9de07dab109ed653f9ef4`.
 - Re-verified `WI-1156` on the delivery path and confirmed both `ci` (`22961807115`) and `vercel-production-deploy` (`22961807153`) stay green after the fifteenth shared workspace visual wave.
 - Started `WI-1157` to extend the same route-first workspace shell onto the admin approval execution workspace and its related operational panels.
+- Closed `WI-1157` with merge `2ccb48815efabd3c0058837210886c03971993cc`.
+- Re-verified `WI-1157` on the delivery path and confirmed both `ci` (`22962956425`) and `vercel-production-deploy` (`22962956442`) stay green after the sixteenth shared workspace visual wave.
+- Started `WI-1158` to extend the same route-first workspace shell onto admin payroll operational consoles covering payroll close, payslip delivery, insurance settlement, and year-end preflight.
+- Closed `WI-1158` with merge `bd26e43199695708239fe24772092ed6da213d41`.
+- Re-verified `WI-1158` on the delivery path and confirmed both `ci` (`22964429339`) and `vercel-production-deploy` (`22964429343`) stay green after the seventeenth shared workspace visual wave.
+- Started `WI-1159` to extend the same route-first workspace shell onto year-end settlement, filing, and withholding receipt consoles.
