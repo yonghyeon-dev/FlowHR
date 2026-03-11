@@ -36,8 +36,8 @@ function run() {
 
   assert.match(layout, /href: "\/employee\/requests(?:\?source=employee-mobile-menu)?"/);
   assert.match(guidePage, /href="\/employee\/requests\?source=employee-guide"/);
-  assert.match(guidePage, /href: "\/employee\/attendance\?source=employee-guide"/);
-  assert.match(guidePage, /href: "\/employee\/leave\?source=employee-guide"/);
+  assert.match(guidePage, /href: "\/employee\/attendance\/correction\?source=employee-guide"/);
+  assert.match(guidePage, /href: "\/employee\/leave\/request\?source=employee-guide"/);
 
   assert.match(workspaceHubs, /\/employee\/attendance/);
   assert.match(workspaceHubs, /\/employee\/leave/);

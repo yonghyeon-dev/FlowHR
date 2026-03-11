@@ -28,8 +28,8 @@ function run() {
   );
 
   assert.match(employeeLayout, /\/employee\/requests\?source=employee-mobile-menu/);
-  assert.match(employeeLayout, /\/employee\/attendance\?source=employee-mobile-menu/);
-  assert.match(employeeLayout, /\/employee\/leave\?source=employee-mobile-menu/);
+  assert.match(employeeLayout, /\/employee\/attendance\/correction\?source=employee-mobile-menu/);
+  assert.match(employeeLayout, /\/employee\/leave\/request\?source=employee-mobile-menu/);
   assert.match(employeeLayout, /\/employee\/schedule\?source=employee-mobile-menu/);
   assert.match(sourceContext, /case "employee-mobile-menu":/);
   assert.match(requestsPage, /EmployeeRequestsWorkspaceContent/);

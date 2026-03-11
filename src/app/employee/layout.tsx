@@ -42,11 +42,11 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
           label: locale === "ko" ? "요청 허브" : "Requests hub"
         },
         {
-          href: "/employee/attendance?source=employee-mobile-menu",
+          href: "/employee/attendance/correction?source=employee-mobile-menu",
           label: locale === "ko" ? "근태 작업" : "Attendance workspace"
         },
         {
-          href: "/employee/leave?source=employee-mobile-menu",
+          href: "/employee/leave/request?source=employee-mobile-menu",
           label: locale === "ko" ? "휴가 작업" : "Leave workspace"
         },
         {
