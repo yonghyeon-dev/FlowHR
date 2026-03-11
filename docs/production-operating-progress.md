@@ -230,9 +230,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1143` by extending the shared workspace visual primitives onto `admin payroll-close` and `employee attendance/leave` route-first workspaces.
-2. Continue the next shared workspace visual wave only after the second admin/employee route pair is stable on `main`.
-3. Expand the workspace visual system to additional route-first surfaces only after both representative waves are proven.
+1. Close `WI-1144` by extending the shared workspace visual primitives onto `admin payslip delivery` and `employee payslips` route-first workspaces.
+2. Continue the next shared workspace visual wave only after the payroll document/delivery route pair is stable on `main`.
+3. Expand the workspace visual system to additional route-first surfaces only after all three representative waves are proven.
 
 ## 5. Blockers Or Watch Items
 
@@ -350,3 +350,6 @@ Latest planning reset:
 - Closed `WI-1142` with merge `b6860d4b9d36b6e9dc06321cae653dbb8269abfe`.
 - Re-verified `WI-1142` on the delivery path and confirmed both `ci` (`22946160145`) and `vercel-production-deploy` (`22946160156`) stay green after the first shared workspace visual primitives baseline.
 - Started `WI-1143` to extend the shared workspace visual primitives onto admin payroll-close and employee attendance/leave route-first workspaces.
+- Closed `WI-1143` with merge `5ce0812a87131090834dda1a270f42ab9826fb8e`.
+- Re-verified `WI-1143` on the delivery path and confirmed both `ci` (`22946958323`) and `vercel-production-deploy` (`22946958328`) stay green after the second shared workspace visual wave.
+- Started `WI-1144` to extend the shared workspace visual primitives onto admin payslip delivery and employee payslips route-first workspaces.

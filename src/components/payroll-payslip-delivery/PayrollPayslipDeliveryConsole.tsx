@@ -136,20 +136,20 @@ export default function PayrollPayslipDeliveryConsole({
   }
 
   return (
-    <main className="saas-content">
-      <header className="hero">
+    <main className="saas-content workspace-shell admin-workspace-shell">
+      <header className="page-header workspace-page-header">
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
         {isAdminHubSource(source) ? (
-          <p className="small muted">
+          <p className="small muted workspace-source-banner">
             {copy.dashboardSourceBanner} · {copy.dashboardSourceFocusLabel}: {focusLabel}
           </p>
         ) : null}
       </header>
 
-      <section className="panel-grid">
-        <article className="panel">
+      <section className="panel-grid workspace-panel-grid">
+        <article className="panel workspace-section-card">
           <h2>{copy.inputTitle}</h2>
           {showDevTools ? (
             <p className="small muted">
@@ -188,11 +188,15 @@ export default function PayrollPayslipDeliveryConsole({
               {copy.applyDeliveryAction}
             </button>
           </div>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
+          {statusMessage ? <p className="small workspace-inline-status">{statusMessage}</p> : null}
+          {supabaseSessionError ? (
+            <p className="small fail workspace-inline-status">
+              {copy.sessionErrorPrefix}: {supabaseSessionError}
+            </p>
+          ) : null}
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.runStatesTitle}</h2>
           {!result ? (
             <p className="small">{copy.noDistributionSummaryYet}</p>
@@ -206,7 +210,7 @@ export default function PayrollPayslipDeliveryConsole({
           )}
         </article>
 
-        <article className="panel">
+        <article className="panel workspace-section-card">
           <h2>{copy.runIdsTitle}</h2>
           {!result ? (
             <p className="small">{copy.noRunIdsYet}</p>
@@ -220,7 +224,7 @@ export default function PayrollPayslipDeliveryConsole({
         </article>
 
         {showDevTools ? (
-          <article className="panel">
+          <article className="panel workspace-side-panel">
             <h2>{copy.apiLogsTitle}</h2>
             <p className="small">
               {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}

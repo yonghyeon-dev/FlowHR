@@ -109,7 +109,7 @@ export function EmployeePayslipsPageView({
   }, [runs.length, selectedRunKey]);
 
   return (
-    <main className="saas-content">
+    <main className="saas-content workspace-shell employee-workspace-shell">
       <EmployeePayslipFilterPanel
         pageCopy={pageCopy}
         sourceContext={sourceContext}
@@ -140,7 +140,7 @@ export function EmployeePayslipsPageView({
         formatKrw={formatKrw}
       />
 
-      <section className="panel-grid">
+      <section className="panel-grid workspace-panel-grid">
         <EmployeePayslipRunListPanel
           pageCopy={pageCopy}
           runs={runs}
@@ -148,7 +148,10 @@ export function EmployeePayslipsPageView({
           setSelectedRunId={setSelectedRunId}
         />
 
-        <article id="payslip-search-sort" className="panel panel-payslip-search-sort">
+        <article
+          id="payslip-search-sort"
+          className="panel workspace-section-card panel-payslip-search-sort"
+        >
           <h2>{searchSortCopy.title}</h2>
           <p className="small">{searchSortCopy.description}</p>
           <PayslipSearchSortPanelContent
@@ -168,7 +171,10 @@ export function EmployeePayslipsPageView({
           />
         </article>
 
-        <article id="status-feedback" className="panel panel-payslip-status-feedback">
+        <article
+          id="status-feedback"
+          className="panel workspace-section-card panel-payslip-status-feedback"
+        >
           <h2>{pageCopy.status.title}</h2>
           <PayslipStatusFeedbackPanelContent
             pageCopy={pageCopy}
@@ -183,7 +189,7 @@ export function EmployeePayslipsPageView({
           />
         </article>
 
-        <article className="panel panel-payslip-compare">
+        <article className="panel workspace-section-card workspace-note-card panel-payslip-compare">
           <div id="compare-view">
             <div className="payslip-compare-head">
               <h2>{pageCopy.compare.title}</h2>
