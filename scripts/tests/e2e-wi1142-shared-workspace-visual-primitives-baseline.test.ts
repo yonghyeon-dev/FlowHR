@@ -50,7 +50,10 @@ async function run() {
   assert.match(adminPreviewPage, /className="page-header workspace-page-header"/);
   assert.match(adminPreviewPage, /className="panel-grid workspace-panel-grid"/);
 
-  assert.match(employeeRequestsWorkspace, /className="saas-content workspace-shell employee-workspace-shell"/);
+  assert.match(
+    employeeRequestsWorkspace,
+    /className="saas-content workspace-shell employee-workspace-shell(?: [^"]+)?"/
+  );
   assert.match(employeeRequestsWorkspace, /workspace-section-card workspace-action-card/);
   assert.match(employeeRequestsWorkspace, /workspace-note-card/);
 
