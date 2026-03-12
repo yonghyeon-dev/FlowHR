@@ -122,9 +122,10 @@ async function run() {
     /const fallbackName = `계약-증빙-\${stableId\.slice\(0, 8\)}\${extension}`;/
   );
 
+  assert.match(packageJson, /"test:e2e:ko-guard":\s*"npm run test:e2e:ko-guard:current"/);
   assert.match(
     packageJson,
-    /"test:e2e:ko-guard":\s*"[^"]*e2e-wi0522-i18n-one-shot-sweep-ci-guard\.test\.ts[^"]*e2e-wi0579-korean-residual-one-shot-and-ci-guard\.test\.ts[^"]*e2e-wi0655-ko-surface-one-shot-sweep-and-ci-guard\.test\.ts"/
+    /"test:e2e:ko-guard:current":\s*"[^"]*e2e-wi0522-i18n-one-shot-sweep-ci-guard\.test\.ts[^"]*e2e-wi0579-korean-residual-one-shot-and-ci-guard\.test\.ts[^"]*e2e-wi0655-ko-surface-one-shot-sweep-and-ci-guard\.test\.ts"/
   );
 
   assert.match(codexGuide, /I18N One-Shot Guard \(WI-0522\)/);
