@@ -789,6 +789,70 @@ body {
   border-color: rgba(123, 89, 49, 0.18);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 245, 236, 0.98));
 }
+.admin-payroll-diagnostics-card {
+  gap: 12px;
+  border-style: solid;
+  border-color: rgba(140, 157, 182, 0.26);
+  background:
+    linear-gradient(180deg, rgba(251, 253, 255, 0.98), rgba(242, 246, 251, 0.96)),
+    #fff;
+  box-shadow: 0 14px 32px rgba(40, 54, 73, 0.05);
+}
+.admin-payroll-diagnostics-intro {
+  gap: 10px;
+}
+.admin-payroll-diagnostics-eyebrow,
+.admin-payroll-recovery-eyebrow {
+  margin: 0;
+}
+.admin-payroll-diagnostics-eyebrow {
+  color: #60758f;
+}
+.admin-payroll-recovery-card {
+  gap: 12px;
+  border-style: solid;
+  border-color: rgba(167, 123, 81, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 251, 246, 0.98), rgba(251, 241, 232, 0.96)),
+    #fff;
+}
+.admin-payroll-recovery-eyebrow {
+  color: #9b6731;
+}
+.admin-payroll-diagnostics-summary {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+}
+.admin-payroll-diagnostics-pill {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(140, 157, 182, 0.24);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+}
+.admin-payroll-diagnostics-pill span {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.admin-payroll-diagnostics-pill strong {
+  font-size: 0.92rem;
+  color: var(--text-strong);
+}
+.admin-payroll-diagnostics-list {
+  gap: 10px;
+}
+.admin-payroll-diagnostics-list li {
+  border-color: rgba(140, 157, 182, 0.18);
+  background: rgba(255, 255, 255, 0.8);
+}
+.admin-payroll-diagnostics-actions {
+  margin-top: 0;
+  justify-content: flex-start;
+}
 .admin-payroll-lane-side {
   display: grid;
   gap: 16px;

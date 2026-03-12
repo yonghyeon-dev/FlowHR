@@ -1444,7 +1444,10 @@ export default function PayrollYearEndFilingConsole() {
         />
           </div>
         <aside className="workspace-side-panel v2-workspace-side" aria-label={locale === "ko" ? "신고 사이드 레일" : "Filing side rail"}>
-          <article className="panel workspace-section-card workspace-note-card v2-surface-card">
+          <article className="panel workspace-section-card workspace-note-card v2-surface-card admin-payroll-diagnostics-card admin-payroll-diagnostics-intro">
+            <p className="eyebrow admin-payroll-diagnostics-eyebrow">
+              {locale === "ko" ? "참고 레일" : "Reference rail"}
+            </p>
             <h2>{locale === "ko" ? "우선 확인할 운영 보조 패널" : "Priority supporting panels"}</h2>
             <p className="small muted">
               {locale === "ko"
