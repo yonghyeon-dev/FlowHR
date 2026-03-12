@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { isTruthyFlag } from "@/app/admin/page-helpers";
-import { isAdminHubSource } from "@/app/admin/source-context";
+import { isAdminHubSource, isAdminPayrollSource } from "@/app/admin/source-context";
 import { payrollPayslipDeliveryCopyByLocale } from "@/components/payroll-payslip-delivery/copy";
 import type {
   ApiLog,
@@ -58,6 +58,7 @@ export default function PayrollPayslipDeliveryConsole({
     queueMode === "undistributed" ? copy.focusUndistributedLabel : copy.focusAllLabel;
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const showPayrollSource = isAdminPayrollSource(source);
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -150,7 +151,17 @@ export default function PayrollPayslipDeliveryConsole({
             {copy.dashboardSourceBanner} · {copy.dashboardSourceFocusLabel}: {focusLabel}
           </p>
         ) : null}
+        {showPayrollSource ? (
+          <p className="small muted workspace-source-banner">
+            {copy.payrollSourceBanner} · {copy.payrollSourceFocusLabel}: {focusLabel}
+          </p>
+        ) : null}
         <div className="page-actions" style={{ marginTop: 8 }}>
+          {showPayrollSource ? (
+            <Link href="/admin/payroll" className="btn btn-secondary btn-small">
+              {copy.backToPayrollAction}
+            </Link>
+          ) : null}
           <Link href="/admin" className="btn btn-secondary btn-small">
             {copy.backToAdminAction}
           </Link>
@@ -159,7 +170,9 @@ export default function PayrollPayslipDeliveryConsole({
 
       <section className="kpi-strip workspace-summary-strip" aria-label={copy.title}>
         <article className="kpi">
-          <span>{copy.dashboardSourceFocusLabel}</span>
+          <span>
+            {showPayrollSource ? copy.payrollSourceFocusLabel : copy.dashboardSourceFocusLabel}
+          </span>
           <strong>{focusLabel}</strong>
         </article>
         <article className="kpi">
@@ -328,8 +341,8 @@ export default function PayrollPayslipDeliveryConsole({
               </ul>
             )}
             <div className="panel-actions">
-              <Link href="/admin" className="btn btn-secondary">
-                {copy.backToAdminAction}
+              <Link href={showPayrollSource ? "/admin/payroll" : "/admin"} className="btn btn-secondary">
+                {showPayrollSource ? copy.backToPayrollAction : copy.backToAdminAction}
               </Link>
             </div>
           </article>

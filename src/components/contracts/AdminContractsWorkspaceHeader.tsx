@@ -13,6 +13,11 @@ type AdminContractsWorkspaceHeaderProps = {
   dashboardSourceBanner: string;
   dashboardSourceFocusLabel: string;
   dashboardFocusLabel: string;
+  payrollSourceBanner: string;
+  payrollSourceFocusLabel: string;
+  payrollFocusLabel: string;
+  payrollBackHref: string | null;
+  payrollBackLabel: string;
   analyticsBackHref: string | null;
   analyticsBackLabel: string;
   openTemplateBuilderAction: string;
@@ -36,6 +41,11 @@ export function AdminContractsWorkspaceHeader({
   dashboardSourceBanner,
   dashboardSourceFocusLabel,
   dashboardFocusLabel,
+  payrollSourceBanner,
+  payrollSourceFocusLabel,
+  payrollFocusLabel,
+  payrollBackHref,
+  payrollBackLabel,
   analyticsBackHref,
   analyticsBackLabel,
   openTemplateBuilderAction,
@@ -64,10 +74,20 @@ export function AdminContractsWorkspaceHeader({
               {dashboardSourceBanner} · {dashboardSourceFocusLabel}: {dashboardFocusLabel}
             </p>
           ) : null}
+          {analyticsSource === "admin-payroll" ? (
+            <p className="small muted workspace-source-banner">
+              {payrollSourceBanner} · {payrollSourceFocusLabel}: {payrollFocusLabel}
+            </p>
+          ) : null}
           <div className="contract-action-row">
             {analyticsBackHref ? (
               <Link href={analyticsBackHref} className="btn btn-secondary btn-small">
                 {analyticsBackLabel}
+              </Link>
+            ) : null}
+            {payrollBackHref ? (
+              <Link href={payrollBackHref} className="btn btn-secondary btn-small">
+                {payrollBackLabel}
               </Link>
             ) : null}
             <Link href="/admin/contracts/builder" className="btn btn-secondary btn-small">

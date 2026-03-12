@@ -6,6 +6,8 @@ export type PayrollPayslipDeliveryCopy = {
   description: string;
   dashboardSourceBanner: string;
   dashboardSourceFocusLabel: string;
+  payrollSourceBanner: string;
+  payrollSourceFocusLabel: string;
   focusUndistributedLabel: string;
   focusAllLabel: string;
   inputTitle: string;
@@ -43,6 +45,7 @@ export type PayrollPayslipDeliveryCopy = {
   apiLogsRunningLabel: string;
   noApiCallYet: string;
   backToAdminAction: string;
+  backToPayrollAction: string;
   statusRequestFailed: string;
   statusDryRunTargetPrefix: string;
   statusRunsSuffix: string;
@@ -63,6 +66,8 @@ const copyEn: PayrollPayslipDeliveryCopy = {
     "Distribute confirmed payroll payslips and track delivery baseline before employee receipt confirmation.",
   dashboardSourceBanner: "Opened from admin hub",
   dashboardSourceFocusLabel: "Focused queue",
+  payrollSourceBanner: "Opened from payroll lane",
+  payrollSourceFocusLabel: "Focused lane",
   focusUndistributedLabel: "Undistributed runs",
   focusAllLabel: "Payslip delivery queue",
   inputTitle: "Distribution Input",
@@ -100,6 +105,7 @@ const copyEn: PayrollPayslipDeliveryCopy = {
   apiLogsRunningLabel: "running",
   noApiCallYet: "No API call yet.",
   backToAdminAction: "Back to Admin",
+  backToPayrollAction: "Back to payroll lane",
   statusRequestFailed: "We couldn't complete the request. Review the current state and try again.",
   statusDryRunTargetPrefix: "dry-run target",
   statusRunsSuffix: "runs",
@@ -119,6 +125,8 @@ const copyKo: PayrollPayslipDeliveryCopy = {
   description: "확정된 급여명세서를 배포하고 직원 수신확인 전 상태를 점검합니다.",
   dashboardSourceBanner: "관리자 허브에서 이동했습니다",
   dashboardSourceFocusLabel: "집중 대기함",
+  payrollSourceBanner: "급여 레인에서 이동했습니다",
+  payrollSourceFocusLabel: "집중 레인",
   focusUndistributedLabel: "미배포 실행",
   focusAllLabel: "명세 배포 대기함",
   inputTitle: "배포 입력",
@@ -156,6 +164,7 @@ const copyKo: PayrollPayslipDeliveryCopy = {
   apiLogsRunningLabel: "실행 중",
   noApiCallYet: "아직 API 호출 이력이 없습니다.",
   backToAdminAction: "관리자 화면으로",
+  backToPayrollAction: "급여 레인으로",
   statusRequestFailed: "요청을 완료하지 못했습니다. 현재 상태를 확인한 뒤 다시 시도해 주세요.",
   statusDryRunTargetPrefix: "드라이런 대상",
   statusRunsSuffix: "건",
