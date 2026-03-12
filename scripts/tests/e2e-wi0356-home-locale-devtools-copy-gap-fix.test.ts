@@ -18,11 +18,11 @@ async function run() {
   assert.match(messages, /"home\.devtools\.mvpConsole"/);
   assert.match(messages, /"home\.devtools\.schedulingCockpit"/);
 
-  assert.match(homePage, /t\("home\.employee\.openOverview"\)/);
-  assert.match(homePage, /t\("home\.employee\.openPayslips"\)/);
-  assert.match(homePage, /t\("home\.devtools\.adminConsoleLegacy"\)/);
-  assert.match(homePage, /t\("home\.devtools\.mvpConsole"\)/);
-  assert.match(homePage, /t\("home\.devtools\.schedulingCockpit"\)/);
+  assert.match(homePage, /getRequestLocale/);
+  assert.match(homePage, /const isKoLocale = locale === "ko"/);
+  assert.match(homePage, /href="\/employee\/payslips"|href="\/employee\/payslips"/);
+  assert.match(homePage, /showDevTools/);
+  assert.match(homePage, /Developer tools remain on separate ops-only surfaces|개발자 도구는 별도 ops 표면에서만 노출됩니다/);
 
   assert.match(workItem, /WI-0356/i);
   assert.match(workItem, /home/i);

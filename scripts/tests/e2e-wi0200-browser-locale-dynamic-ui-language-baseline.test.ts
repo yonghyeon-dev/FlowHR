@@ -54,25 +54,26 @@ async function run() {
     "root layout should provide locale context to client components"
   );
 
-  assert.match(homePageSource, /createTranslator/, "home page should use i18n translator");
-  assert.match(homePageSource, /t\("home\.title"\)/, "home page should render localized title");
+  assert.match(homePageSource, /getRequestLocale/, "home page should resolve locale from the request");
+  assert.match(homePageSource, /const isKoLocale = locale === "ko"/, "home page should branch on locale");
 
   assert.match(adminLayoutSource, /createTranslator/, "admin layout should use i18n translator");
   assert.match(
     adminLayoutSource,
-    /t\("admin\.nav\.aria"\)/,
+    /navAriaLabel=\{isKoLocale \? "관리자 탐색" : "Admin navigation"\}/,
     "admin layout should localize navigation labels"
   );
 
   assert.match(employeeLayoutSource, /createTranslator/, "employee layout should use i18n translator");
   assert.match(
     employeeLayoutSource,
-    /t\("employee\.nav\.aria"\)/,
+    /navAriaLabel=\{isKoLocale \? "직원 탐색" : "Employee navigation"\}/,
     "employee layout should localize navigation labels"
   );
 
   assert.match(loginPageSource, /useI18n/, "login page should consume i18n context");
-  assert.match(loginPageSource, /t\("login\.title"\)/, "login page should render localized strings");
+  assert.match(loginPageSource, /const \{ locale \} = useI18n\(\)/, "login page should read the active locale");
+  assert.match(loginPageSource, /isKoLocale \? "로그인" : "Sign in"/, "login page should render localized strings");
 
   assert.match(sessionMenuSource, /useI18n/, "session menu should consume i18n context");
   assert.match(

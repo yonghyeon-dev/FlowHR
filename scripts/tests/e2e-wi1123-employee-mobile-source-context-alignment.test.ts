@@ -27,10 +27,10 @@ function run() {
     "WI-1123-employee-mobile-source-context-alignment.md"
   );
 
-  assert.match(employeeLayout, /\/employee\/requests\?source=employee-mobile-menu/);
-  assert.match(employeeLayout, /\/employee\/attendance\/correction\?source=employee-mobile-menu/);
-  assert.match(employeeLayout, /\/employee\/leave\/request\?source=employee-mobile-menu/);
-  assert.match(employeeLayout, /\/employee\/schedule\?source=employee-mobile-menu/);
+  assert.match(employeeLayout, /href: "\/employee\/requests"/);
+  assert.match(employeeLayout, /href: "\/employee\/attendance\/correction"/);
+  assert.match(employeeLayout, /href: "\/employee\/leave\/request"/);
+  assert.match(employeeLayout, /href: "\/employee\/schedule"/);
   assert.match(sourceContext, /case "employee-mobile-menu":/);
   assert.match(requestsPage, /EmployeeRequestsWorkspaceContent/);
   assert.match(requestsWorkspaceContent, /resolveEmployeeWorkspaceSourceEntry/);

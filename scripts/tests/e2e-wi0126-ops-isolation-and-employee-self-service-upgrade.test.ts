@@ -13,10 +13,15 @@ function run() {
     /href="\/admin\/leave-promotion"/,
     "admin navigation should not expose /admin/leave-promotion in default journey"
   );
-  assert.match(
+  assert.doesNotMatch(
     adminLayoutSource,
     /href="\/ops\/leave-promotion"/,
-    "admin layout should expose leave-promotion only in dev ops links"
+    "admin layout should not expose leave-promotion directly inside the current shell"
+  );
+  assert.match(
+    adminLayoutSource,
+    /href="\/ops\/mvp-console"/,
+    "admin layout should keep dev-only ops entry points behind the dev tools footer"
   );
 
   const adminLeavePromotionSource = readUtf8("src", "app", "admin", "leave-promotion", "page.tsx");
@@ -57,9 +62,10 @@ function run() {
     "employee shell should not expose leave calendar as a hidden-subpage focus link"
   );
   assert.ok(
-    /employee\.navGroup\.requests/.test(employeeLayoutSource) &&
-      /employee\.navGroup\.documents/.test(employeeLayoutSource) &&
-      /employee\.navGroup\.noticesAndAlerts/.test(employeeLayoutSource),
+    /title: isKoLocale \? "Today" : "Today"/.test(employeeLayoutSource) &&
+      /title: isKoLocale \? "Requests" : "Requests"/.test(employeeLayoutSource) &&
+      /title: isKoLocale \? "Documents" : "Documents"/.test(employeeLayoutSource) &&
+      /title: isKoLocale \? "Account" : "Account"/.test(employeeLayoutSource),
     "employee shell should regroup self-service navigation into stable product areas"
   );
 }

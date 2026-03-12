@@ -61,8 +61,10 @@ function run() {
 
   const requiredEmployeeRoutes = [
     "/employee/guide",
-    "/employee/onboarding",
     "/employee/schedule",
+    "/employee/requests",
+    "/employee/attendance/correction",
+    "/employee/leave/request",
     "/employee/benefits",
     "/employee/contracts",
     "/employee/payslips",

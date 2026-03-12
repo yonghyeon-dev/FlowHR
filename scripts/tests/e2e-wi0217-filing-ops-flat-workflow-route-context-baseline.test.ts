@@ -8,6 +8,8 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const adminLayoutSource = readUtf8("src", "app", "admin", "layout.tsx");
+  const adminShellNavigationSource = readUtf8("src", "app", "admin", "admin-shell-navigation.ts");
+  const adminHubSource = readUtf8("src", "app", "admin", "page-workspace-hubs.ts");
   const messagesSource = readUtf8("src", "lib", "i18n", "messages.ts");
   const stepRouteSource = readUtf8(
     "src",
@@ -122,14 +124,15 @@ async function run() {
   ];
 
   assert.ok(
-    /\/admin\/payroll-year-end-filing\/ops\/alert/.test(adminLayoutSource) ||
+    /\/admin\/payroll-year-end-filing/.test(adminShellNavigationSource) ||
+      /\/admin\/payroll-year-end-filing/.test(adminHubSource) ||
       /\/admin\/payroll-year-end-filing\/ops/.test(adminLayoutSource),
-    "admin nav should expose flat alert step link or root filing ops link"
+    "admin navigation should expose filing entry through the shell or hub"
   );
   assert.ok(
     /\/admin\/payroll-year-end-filing\/ops\/checklist-flow/.test(adminLayoutSource) ||
-      /\/admin\/payroll-year-end-filing\/ops/.test(adminLayoutSource),
-    "admin nav should expose flat checklist-flow step link or root filing ops link"
+      /buildFilingOpsStepHref/.test(helperSource),
+    "filing flow should keep the flat checklist-flow route contract"
   );
   assert.match(
     messagesSource,

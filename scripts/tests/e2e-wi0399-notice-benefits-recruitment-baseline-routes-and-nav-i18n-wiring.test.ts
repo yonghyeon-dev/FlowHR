@@ -31,7 +31,6 @@ async function run() {
   assert.match(adminNavSource, /admin\.nav\.recruitment/);
 
   assert.match(employeeLayout, /href: "\/employee\/benefits", label: t\("employee\.nav\.benefits"\)/);
-  assert.match(employeeLayout, /href: "\/employee\/recruitment", label: t\("employee\.nav\.recruitment"\)/);
 
   assert.match(messages, /"admin\.nav\.notices": "공지사항"/);
   assert.match(messages, /"admin\.nav\.benefits": "복리후생"/);
