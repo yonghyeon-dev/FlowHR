@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { isTruthyFlag } from "@/app/admin/page-helpers";
-import { isAdminHubSource } from "@/app/admin/source-context";
+import { isAdminHubSource, isAdminPayrollSource } from "@/app/admin/source-context";
 import {
   normalizeAdminAnalyticsFocusMetric,
   resolveAdminAnalyticsBackHref
@@ -71,6 +71,7 @@ export default function PayrollClosePeriodConsole({
   );
   const analyticsBackHref = resolveAdminAnalyticsBackHref(source, analyticsFocusMetric);
   const focusLabel = queueMode === "previewed" ? copy.focusPreviewedLabel : copy.focusAllLabel;
+  const showPayrollSource = isAdminPayrollSource(source);
   const analyticsFocusLabel =
     searchParams.get("focusMetric") === "payrollConfirmedRate"
       ? locale === "ko"
@@ -205,6 +206,11 @@ export default function PayrollClosePeriodConsole({
             {copy.dashboardSourceBanner} · {copy.dashboardSourceFocusLabel}: {focusLabel}
           </p>
         ) : null}
+        {showPayrollSource ? (
+          <p className="small muted workspace-source-banner">
+            {copy.payrollSourceBanner} 쨌 {copy.payrollSourceFocusLabel}: {focusLabel}
+          </p>
+        ) : null}
         {source === "admin-analytics" ? (
           <p className="small muted workspace-source-banner">
             {locale === "ko" ? "관리자 분석에서 이동했습니다" : "Opened from admin analytics"} ·{" "}
@@ -217,6 +223,11 @@ export default function PayrollClosePeriodConsole({
               {locale === "ko" ? "분석으로 돌아가기" : "Back to analytics"}
             </Link>
           ) : null}
+          {showPayrollSource ? (
+            <Link href="/admin/payroll" className="btn btn-secondary btn-small">
+              {copy.backToPayroll}
+            </Link>
+          ) : null}
           <Link href="/admin" className="btn btn-secondary btn-small">
             {copy.backToAdmin}
           </Link>
@@ -225,7 +236,9 @@ export default function PayrollClosePeriodConsole({
 
       <section className="kpi-strip workspace-summary-strip" aria-label={copy.title}>
         <article className="kpi">
-          <span>{copy.dashboardSourceFocusLabel}</span>
+          <span>
+            {showPayrollSource ? copy.payrollSourceFocusLabel : copy.dashboardSourceFocusLabel}
+          </span>
           <strong>{focusLabel}</strong>
         </article>
         <article className="kpi">
@@ -472,8 +485,8 @@ export default function PayrollClosePeriodConsole({
               </ul>
             )}
             <div className="panel-actions">
-              <Link href="/admin" className="btn btn-secondary">
-                {copy.backToAdmin}
+              <Link href={showPayrollSource ? "/admin/payroll" : "/admin"} className="btn btn-secondary">
+                {showPayrollSource ? copy.backToPayroll : copy.backToAdmin}
               </Link>
             </div>
           </article>
