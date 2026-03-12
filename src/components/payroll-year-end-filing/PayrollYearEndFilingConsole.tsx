@@ -1304,8 +1304,8 @@ export default function PayrollYearEndFilingConsole() {
               </p>
               <p className={styles.consoleActionGroupCopy}>
                 {locale === "ko"
-                  ? "미리보기, 정산 확정, 제출 데이터 내보내기, 신고 제출을 한 레일에서 이어갑니다."
-                  : "Keep preview, finalization, export, and submission in one operator lane."}
+                  ? "미리보기, 정산 확정, 내보내기, 신고 제출을 한 레일로 잇습니다."
+                  : "Keep preview, finalization, export, and submission in one lane."}
               </p>
               <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void runFinalization(false)} disabled={pendingLabel !== null}>{copy.previewFinalizationAction}</button>
@@ -1504,11 +1504,11 @@ export default function PayrollYearEndFilingConsole() {
             <p className="eyebrow admin-payroll-diagnostics-eyebrow">
               {locale === "ko" ? "참고 레일" : "Reference rail"}
             </p>
-            <h2>{locale === "ko" ? "우선 확인할 운영 보조 패널" : "Priority supporting panels"}</h2>
+            <h2>{locale === "ko" ? "우선 확인할 보조 패널" : "Priority support panels"}</h2>
             <p className="small muted">
               {locale === "ko"
-                ? "정산 상태와 차단 항목을 먼저 보고, 실패 복구와 진단 로그는 그다음에 따라옵니다."
-                : "Review settlement state and blockers first, then failure recovery and diagnostics."}
+                ? "정산 상태와 차단 항목을 먼저 보고, 복구와 진단은 그다음에 확인합니다."
+                : "Review settlement state and blockers first, then recovery and diagnostics."}
             </p>
           </article>
 
