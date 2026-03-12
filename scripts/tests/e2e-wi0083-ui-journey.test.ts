@@ -362,7 +362,7 @@ async function run() {
   const employeeUiSource = `${employeeSource}\n${employeeDashboardChromeSource}`;
   assert.match(
     homeSource,
-    /(HR SaaS MVP|t\("home\.title"\))/,
+    /(className="landing"|className="landing-hero"|getRequestLocale)/,
     "home page should be SaaS landing"
   );
   assert.match(homeSource, /href="\/admin"/, "home page should link to admin dashboard");
