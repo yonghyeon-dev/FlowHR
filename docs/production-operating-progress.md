@@ -9,6 +9,7 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 2. Completed In This Wave
 
+- Started `WI-1197` to compact the filing timeline card so response notes, timestamps, and evidence updates read as one tighter payroll-lane follow-up stream.
 - Started `WI-1196` to compact the filing settlement summary pair so finalization and export signals scan like one payroll-lane snapshot instead of two generic stacked note cards.
 - Started `WI-1195` to tone down filing diagnostics and supporting-note cards so the side rail distinguishes blocking actions from lower-priority reference panels at a glance.
 - Started `WI-1194` to reorder the filing side rail so settlement state, blockers, failure recovery, and diagnostics follow one operator-priority sequence beside the rebalanced main workspace.

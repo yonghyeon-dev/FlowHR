@@ -894,6 +894,42 @@ body {
   color: rgba(58, 42, 24, 0.9);
   font-size: 0.8rem;
 }
+.admin-payroll-timeline-card {
+  gap: 12px;
+}
+.admin-payroll-timeline-eyebrow {
+  margin: 0;
+  color: #6c7f98;
+}
+.admin-payroll-timeline-list {
+  display: grid;
+  gap: 10px;
+}
+.admin-payroll-timeline-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid rgba(140, 157, 182, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+}
+.admin-payroll-timeline-item-head {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+}
+.admin-payroll-timeline-item-head time {
+  color: var(--muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.admin-payroll-timeline-item-copy {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  font-size: 0.86rem;
+}
 .admin-payroll-lane-side {
   display: grid;
   gap: 16px;
