@@ -1,4 +1,5 @@
 export const ADMIN_HUB_SOURCE = "admin-hub";
+export const ADMIN_OPERATIONS_SOURCE = "admin-operations";
 export const ADMIN_DASHBOARD_LEGACY_SOURCE = "admin-dashboard";
 
 export function isAdminHubSource(value: string | null) {
@@ -7,9 +8,13 @@ export function isAdminHubSource(value: string | null) {
 }
 
 export function withAdminHubSource(href: string) {
+  return withAdminSource(href, ADMIN_HUB_SOURCE);
+}
+
+export function withAdminSource(href: string, source: string) {
   if (href.includes("source=")) {
     return href;
   }
   const separator = href.includes("?") ? "&" : "?";
-  return `${href}${separator}source=${ADMIN_HUB_SOURCE}`;
+  return `${href}${separator}source=${source}`;
 }

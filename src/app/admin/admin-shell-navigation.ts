@@ -49,8 +49,9 @@ export const ADMIN_SHELL_SECTION_DEFINITIONS: AdminShellSectionDefinition[] = [
   {
     key: "operations",
     titleKey: "admin.navGroup.operations",
-    dashboardEntryHref: "/admin/attendance-live",
+    dashboardEntryHref: "/admin/operations",
     navLinks: [
+      { href: "/admin/operations", labelKey: "admin.nav.operationsLane" },
       { href: "/admin/attendance-live", labelKey: "admin.nav.attendanceLive" },
       { href: "/admin/leave-accrual", labelKey: "admin.nav.leaveAccrual" },
       { href: "/admin/leave-calendar", labelKey: "admin.nav.leaveCalendar" },

@@ -739,6 +739,39 @@ body {
   border-color: rgba(176, 150, 120, 0.32);
   background: rgba(255, 255, 255, 0.96);
 }
+.admin-operations-lane-shell {
+  gap: 20px;
+}
+.admin-operations-lane-grid {
+  align-items: start;
+}
+.admin-operations-lane-summary {
+  margin-top: 0;
+}
+.admin-operations-lane-card,
+.admin-operations-side-card {
+  gap: 14px;
+}
+.admin-operations-queue-item {
+  align-items: center;
+}
+.admin-operations-lane-cards {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.admin-operations-lane-surface {
+  gap: 14px;
+}
+.admin-operations-lane-side {
+  display: grid;
+  gap: 16px;
+}
+.admin-operations-rule-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary);
+}
 .admin-hub-status-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
