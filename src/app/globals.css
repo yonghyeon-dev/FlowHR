@@ -2225,11 +2225,28 @@ button.queue-badge:hover {
   flex-direction: column;
   gap: 6px;
 }
+.employee-request-search-card {
+  border-color: rgba(176, 209, 195, 0.32);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfffd 100%);
+}
 .request-search-list li p {
   margin: 0;
   font-size: 0.75rem;
   color: var(--muted);
   line-height: 1.35;
+}
+.employee-request-search-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.employee-request-search-summary {
+  font-weight: 700;
+  color: var(--text-strong);
+}
+.employee-request-search-detail {
+  margin-top: -2px;
 }
 .request-search-head {
   display: flex;
@@ -3131,11 +3148,24 @@ button.queue-badge:hover {
   background: #fff;
   padding: 8px 10px;
 }
+.employee-request-timeline-card {
+  border-color: rgba(176, 209, 195, 0.3);
+  background: linear-gradient(180deg, #ffffff 0%, #f9fffc 100%);
+}
+.employee-request-timeline-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .timeline-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+.employee-request-timeline-detail {
+  color: var(--text-strong);
 }
 .mobile-request-timeline-list p {
   margin: 6px 0 0;

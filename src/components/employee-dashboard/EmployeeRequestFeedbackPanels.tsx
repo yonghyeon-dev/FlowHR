@@ -247,15 +247,24 @@ export function EmployeeRequestFeedbackPanels({
         ) : (
           <ul className="request-search-list" aria-label={isKoLocale ? "요청 검색/정렬 목록" : "Request search and sort list"}>
             {filteredRequestSearchRows.slice(0, 24).map((row) => (
-              <li key={row.key}>
+              <li key={row.key} className="employee-request-search-card">
                 <div className="request-search-head">
-                  <strong>
-                    [{row.channel}] {row.requestId}
-                  </strong>
+                  <div className="employee-request-search-title">
+                    <span className="workspace-hero-chip">
+                      {row.channel === "attendance"
+                        ? isKoLocale
+                          ? "출퇴근"
+                          : "Attendance"
+                        : isKoLocale
+                          ? "휴가"
+                          : "Leave"}
+                    </span>
+                    <strong>{row.requestId}</strong>
+                  </div>
                   <span className={`feedback-state-pill state-${statusToTone(row.status)}`}>{toRequestStatusLabel(row.status)}</span>
                 </div>
-                <p>{row.summary}</p>
-                <p className="small muted">{row.detail}</p>
+                <p className="employee-request-search-summary">{row.summary}</p>
+                <p className="small muted employee-request-search-detail">{row.detail}</p>
                 <div className="request-search-meta">
                   <span className="queue-history-chip">{formatDateTime(row.at)}</span>
                   {row.status === "PENDING" ? (
@@ -313,20 +322,31 @@ export function EmployeeRequestFeedbackPanels({
         ) : (
           <ul className="mobile-request-timeline-list" aria-label={isKoLocale ? "요청 이력 타임라인" : "Request timeline"}>
             {filteredMobileRequestTimeline.map((item) => (
-              <li key={item.id}>
+              <li key={item.id} className="employee-request-timeline-card">
                 <div className="timeline-head">
-                  <strong>
-                    {item.channel === "attendance"
-                      ? isKoLocale
-                        ? "출퇴근"
-                        : "Attendance"
-                      : isKoLocale
-                        ? "휴가"
-                        : "Leave"}
-                  </strong>
+                  <div className="employee-request-timeline-title">
+                    <span className="workspace-hero-chip">
+                      {item.channel === "attendance"
+                        ? isKoLocale
+                          ? "출퇴근"
+                          : "Attendance"
+                        : isKoLocale
+                          ? "휴가"
+                          : "Leave"}
+                    </span>
+                    <strong>
+                      {item.channel === "attendance"
+                        ? isKoLocale
+                          ? "근태 요청"
+                          : "Attendance request"
+                        : isKoLocale
+                          ? "휴가 요청"
+                          : "Leave request"}
+                    </strong>
+                  </div>
                   <span className={`feedback-state-pill state-${statusToTone(item.status)}`}>{toRequestStatusLabel(item.status)}</span>
                 </div>
-                <p>{item.detail}</p>
+                <p className="employee-request-timeline-detail">{item.detail}</p>
                 <time>{formatDateTime(item.at)}</time>
               </li>
             ))}
