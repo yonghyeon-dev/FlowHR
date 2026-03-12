@@ -9,6 +9,7 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 2. Completed In This Wave
 
+- Started `WI-1170` to adopt the V2 shell and design system from `flowhr_V2/flowhr-ui` as the new frontend baseline for landing, login, and shared role shells.
 - Started `WI-1168` to rebuild employee request feedback and failure-cause rows into clearer monitoring cards after the search/timeline tidy pass.
 - Closed `WI-1167` through the full GitHub flow and merged it to `main` as `0dbbf444b707323fe37651262642f940ee9e81c5`, then deleted the feature branch.
 - Re-verified `WI-1167` on the delivery path and confirmed both `ci` (`22985911315`) and `vercel-production-deploy` (`22985911302`) stay green after rerunning the transient `contract-governance` checkout failure.

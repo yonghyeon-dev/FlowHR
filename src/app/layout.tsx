@@ -1,4 +1,6 @@
 import "./globals.css";
+import "./v2-design-system.css";
+import "./v2-bridge.css";
 import type { Metadata } from "next";
 import { ReactNode } from "react";
 

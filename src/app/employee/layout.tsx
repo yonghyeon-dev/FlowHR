@@ -1,12 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import NotificationBell from "@/components/NotificationBell";
+import SessionMenu from "@/components/SessionMenu";
 import SaasMobileMenu, {
   type SaasMobileMenuLink,
   type SaasMobileMenuSection
 } from "@/components/layout/SaasMobileMenu";
-import NotificationBell from "@/components/NotificationBell";
-import SessionMenu from "@/components/SessionMenu";
+import AppNavLink from "@/components/v2/AppNavLink";
 import { createTranslator } from "@/lib/i18n/messages";
 import { getRequestLocale } from "@/lib/i18n/server";
 
@@ -24,116 +25,105 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
   const showDevTools = isDevToolsEnabled();
   const locale = await getRequestLocale();
   const t = createTranslator(locale);
+  const isKoLocale = locale === "ko";
 
   const navSections: SaasMobileMenuSection[] = [
     {
-      title: t("employee.navGroup.today"),
+      title: isKoLocale ? "Today" : "Today",
       links: [
         { href: "/employee", label: t("employee.nav.overview") },
         { href: "/employee/guide", label: t("employee.nav.guide") },
-        { href: "/employee/onboarding", label: t("employee.nav.onboardingChecklist") }
+        { href: "/employee/schedule", label: t("employee.nav.scheduleBoard") }
       ]
     },
     {
-      title: t("employee.navGroup.requests"),
+      title: isKoLocale ? "Requests" : "Requests",
       links: [
-        {
-          href: "/employee/requests?source=employee-mobile-menu",
-          label: locale === "ko" ? "요청 허브" : "Requests hub"
-        },
-        {
-          href: "/employee/attendance/correction?source=employee-mobile-menu",
-          label: locale === "ko" ? "근태 작업" : "Attendance workspace"
-        },
-        {
-          href: "/employee/leave/request?source=employee-mobile-menu",
-          label: locale === "ko" ? "휴가 작업" : "Leave workspace"
-        },
-        {
-          href: "/employee/schedule?source=employee-mobile-menu",
-          label: t("employee.nav.scheduleBoard")
-        },
+        { href: "/employee/requests", label: isKoLocale ? "요청 허브" : "Requests hub" },
+        { href: "/employee/attendance/correction", label: isKoLocale ? "근태 작업" : "Attendance" },
+        { href: "/employee/leave/request", label: isKoLocale ? "휴가 작업" : "Leave" },
         { href: "/employee/benefits", label: t("employee.nav.benefits") }
       ]
     },
     {
-      title: t("employee.navGroup.documents"),
+      title: isKoLocale ? "Documents" : "Documents",
       links: [
         { href: "/employee/contracts", label: t("employee.nav.contracts") },
         { href: "/employee/payslips", label: t("employee.nav.payslips") },
         { href: "/employee/payslip-receipts", label: t("employee.nav.payslipReceipts") },
-        { href: "/employee/withholding-receipt", label: t("employee.nav.withholdingReceipt") },
-        { href: "/employee/year-end-input", label: t("employee.nav.yearEndInput") }
+        { href: "/employee/withholding-receipt", label: t("employee.nav.withholdingReceipt") }
       ]
     },
     {
-      title: t("employee.navGroup.noticesAndAlerts"),
+      title: isKoLocale ? "Account" : "Account",
       links: [
-        { href: "/employee/notifications", label: t("employee.nav.notifications") },
         { href: "/employee/notices", label: t("employee.nav.notices") },
-        { href: "/employee/recruitment", label: t("employee.nav.recruitment") }
-      ]
-    },
-    {
-      title: t("employee.navGroup.account"),
-      links: [
+        { href: "/employee/notifications", label: t("employee.nav.notifications") },
         { href: "/employee/profile", label: t("employee.nav.profile") },
-        { href: "/employee/people", label: t("employee.nav.people") },
         { href: "/employee/settings", label: t("employee.nav.settings") }
       ]
     }
   ];
   const navLinks: SaasMobileMenuLink[] = navSections.flatMap((section) => section.links);
-
   const footerLinks: SaasMobileMenuLink[] = showDevTools
-    ? [{ href: "/admin", label: t("employee.nav.admin") }]
+    ? [{ href: "/admin", label: isKoLocale ? "관리자" : "Admin" }]
     : [];
 
   return (
     <>
       <SaasMobileMenu
-        badge={t("employee.badge")}
-        menuLabel={t("shell.mobileMenu")}
-        navAriaLabel={t("employee.nav.aria")}
+        badge={isKoLocale ? "직원" : "Employee"}
+        menuLabel={isKoLocale ? "메뉴" : "Menu"}
+        navAriaLabel={isKoLocale ? "직원 탐색" : "Employee navigation"}
         navLinks={navLinks}
         navSections={navSections}
         footerLinks={footerLinks}
       />
-      <div className="saas-shell employee-shell">
-        <aside className="saas-sidebar employee-sidebar">
-          <div className="saas-brand">
-            <Link href="/">FlowHR</Link>
-            <span className="saas-badge">{t("employee.badge")}</span>
+      <div className="app-shell">
+        <header className="app-header">
+          <div className="header-brand">
+            <Link className="header-brand-link" href="/employee">
+              <span className="brand-dot" />
+              <span>FlowHR</span>
+            </Link>
           </div>
-          <p className="employee-sidebar-copy">
-            {locale === "ko"
-              ? "오늘 처리할 요청, 문서, 개인 상태를 한곳에서 확인하는 업무 홈입니다."
-              : "A personal work home for today's requests, documents, and account status."}
-          </p>
-
-          <nav className="saas-nav" aria-label={t("employee.nav.aria")}>
-            {navSections.map((section) => (
-              <div key={section.title} className="saas-nav-section">
-                <p className="saas-nav-section-title">{section.title}</p>
-                <div className="saas-nav-link-list">
-                  {section.links.map((item) => (
-                    <Link key={item.href} href={item.href}>
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
+          <div className="header-search header-placeholder-search">
+            {isKoLocale ? "오늘 할 일, 요청, 문서, 계정 상태를 한 흐름으로 정리합니다." : "Bring today's work, requests, documents, and account status into one flow."}
+          </div>
+          <div className="header-actions">
+            <div className="header-actions-group">
+              <NotificationBell href="/employee/notifications" />
+              {showDevTools ? (
+                <Link className="header-link-chip" href="/admin">
+                  {isKoLocale ? "관리자" : "Admin"}
+                </Link>
+              ) : null}
+              <div className="header-avatar">
+                <span className="header-avatar-text">{isKoLocale ? "직원" : "Employee"}</span>
               </div>
-            ))}
-          </nav>
+            </div>
+          </div>
+        </header>
 
-          <div className="saas-sidebar-footer employee-sidebar-footer">
-            <NotificationBell href="/employee/notifications" />
-            <SessionMenu />
-            {showDevTools ? <Link href="/admin">{t("employee.nav.admin")}</Link> : null}
+        <aside className="app-sidebar">
+          {navSections.map((section) => (
+            <div className="nav-section" key={section.title}>
+              <div className="nav-section-label">{section.title}</div>
+              {section.links.map((item) => (
+                <AppNavLink href={item.href} key={item.href} label={item.label} />
+              ))}
+            </div>
+          ))}
+
+          <div className="app-sidebar-footer">
+            <SessionMenu className="session-menu sidebar-session" />
+            {showDevTools ? <AppNavLink href="/admin" label={isKoLocale ? "관리자 홈" : "Admin home"} muted /> : null}
           </div>
         </aside>
 
-        <div className="saas-main">{children}</div>
+        <main className="app-main">
+          <div className="app-main-scroll">{children}</div>
+        </main>
       </div>
     </>
   );

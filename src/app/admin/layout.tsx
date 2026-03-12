@@ -1,12 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import SaasMobileMenu, {
-  type SaasMobileMenuLink,
-} from "@/components/layout/SaasMobileMenu";
 import { buildAdminShellNavSections } from "@/app/admin/admin-shell-navigation";
 import NotificationBell from "@/components/NotificationBell";
 import SessionMenu from "@/components/SessionMenu";
+import SaasMobileMenu, { type SaasMobileMenuLink } from "@/components/layout/SaasMobileMenu";
+import AppNavLink from "@/components/v2/AppNavLink";
 import { createTranslator } from "@/lib/i18n/messages";
 import { getRequestLocale } from "@/lib/i18n/server";
 
@@ -24,77 +23,75 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
   const showDevTools = isDevToolsEnabled();
   const locale = await getRequestLocale();
   const t = createTranslator(locale);
+  const isKoLocale = locale === "ko";
 
   const navSections = buildAdminShellNavSections(t);
   const adminLinks: SaasMobileMenuLink[] = navSections.flatMap((section) => section.links);
+  const mobileFooterLinks: SaasMobileMenuLink[] = [
+    { href: "/employee", label: isKoLocale ? "직원 홈" : "Employee home" }
+  ];
 
-  const mobileFooterLinks: SaasMobileMenuLink[] = [{ href: "/employee", label: t("admin.nav.employeePortal") }];
   if (showDevTools) {
-    mobileFooterLinks.push(
-      { href: "/ops/mvp-console", label: t("admin.nav.devOpsConsole"), muted: true },
-      { href: "/ops/leave-promotion", label: t("admin.nav.devLeavePromotion"), muted: true },
-      { href: "/admin/payroll-year-end-filing/ops", label: t("admin.nav.yearEndFilingOps"), muted: true }
-    );
+    mobileFooterLinks.push({ href: "/ops/mvp-console", label: isKoLocale ? "ops 콘솔" : "Ops console", muted: true });
   }
 
   return (
     <>
       <SaasMobileMenu
-        badge={t("admin.badge")}
-        menuLabel={t("shell.mobileMenu")}
-        navAriaLabel={t("admin.nav.aria")}
+        badge={isKoLocale ? "관리자" : "Admin"}
+        menuLabel={isKoLocale ? "메뉴" : "Menu"}
+        navAriaLabel={isKoLocale ? "관리자 탐색" : "Admin navigation"}
         navLinks={adminLinks}
         navSections={navSections}
         footerLinks={mobileFooterLinks}
       />
-      <div className="saas-shell admin-shell">
-        <aside className="saas-sidebar admin-sidebar">
-          <div className="saas-brand">
-            <Link href="/">FlowHR</Link>
-            <span className="saas-badge">{t("admin.badge")}</span>
+      <div className="app-shell">
+        <header className="app-header">
+          <div className="header-brand">
+            <Link className="header-brand-link" href="/admin">
+              <span className="brand-dot" />
+              <span>FlowHR</span>
+            </Link>
           </div>
-          <p className="admin-sidebar-copy">
-            {locale === "ko"
-              ? "고객사 운영자가 우선순위를 보고 전용 워크스페이스로 이동하는 허브입니다."
-              : "A hub for customer admins to review priorities and continue in dedicated workspaces."}
-          </p>
+          <div className="header-search header-placeholder-search">
+            {isKoLocale ? "검색과 전역 명령은 다음 파동에서 연결합니다." : "Search and global command launcher follow in the next wave."}
+          </div>
+          <div className="header-actions">
+            <div className="header-actions-group">
+              <NotificationBell href="/admin/notifications" />
+              <Link className="header-link-chip" href="/employee">
+                {isKoLocale ? "직원 홈" : "Employee"}
+              </Link>
+              <div className="header-avatar">
+                <span className="header-avatar-text">{isKoLocale ? "관리" : "Admin"}</span>
+              </div>
+            </div>
+          </div>
+        </header>
 
-          <nav className="saas-nav" aria-label={t("admin.nav.aria")}>
+        <aside className="app-sidebar">
+          <div className="nav-section">
+            <div className="nav-section-label">{isKoLocale ? "FlowHR Admin" : "FlowHR Admin"}</div>
             {navSections.map((section) => (
-              <div key={section.title} className="saas-nav-section">
-                <p className="saas-nav-section-title">{section.title}</p>
-                <div className="saas-nav-link-list">
-                  {section.links.map((item) => (
-                    <Link key={item.href} href={item.href}>
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
+              <div className="nav-section" key={section.key}>
+                <div className="nav-section-label">{section.title}</div>
+                {section.links.map((item) => (
+                  <AppNavLink href={item.href} key={item.href} label={item.label} />
+                ))}
               </div>
             ))}
-          </nav>
-
-          <div className="saas-sidebar-footer admin-sidebar-footer">
-            <NotificationBell href="/admin/notifications" />
-            <SessionMenu />
-            <Link href="/employee">{t("admin.nav.employeePortal")}</Link>
+          </div>
+          <div className="app-sidebar-footer">
+            <SessionMenu className="session-menu sidebar-session" />
             {showDevTools ? (
-              <>
-                <Link className="muted-link" href="/ops/mvp-console">
-                  {t("admin.nav.devOpsConsole")}
-                </Link>
-                <Link className="muted-link" href="/ops/leave-promotion">
-                  {t("admin.nav.devLeavePromotion")}
-                </Link>
-                <Link className="muted-link" href="/admin/payroll-year-end-filing/ops">
-                  {t("admin.nav.yearEndFilingOps")}
-                </Link>
-              </>
+              <AppNavLink href="/ops/mvp-console" label={isKoLocale ? "ops 콘솔" : "Ops console"} muted />
             ) : null}
           </div>
         </aside>
 
-        <div className="saas-main">{children}</div>
+        <main className="app-main">
+          <div className="app-main-scroll">{children}</div>
+        </main>
       </div>
     </>
   );
