@@ -9,6 +9,7 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 2. Completed In This Wave
 
+- Started `WI-1171` to freeze the service-readiness execution map so the UI/UX-first refactor now lands as a concrete phase-and-WI program rather than a loose roadmap.
 - Started `WI-1170` to adopt the V2 shell and design system from `flowhr_V2/flowhr-ui` as the new frontend baseline for landing, login, and shared role shells.
 - Started `WI-1168` to rebuild employee request feedback and failure-cause rows into clearer monitoring cards after the search/timeline tidy pass.
 - Closed `WI-1167` through the full GitHub flow and merged it to `main` as `0dbbf444b707323fe37651262642f940ee9e81c5`, then deleted the feature branch.
@@ -255,9 +256,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1144` by extending the shared workspace visual primitives onto `admin payslip delivery` and `employee payslips` route-first workspaces.
-2. Continue the next shared workspace visual wave only after the payroll document/delivery route pair is stable on `main`.
-3. Expand the workspace visual system to additional route-first surfaces only after all three representative waves are proven.
+1. Close `WI-1170` by getting V2 shell adoption green through PR CI and then extend the V2 baseline into admin and employee core routes.
+2. Start `WI-1172` to roll the V2 shell baseline into the main admin/employee route entry surfaces.
+3. Start `WI-1173` to lock the shared workspace primitives and visual contract before broader route rollout.
 
 ## 5. Blockers Or Watch Items
 

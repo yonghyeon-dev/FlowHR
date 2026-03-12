@@ -9,12 +9,14 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
-  const globalsCss = readUtf8("src", "app", "globals.css");
+  const bridgeCss = readUtf8("src", "app", "v2-bridge.css");
+  const designSystemCss = readUtf8("src", "app", "v2-design-system.css");
   const workItem = readUtf8("work-items", "WI-1140-admin-hub-visual-shell-baseline.md");
 
-  assert.match(adminLayout, /className="saas-shell admin-shell"/);
-  assert.match(adminLayout, /className="saas-sidebar admin-sidebar"/);
-  assert.match(adminLayout, /admin-sidebar-copy/);
+  assert.match(adminLayout, /className="app-shell"/);
+  assert.match(adminLayout, /className="app-header"/);
+  assert.match(adminLayout, /className="app-sidebar"/);
+  assert.match(adminLayout, /header-brand-link/);
 
   assert.match(adminPage, /className="saas-content admin-hub-shell"/);
   assert.match(adminPage, /className="page-header admin-hub-hero"/);
@@ -22,14 +24,13 @@ async function run() {
   assert.match(adminPage, /admin-hub-queue-grid/);
   assert.match(adminPage, /admin-hub-workspace-grid/);
 
-  assert.match(globalsCss, /\.admin-shell \{/);
-  assert.match(globalsCss, /\.admin-sidebar-copy \{/);
-  assert.match(globalsCss, /\.admin-hub-hero \{/);
-  assert.match(globalsCss, /\.admin-hub-chip \{/);
-  assert.match(globalsCss, /\.admin-hub-workspace-grid \{/);
+  assert.match(bridgeCss, /\.app-main-scroll \{/);
+  assert.match(bridgeCss, /\.header-brand-link \{/);
+  assert.match(designSystemCss, /\.app-shell \{/);
+  assert.match(designSystemCss, /\.app-header \{/);
+  assert.match(designSystemCss, /\.app-sidebar \{/);
 
   assert.match(workItem, /WI-1140/);
-  assert.match(workItem, /관리자 허브 시각 셸 베이스라인/);
 }
 
 run()

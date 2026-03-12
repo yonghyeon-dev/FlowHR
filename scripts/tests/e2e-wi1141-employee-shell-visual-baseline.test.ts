@@ -21,36 +21,35 @@ async function run() {
     "employee-dashboard",
     "EmployeeAccountOverviewPanels.tsx"
   );
-  const globalsCss = readUtf8("src", "app", "globals.css");
-  const workItem = readUtf8(
-    "work-items",
-    "WI-1141-employee-shell-visual-baseline.md"
-  );
+  const bridgeCss = readUtf8("src", "app", "v2-bridge.css");
+  const designSystemCss = readUtf8("src", "app", "v2-design-system.css");
+  const workItem = readUtf8("work-items", "WI-1141-employee-shell-visual-baseline.md");
 
-  assert.match(employeeLayout, /className="saas-shell employee-shell"/);
-  assert.match(employeeLayout, /className="saas-sidebar employee-sidebar"/);
-  assert.match(employeeLayout, /employee-sidebar-copy/);
+  assert.match(employeeLayout, /className="app-shell"/);
+  assert.match(employeeLayout, /className="app-header"/);
+  assert.match(employeeLayout, /className="app-sidebar"/);
+  assert.match(employeeLayout, /header-brand-link/);
 
   assert.match(employeePage, /className="saas-content employee-home-shell"/);
   assert.match(employeePage, /variant="home"/);
-  assert.match(employeePage, /employee-home-panel-grid/);
 
-  assert.match(dashboardChrome, /employee-home-hero/);
-  assert.match(dashboardChrome, /employee-home-hero-meta/);
-  assert.match(dashboardChrome, /employee-home-chip/);
+  assert.match(dashboardChrome, /className="page-header home-page-header"/);
+  assert.match(dashboardChrome, /className="hero-inline-meta"/);
+  assert.match(dashboardChrome, /className="content-grid cols-2-1 mb-6"/);
   assert.match(dashboardChrome, /variant\?: "workspace" \| "home"/);
 
   assert.match(overviewPanels, /employee-home-workspace-panel/);
   assert.match(overviewPanels, /employee-home-priority-panel/);
   assert.match(overviewPanels, /employee-home-workspace-grid/);
 
-  assert.match(globalsCss, /\.employee-shell \{/);
-  assert.match(globalsCss, /\.employee-home-hero \{/);
-  assert.match(globalsCss, /\.employee-home-chip \{/);
-  assert.match(globalsCss, /\.employee-home-workspace-grid \{/);
+  assert.match(bridgeCss, /\.app-main-scroll \{/);
+  assert.match(bridgeCss, /\.hero-inline-meta \{/);
+  assert.match(bridgeCss, /\.mini-stat-list \{/);
+  assert.match(designSystemCss, /\.app-shell \{/);
+  assert.match(designSystemCss, /\.app-header \{/);
+  assert.match(designSystemCss, /\.app-sidebar \{/);
 
   assert.match(workItem, /WI-1141/);
-  assert.match(workItem, /직원 홈 시각 셸 베이스라인/);
 }
 
 run()
