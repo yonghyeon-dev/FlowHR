@@ -1294,10 +1294,18 @@ export default function PayrollYearEndFilingConsole() {
           <label>{copy.timelineSubmissionIdLabel}<input value={timelineSubmissionId} onChange={(event) => setTimelineSubmissionId(event.target.value)} /></label>
           <label>{copy.evidenceNoteLabel}<input value={evidenceNote} onChange={(event) => setEvidenceNote(event.target.value)} /></label>
           </div>
+          <p className={`eyebrow ${styles.consoleActionRailEyebrow}`}>
+            {locale === "ko" ? "액션 레일" : "Action rail"}
+          </p>
           <div className={styles.consoleActionStack}>
             <div className={styles.consoleActionGroup}>
               <p className={styles.consoleActionGroupTitle}>
                 {locale === "ko" ? "핵심 진행" : "Primary flow"}
+              </p>
+              <p className={styles.consoleActionGroupCopy}>
+                {locale === "ko"
+                  ? "미리보기, 정산 확정, 제출 데이터 내보내기, 신고 제출을 한 레일에서 이어갑니다."
+                  : "Keep preview, finalization, export, and submission in one operator lane."}
               </p>
               <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void runFinalization(false)} disabled={pendingLabel !== null}>{copy.previewFinalizationAction}</button>
@@ -1310,6 +1318,11 @@ export default function PayrollYearEndFilingConsole() {
               <p className={styles.consoleActionGroupTitle}>
                 {locale === "ko" ? "응답과 복구" : "Response and recovery"}
               </p>
+              <p className={styles.consoleActionGroupCopy}>
+                {locale === "ko"
+                  ? "응답 저장, 재제출, 취소, 재개 작업을 같은 복구 묶음으로 정리합니다."
+                  : "Keep acknowledge, resubmit, cancel, and reopen inside one recovery group."}
+              </p>
               <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void runAcknowledgeSubmission()} disabled={pendingLabel !== null}>{copy.acknowledgeSubmissionAction}</button>
             <button className="btn btn-secondary" onClick={() => void runResubmitSubmission()} disabled={pendingLabel !== null}>{copy.resubmitSubmissionAction}</button>
@@ -1320,6 +1333,11 @@ export default function PayrollYearEndFilingConsole() {
             <div className={styles.consoleActionGroup}>
               <p className={styles.consoleActionGroupTitle}>
                 {locale === "ko" ? "보조 점검" : "Supporting checks"}
+              </p>
+              <p className={styles.consoleActionGroupCopy}>
+                {locale === "ko"
+                  ? "필터 재설정, 카탈로그 갱신, 타임라인 조회, 근거 메모를 보조 레일로 묶습니다."
+                  : "Treat filters, catalog refresh, timeline lookup, and evidence notes as one support rail."}
               </p>
               <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void runRefreshSubmissions()} disabled={pendingLabel !== null}>{copy.refreshSubmissionsAction}</button>
