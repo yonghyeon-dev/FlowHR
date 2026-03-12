@@ -136,7 +136,7 @@ export function EmployeeRequestFeedbackPanels({
           </label>
         </div>
         {filteredRequestFeedbackRows.length === 0 ? (
-          <p className="small muted" style={{ marginTop: 10 }}>
+          <p className="small muted employee-request-monitoring-empty">
             {isKoLocale
               ? "현재 필터 조건에서 표시할 요청 피드백이 없습니다."
               : "No request feedback for the current filter."}
@@ -144,29 +144,41 @@ export function EmployeeRequestFeedbackPanels({
         ) : (
           <ul className="simple-list feedback-row-list" aria-label={isKoLocale ? "요청 상태 피드백" : "Request status feedback"}>
             {filteredRequestFeedbackRows.map((row) => (
-              <li key={row.id}>
-                <span>
-                  <strong>
-                    {row.channel === "attendance"
-                      ? isKoLocale
-                        ? "출퇴근"
-                        : "Attendance"
-                      : isKoLocale
-                        ? "휴가"
-                        : "Leave"}
-                  </strong>{" "}
+              <li key={row.id} className="employee-request-feedback-card">
+                <div className="employee-request-feedback-head">
+                  <div className="employee-request-feedback-title">
+                    <span className="workspace-hero-chip">
+                      {row.channel === "attendance"
+                        ? isKoLocale
+                          ? "출퇴근"
+                          : "Attendance"
+                        : isKoLocale
+                          ? "휴가"
+                          : "Leave"}
+                    </span>
+                    <strong>
+                      {row.channel === "attendance"
+                        ? isKoLocale
+                          ? "상태 확인"
+                          : "Status review"
+                        : isKoLocale
+                          ? "요청 확인"
+                          : "Request review"}
+                    </strong>
+                  </div>
                   <span className={`feedback-state-pill state-${row.tone}`}>{toRequestStatusLabel(row.status)}</span>
-                  <br />
-                  <span className="small">{row.message}</span>
-                </span>
-                <time>{formatDateTime(row.at)}</time>
+                </div>
+                <p className="employee-request-feedback-message">{row.message}</p>
+                <div className="employee-request-feedback-meta">
+                  <time>{formatDateTime(row.at)}</time>
+                </div>
               </li>
             ))}
           </ul>
         )}
         <hr className="divider" />
-        <div className="actions">
-          <p className="small" style={{ margin: 0 }}>
+        <div className="actions employee-request-failure-actions">
+          <p className="small employee-request-failure-summary">
             {isKoLocale
               ? `실패 원인 가시화 (${requestFailureCauses.length}건)`
               : `Failure Cause Visibility (${requestFailureCauses.length})`}
@@ -176,14 +188,19 @@ export function EmployeeRequestFeedbackPanels({
           </button>
         </div>
         {requestFailureCauses.length === 0 ? (
-          <p className="small muted" style={{ marginTop: 10 }}>
+          <p className="small muted employee-request-monitoring-empty">
             {isKoLocale ? "최근 실패/반려 이력이 없습니다." : "No recent failed/rejected records."}
           </p>
         ) : (
           <ul className="failure-cause-list" aria-label={isKoLocale ? "실패 원인 목록" : "Failure cause list"}>
             {requestFailureCauses.map((cause) => (
-              <li key={cause.id}>
-                <strong>{cause.source}</strong>
+              <li key={cause.id} className="employee-request-failure-card">
+                <div className="employee-request-failure-title">
+                  <span className="workspace-hero-chip">
+                    {isKoLocale ? "실패 원인" : "Failure cause"}
+                  </span>
+                  <strong>{cause.source}</strong>
+                </div>
                 <p>{cause.message}</p>
                 <time>{cause.at}</time>
               </li>

@@ -3124,6 +3124,44 @@ button.queue-badge:hover {
 .feedback-row-list {
   margin-top: 10px;
 }
+.employee-request-monitoring-empty {
+  margin-top: 10px;
+}
+.employee-request-feedback-card {
+  border: 1px solid rgba(176, 209, 195, 0.28);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fefb 100%);
+  padding: 12px 14px;
+}
+.employee-request-feedback-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.employee-request-feedback-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.employee-request-feedback-message {
+  margin: 10px 0 0;
+  color: var(--text-strong);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.employee-request-feedback-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+.employee-request-feedback-meta time {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
 .request-filter-row {
   margin-top: 10px;
 }
@@ -3247,11 +3285,25 @@ button.queue-badge:hover {
   display: grid;
   gap: 8px;
 }
-.failure-cause-list li {
+.employee-request-failure-card {
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: #fff;
-  padding: 8px 10px;
+  background: linear-gradient(180deg, #fffaf5 0%, #ffffff 100%);
+  padding: 12px 14px;
+  border-color: rgba(212, 170, 121, 0.34);
+}
+.employee-request-failure-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.employee-request-failure-actions {
+  align-items: center;
+  gap: 10px;
+}
+.employee-request-failure-summary {
+  margin: 0;
 }
 .failure-cause-list strong {
   font-size: 0.77rem;
