@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { payrollYearEndCopyByLocale } from "@/components/payroll-year-end/copy";
@@ -19,6 +20,7 @@ import {
   formatAdminSessionConnectionState,
   formatWorkspaceConnectionState
 } from "@/lib/product-language";
+import { isAdminPayrollSource, withAdminSource } from "@/app/admin/source-context";
 import type {
   ApiLog,
   PayrollYearEndInsuranceReconciliationReportResponse,
@@ -103,6 +105,7 @@ function summarizeTaxCreditReasonCodes(
 }
 
 export default function PayrollYearEndConsole() {
+  const searchParams = useSearchParams();
   const [employeeId, setEmployeeId] = useState("EMP-1001");
   const [year, setYear] = useState(String(currentYear()));
   const [nonTaxableAnnualIncomeKrw, setNonTaxableAnnualIncomeKrw] = useState("0");
@@ -141,6 +144,8 @@ export default function PayrollYearEndConsole() {
   const { locale } = useI18n();
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = payrollYearEndCopyByLocale[locale];
+  const source = searchParams.get("source");
+  const showPayrollSource = isAdminPayrollSource(source);
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
@@ -512,15 +517,34 @@ export default function PayrollYearEndConsole() {
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
-        <p className="small muted workspace-source-banner">
+        <p className="small muted workspace-source-banner" hidden={showPayrollSource}>
           {locale === "ko"
             ? "연말정산, 재계산, 보험 정산, 원천징수 발급 상태를 한 작업면에서 점검하는 관리자 콘솔입니다."
             : "Review settlement, recalculation, insurance reconciliation, and withholding readiness from one admin workspace."}
         </p>
+        {showPayrollSource ? (
+          <p className="small muted workspace-source-banner">
+            {locale === "ko"
+              ? "급여 레인에서 이동했습니다 · 집중 레인: 연말정산"
+              : "Opened from payroll lane · Focused lane: year-end"}
+          </p>
+        ) : null}
         <div className="page-actions" style={{ marginTop: 8 }}>
-          <Link href="/admin/payroll-year-end/preflight" className="btn btn-secondary btn-small">
+          <Link
+            href={
+              showPayrollSource
+                ? withAdminSource("/admin/payroll-year-end/preflight", "admin-payroll")
+                : "/admin/payroll-year-end/preflight"
+            }
+            className="btn btn-secondary btn-small"
+          >
             {copy.openPreflightChecklistAction}
           </Link>
+          {showPayrollSource ? (
+            <Link href="/admin/payroll" className="btn btn-secondary btn-small">
+              {locale === "ko" ? "급여 레인으로" : "Back to payroll lane"}
+            </Link>
+          ) : null}
           <Link href="/admin" className="btn btn-secondary btn-small">
             {copy.backToAdminAction}
           </Link>
@@ -683,7 +707,21 @@ export default function PayrollYearEndConsole() {
               </ul>
             )}
             <div className="panel-actions">
-              <Link href="/admin/payroll-year-end/preflight" className="btn btn-secondary">{copy.openPreflightChecklistAction}</Link>
+              <Link
+                href={
+                  showPayrollSource
+                    ? withAdminSource("/admin/payroll-year-end/preflight", "admin-payroll")
+                    : "/admin/payroll-year-end/preflight"
+                }
+                className="btn btn-secondary"
+              >
+                {copy.openPreflightChecklistAction}
+              </Link>
+              {showPayrollSource ? (
+                <Link href="/admin/payroll" className="btn btn-secondary">
+                  {locale === "ko" ? "급여 레인으로" : "Back to payroll lane"}
+                </Link>
+              ) : null}
               <Link href="/admin" className="btn btn-secondary">{copy.backToAdminAction}</Link>
             </div>
           </article>

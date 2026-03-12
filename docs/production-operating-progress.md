@@ -9,6 +9,7 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 2. Completed In This Wave
 
+- Started `WI-1190` to keep payroll insurance, year-end, and filing detail surfaces attached to `/admin/payroll` so the representative payroll lane journey stays source-aware end-to-end.
 - Started `WI-1189` to keep payroll-close detail surfaces attached to the new `/admin/payroll` lane so close-period follow-up stops falling back to the generic admin hub.
 - Started `WI-1177` to keep payroll detail surfaces source-aware so payslip delivery and contract documents stay attached to the new `/admin/payroll` lane instead of falling back to the generic admin hub.
 - Started `WI-1176` to promote payroll, payslip delivery, year-end, filing, and document follow-up into a dedicated `/admin/payroll` route-first lane and unify every admin payroll entry on that route.

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import FilingApiLogsPanel from "@/components/payroll-year-end-filing/FilingApiLogsPanel";
@@ -27,6 +28,7 @@ import {
   upsertSubmissionAtTop
 } from "@/components/payroll-year-end-filing/submission-state-helpers";
 import { isTruthyFlag } from "@/app/admin/page-helpers";
+import { isAdminPayrollSource, withAdminSource } from "@/app/admin/source-context";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import {
@@ -59,6 +61,7 @@ import type {
 } from "@/components/payroll-year-end-filing/types";
 
 export default function PayrollYearEndFilingConsole() {
+  const searchParams = useSearchParams();
   const [year, setYear] = useState(String(currentYear()));
   const [employeeId, setEmployeeId] = useState("EMP-1001");
   const [nonTaxableAnnualIncomeKrw, setNonTaxableAnnualIncomeKrw] = useState("0");
@@ -128,6 +131,8 @@ export default function PayrollYearEndFilingConsole() {
   const { locale } = useI18n();
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = payrollYearEndFilingCopyByLocale[locale];
+  const source = searchParams.get("source");
+  const showPayrollSource = isAdminPayrollSource(source);
   const shortcutStatusCopy =
     locale === "ko"
       ? {
@@ -911,15 +916,34 @@ export default function PayrollYearEndFilingConsole() {
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
-        <p className="small muted workspace-source-banner">
+        <p className="small muted workspace-source-banner" hidden={showPayrollSource}>
           {locale === "ko"
             ? "연말정산 확정, 신고 제출, 응답 확인, 재제출까지 하나의 관리자 작업면으로 묶은 신고 콘솔입니다."
             : "Manage finalization, filing submission, acknowledgement, and resubmission from one admin workspace."}
         </p>
+        {showPayrollSource ? (
+          <p className="small muted workspace-source-banner">
+            {locale === "ko"
+              ? "급여 레인에서 이동했습니다 · 집중 레인: 신고 후속"
+              : "Opened from payroll lane · Focused lane: filing follow-up"}
+          </p>
+        ) : null}
         <div className="page-actions" style={{ marginTop: 8 }}>
-          <Link href="/admin/payroll-year-end" className="btn btn-secondary btn-small">
+          <Link
+            href={
+              showPayrollSource
+                ? withAdminSource("/admin/payroll-year-end", "admin-payroll")
+                : "/admin/payroll-year-end"
+            }
+            className="btn btn-secondary btn-small"
+          >
             {copy.backToYearEndAction}
           </Link>
+          {showPayrollSource ? (
+            <Link href="/admin/payroll" className="btn btn-secondary btn-small">
+              {locale === "ko" ? "급여 레인으로" : "Back to payroll lane"}
+            </Link>
+          ) : null}
           <Link href="/admin" className="btn btn-secondary btn-small">
             {copy.backToAdminAction}
           </Link>
