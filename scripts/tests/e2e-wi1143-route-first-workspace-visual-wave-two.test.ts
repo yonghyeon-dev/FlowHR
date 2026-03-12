@@ -74,11 +74,11 @@ async function run() {
   );
   assert.match(
     dashboardChrome,
-    /workspace-summary-strip employee-workspace-status-strip/
+    /className="kpi-grid cols-5"/
   );
   assert.match(
     dashboardChrome,
-    /workspace-summary-card employee-workspace-status-card/
+    /className="kpi-card"/
   );
   assert.match(
     dashboardChrome,
@@ -87,7 +87,7 @@ async function run() {
 
   assert.match(globalsCss, /\.workspace-inline-status \{/);
   assert.match(globalsCss, /\.workspace-source-banner \{/);
-  assert.match(globalsCss, /\.employee-workspace-status-strip \{/);
+  assert.match(globalsCss, /\.employee-workspace-status-header \{/);
 
   assert.match(workItem, /WI-1143/);
   assert.match(workItem, /visual/i);
