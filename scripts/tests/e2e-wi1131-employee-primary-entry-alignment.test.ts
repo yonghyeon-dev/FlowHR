@@ -23,11 +23,11 @@ function run() {
 
   assert.match(
     employeeLayout,
-    /\/employee\/attendance\/correction\?source=employee-mobile-menu/
+    /href: "\/employee\/attendance\/correction"/
   );
   assert.match(
     employeeLayout,
-    /\/employee\/leave\/request\?source=employee-mobile-menu/
+    /href: "\/employee\/leave\/request"/
   );
   assert.match(
     guidePage,
