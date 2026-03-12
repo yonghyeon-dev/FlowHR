@@ -9,6 +9,7 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 2. Completed In This Wave
 
+- Started `WI-1192` to bring the filing workflow step dashboard and step panel up to the same payroll-lane visual rhythm so filing ops reads like one customer-admin route-first station instead of legacy generic panels.
 - Started `WI-1191` to keep year-end preflight and filing ops follow-up attached to `/admin/payroll` so payroll-lane shortcuts stay source-aware after operators move into preflight or filing workflow steps.
 - Started `WI-1190` to keep payroll insurance, year-end, and filing detail surfaces attached to `/admin/payroll` so the representative payroll lane journey stays source-aware end-to-end.
 - Started `WI-1189` to keep payroll-close detail surfaces attached to the new `/admin/payroll` lane so close-period follow-up stops falling back to the generic admin hub.

@@ -9,6 +9,52 @@
   gap: 0.8rem;
 }
 
+.stationHero,
+.stepHero {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.6fr) minmax(16rem, 0.9fr);
+  align-items: start;
+}
+
+.stationCopy,
+.stepCopy {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.stationCopy h2,
+.stepCopy h2 {
+  margin: 0;
+}
+
+.stationSummary {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+}
+
+.stationSummaryCard,
+.stepMetric {
+  border: 1px solid rgba(122, 85, 36, 0.14);
+  border-radius: 0.9rem;
+  background: linear-gradient(180deg, #fffdf8 0%, #fff 100%);
+  padding: 0.85rem 0.95rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.stationSummaryCard span,
+.stepMetric span {
+  color: #7a5a38;
+  font-size: 0.78rem;
+}
+
+.stationSummaryCard strong,
+.stepMetric strong {
+  font-size: 1rem;
+}
+
 .digestRow {
   border: 1px solid #d0d8e8;
   border-radius: 0.75rem;
@@ -18,9 +64,50 @@
   gap: 0.6rem;
 }
 
+.digestRowActive {
+  border-color: rgba(122, 85, 36, 0.24);
+  background:
+    radial-gradient(280px 120px at 0% 0%, rgba(255, 236, 214, 0.65) 0%, transparent 76%),
+    linear-gradient(180deg, #fffdf8 0%, #fff 100%);
+}
+
+.digestHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.digestBadge {
+  border-radius: 999px;
+  border: 1px solid rgba(122, 85, 36, 0.14);
+  background: rgba(255, 255, 255, 0.9);
+  color: #7a5a38;
+  font-size: 0.72rem;
+  padding: 0.28rem 0.58rem;
+  white-space: nowrap;
+}
+
+.stepMetrics {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.stepPanelGrid {
+  display: grid;
+  gap: 1rem;
+}
+
 .blockerList {
   margin: 0.6rem 0 0;
   padding-left: 1.1rem;
   display: grid;
   gap: 0.3rem;
+}
+
+@media (max-width: 900px) {
+  .stationHero,
+  .stepHero {
+    grid-template-columns: 1fr;
+  }
 }
