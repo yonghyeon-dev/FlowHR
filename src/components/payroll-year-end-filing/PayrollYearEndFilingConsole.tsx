@@ -999,7 +999,7 @@ export default function PayrollYearEndFilingConsole() {
 
         <section className="panel-grid workspace-panel-grid v2-workspace-split">
           <div className="v2-workspace-main">
-          <article className="panel workspace-section-card workspace-toolbar-card v2-surface-card">
+          <article className="panel workspace-section-card workspace-toolbar-card v2-surface-card admin-payroll-setup-card">
             <h2>{copy.inputTitle}</h2>
             {showDevTools ? (
               <p className="small muted workspace-source-banner">
@@ -1017,7 +1017,11 @@ export default function PayrollYearEndFilingConsole() {
                 </div>
               ))}
             </div>
-            <div className={styles.consoleFieldSection}>
+            <p className={`eyebrow ${styles.consoleCardEyebrow}`}>
+              {locale === "ko" ? "운영 입력 폼" : "Operator form"}
+            </p>
+            <div className={styles.consoleTopStageGrid}>
+            <div className={`${styles.consoleFieldSection} ${styles.consoleFieldSectionCard}`}>
             <div className={styles.consoleFieldHeader}>
               <h3>{locale === "ko" ? "정산 기준 입력" : "Settlement baseline inputs"}</h3>
               <p className="small muted">
@@ -1026,7 +1030,7 @@ export default function PayrollYearEndFilingConsole() {
                   : "Set year-end baseline values and deductions before preparing the filing package."}
               </p>
             </div>
-            <div className="input-grid">
+            <div className={`input-grid ${styles.consoleDenseInputGrid}`}>
             <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
             <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
             <label>{copy.nonTaxableAnnualIncomeLabel}<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
@@ -1041,7 +1045,7 @@ export default function PayrollYearEndFilingConsole() {
             <label>{copy.housingSavingsLabel}<input value={housingSavingsKrw} onChange={(event) => setHousingSavingsKrw(event.target.value)} /></label>
             </div>
             </div>
-            <div className={styles.consoleFieldSection}>
+            <div className={`${styles.consoleFieldSection} ${styles.consoleFieldSectionCard}`}>
             <div className={styles.consoleFieldHeader}>
               <h3>{locale === "ko" ? "제출 준비와 검증 기준" : "Submission setup and validation"}</h3>
               <p className="small muted">
@@ -1050,7 +1054,7 @@ export default function PayrollYearEndFilingConsole() {
                   : "Set export format, validation strength, notes, and settlement match keys together."}
               </p>
             </div>
-            <div className="input-grid">
+            <div className={`input-grid ${styles.consoleDenseInputGrid}`}>
             <label>{copy.exportFormatLabel}
               <select
                 value={exportFormat}
@@ -1187,7 +1191,8 @@ export default function PayrollYearEndFilingConsole() {
             </label>
             </div>
             </div>
-            <div className={styles.consoleFieldSection}>
+            </div>
+            <div className={`${styles.consoleFieldSection} ${styles.consoleFieldSectionCard}`}>
             <div className={styles.consoleFieldHeader}>
               <h3>{locale === "ko" ? "응답과 재제출 후속 조치" : "Response and recovery follow-up"}</h3>
               <p className="small muted">
@@ -1223,7 +1228,7 @@ export default function PayrollYearEndFilingConsole() {
               ))}
             </div>
           ) : null}
-          <div className="input-grid">
+          <div className={`input-grid ${styles.consoleActionInputGrid}`}>
           <label>{copy.finalizationNoteLabel}<input value={finalizedByNote} onChange={(event) => setFinalizedByNote(event.target.value)} /></label>
           <label>{copy.expectedSettlementHashExportLabel}
             <input

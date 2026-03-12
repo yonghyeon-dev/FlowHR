@@ -100,6 +100,12 @@
   margin-bottom: 1rem;
 }
 
+.consoleTopStageGrid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+}
+
 .consoleDigestCard {
   border: 1px solid rgba(180, 203, 228, 0.3);
   border-radius: 0.95rem;
@@ -127,10 +133,23 @@
   border-top: 1px solid rgba(180, 203, 228, 0.24);
 }
 
+.consoleFieldSectionCard {
+  border: 1px solid rgba(180, 203, 228, 0.24);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 251, 255, 0.94) 100%);
+  padding: 1rem;
+}
+
 .consoleFieldSection:first-of-type {
   padding-top: 0;
   margin-top: 0;
   border-top: 0;
+}
+
+.consoleFieldSectionCard:first-of-type {
+  padding-top: 1rem;
+  margin-top: 0;
+  border-top: 1px solid rgba(180, 203, 228, 0.24);
 }
 
 .consoleFieldHeader {
@@ -143,6 +162,19 @@
   font-size: 0.96rem;
 }
 
+.consoleCardEyebrow {
+  margin-bottom: 0.45rem;
+}
+
+.consoleDenseInputGrid {
+  gap: 0.7rem;
+}
+
+.consoleActionInputGrid {
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+
 .consoleActionStack {
   display: grid;
   gap: 0.85rem;
@@ -152,6 +184,10 @@
 .consoleActionGroup {
   display: grid;
   gap: 0.45rem;
+  border: 1px solid rgba(180, 203, 228, 0.28);
+  border-radius: 0.95rem;
+  background: rgba(248, 251, 255, 0.9);
+  padding: 0.85rem 0.95rem;
 }
 
 .consoleActionGroupTitle {
@@ -184,6 +220,10 @@
 @media (max-width: 900px) {
   .stationHero,
   .stepHero {
+    grid-template-columns: 1fr;
+  }
+
+  .consoleTopStageGrid {
     grid-template-columns: 1fr;
   }
 }
