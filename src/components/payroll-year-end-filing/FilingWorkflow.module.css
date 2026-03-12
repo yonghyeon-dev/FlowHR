@@ -259,3 +259,27 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 720px) {
+  .consoleDigestGrid {
+    gap: 0.65rem;
+    grid-template-columns: 1fr;
+  }
+
+  .consoleDigestCard,
+  .consoleFieldSectionCard,
+  .consoleActionGroup,
+  .consoleFeedbackRail {
+    padding: 0.8rem;
+  }
+
+  .consoleFieldSectionCard,
+  .consoleActionStack,
+  .consoleFeedbackRail {
+    gap: 0.65rem;
+  }
+
+  .consoleActionStack {
+    margin-top: 0.8rem;
+  }
+}

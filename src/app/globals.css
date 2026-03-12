@@ -1074,6 +1074,25 @@ body {
   gap: 8px;
   color: rgba(55, 42, 28, 0.84);
 }
+
+@media (max-width: 720px) {
+  .admin-payroll-submissions-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-payroll-submission-item {
+    padding: 10px 12px;
+  }
+
+  .admin-payroll-submission-item-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-payroll-submission-item-head time {
+    white-space: normal;
+  }
+}
 .admin-payroll-queue-item {
   background: rgba(255, 252, 246, 0.9);
   border-radius: 18px;
