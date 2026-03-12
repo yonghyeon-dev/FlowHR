@@ -1348,15 +1348,20 @@ export default function PayrollYearEndFilingConsole() {
               </div>
             </div>
           </div>
-          <div className={styles.consoleFeedbackStack}>
-          <RouteWorkspaceStatus
-            message={lastFailure ? pendingLabel : pendingLabel ?? statusMessage}
-            tone={pendingLabel ? "info" : "success"}
-          />
-          <RouteWorkspaceStatus
-            message={supabaseSessionError ? `${copy.sessionErrorPrefix}: ${supabaseSessionError}` : null}
-            tone="error"
-          />
+          <div className={styles.consoleFeedbackRail}>
+            <p className={`eyebrow ${styles.consoleFeedbackRailEyebrow}`}>
+              {locale === "ko" ? "상태 스트립" : "Status strip"}
+            </p>
+            <div className={styles.consoleFeedbackStack}>
+            <RouteWorkspaceStatus
+              message={lastFailure ? pendingLabel : pendingLabel ?? statusMessage}
+              tone={pendingLabel ? "info" : "success"}
+            />
+            <RouteWorkspaceStatus
+              message={supabaseSessionError ? `${copy.sessionErrorPrefix}: ${supabaseSessionError}` : null}
+              tone="error"
+            />
+            </div>
           </div>
           </div>
         </article>
