@@ -18,10 +18,10 @@ async function run() {
   assert.match(adminLayout, /className="app-sidebar"/);
   assert.match(adminLayout, /header-brand-link/);
 
-  assert.match(adminPage, /className="saas-content admin-hub-shell"/);
-  assert.match(adminPage, /className="page-header admin-hub-hero"/);
+  assert.match(adminPage, /<RouteWorkspaceShell tone="admin" className="admin-hub-shell admin-control-tower-shell">/);
+  assert.match(adminPage, /<RouteWorkspaceHeader/);
+  assert.match(adminPage, /className="admin-hub-hero control-tower-header"/);
   assert.match(adminPage, /admin-hub-hero-meta/);
-  assert.match(adminPage, /admin-hub-queue-grid/);
   assert.match(adminPage, /admin-hub-workspace-grid/);
 
   assert.match(bridgeCss, /\.app-main-scroll \{/);

@@ -9,6 +9,7 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 2. Completed In This Wave
 
+- Started `WI-1174` to turn `/admin` into a queue-first customer-admin control tower using the V2 workspace primitives and current CI baseline.
 - Started `WI-1173` to turn shared workspace header, summary, split-layout, empty-state, and feedback into one reusable V2 contract before the next route rollout wave.
 - Started `WI-1188` to reset the CI baseline for the V2 shell rollout because repeated `quality-gates` failures are now dominated by stale pre-V2 shell expectations rather than real product regressions.
 - Started `WI-1171` to freeze the service-readiness execution map so the UI/UX-first refactor now lands as a concrete phase-and-WI program rather than a loose roadmap.
