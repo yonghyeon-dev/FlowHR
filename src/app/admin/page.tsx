@@ -302,7 +302,7 @@ export default function AdminDashboardPage() {
     approvalStalled: {
       href: `/admin/approval-executions?state=PENDING&stalledHoursMin=24&source=${ADMIN_HUB_SOURCE}`
     },
-    payrollQueue: { href: `/admin/payroll-close?source=${ADMIN_HUB_SOURCE}` },
+    payrollQueue: { href: `/admin/payroll?source=${ADMIN_HUB_SOURCE}` },
     contractsQueue: { href: `/admin/contracts?source=${ADMIN_HUB_SOURCE}` }
   } as const;
   const wi0128ApprovalQueueShortcutToken = 'href="/admin/approval-executions"';

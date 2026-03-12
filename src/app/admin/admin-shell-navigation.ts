@@ -65,8 +65,9 @@ export const ADMIN_SHELL_SECTION_DEFINITIONS: AdminShellSectionDefinition[] = [
   {
     key: "payrollAndFiling",
     titleKey: "admin.navGroup.payrollAndFiling",
-    dashboardEntryHref: "/admin/payroll-close",
+    dashboardEntryHref: "/admin/payroll",
     navLinks: [
+      { href: "/admin/payroll", labelKey: "admin.nav.payroll" },
       { href: "/admin/payroll-close", labelKey: "admin.nav.payrollClose" },
       { href: "/admin/payroll-payslip-delivery", labelKey: "admin.nav.payslipDelivery" },
       { href: "/admin/payroll-insurance", labelKey: "admin.nav.insurance" },
