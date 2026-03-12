@@ -64,16 +64,66 @@ export function EmployeeRequestFeedbackPanels({
   onTimelineChannelFilterChange,
   onTimelineStatusFilterChange
 }: EmployeeRequestFeedbackPanelsProps) {
+  const pendingSearchRows = filteredRequestSearchRows.filter(
+    (row) => row.status === "PENDING"
+  );
+
   return (
     <>
+      <section className="employee-request-monitoring-summary-grid">
+        <article className="employee-request-monitoring-summary-card">
+          <p>{isKoLocale ? "피드백 노출" : "Visible feedback"}</p>
+          <strong>{filteredRequestFeedbackRows.length}</strong>
+          <span>
+            {isKoLocale
+              ? "현재 필터에 맞는 요청 상태"
+              : "Request states in the active filter"}
+          </span>
+        </article>
+        <article className="employee-request-monitoring-summary-card">
+          <p>{isKoLocale ? "대기 후속 조치" : "Pending follow-up"}</p>
+          <strong>{pendingSearchRows.length}</strong>
+          <span>
+            {isKoLocale
+              ? "즉시 확인이 필요한 요청"
+              : "Requests that still need action"}
+          </span>
+        </article>
+        <article className="employee-request-monitoring-summary-card">
+          <p>{isKoLocale ? "실패/반려 원인" : "Failure causes"}</p>
+          <strong>{requestFailureCauses.length}</strong>
+          <span>
+            {isKoLocale
+              ? "복사 가능한 최근 원인 포함"
+              : "Includes the latest copyable cause"}
+          </span>
+        </article>
+        <article className="employee-request-monitoring-summary-card">
+          <p>{isKoLocale ? "타임라인 항목" : "Timeline entries"}</p>
+          <strong>{filteredMobileRequestTimeline.length}</strong>
+          <span>
+            {isKoLocale
+              ? "채널/상태 기준으로 재정렬 가능"
+              : "Reorderable by channel and status"}
+          </span>
+        </article>
+      </section>
+
       <article className="panel panel-request-feedback" id="request-feedback">
-        <h2>{isKoLocale ? "요청 상태 피드백" : "Request Status Feedback"}</h2>
-        <p className="small">
-          {isKoLocale
-            ? "최근 출퇴근/휴가 요청 상태와 반려·실패 원인을 한 화면에서 확인합니다."
-            : "Review attendance/leave request statuses and rejection/failure reasons in one place."}
-        </p>
-        <div className="request-filter-row">
+        <div className="employee-request-monitoring-panel-head">
+          <div>
+            <h2>{isKoLocale ? "요청 상태 피드백" : "Request Status Feedback"}</h2>
+            <p className="small">
+              {isKoLocale
+                ? "최근 출퇴근/휴가 요청 상태와 반려·실패 원인을 한 화면에서 확인합니다."
+                : "Review attendance/leave request statuses and rejection/failure reasons in one place."}
+            </p>
+          </div>
+          <span className="workspace-hero-chip">
+            {isKoLocale ? "상태 점검" : "Status review"}
+          </span>
+        </div>
+        <div className="request-filter-row employee-request-monitoring-toolbar">
           <label>
             {isKoLocale ? "상태 필터" : "Status Filter"}
             <select value={requestFeedbackStatusFilter} onChange={(event) => onRequestFeedbackStatusFilterChange(event.target.value as RequestStatusFilter)}>
@@ -143,12 +193,19 @@ export function EmployeeRequestFeedbackPanels({
       </article>
 
       <article className="panel panel-request-search-sort" id="request-search-sort">
-        <h2>{isKoLocale ? "요청 검색/정렬" : "Request Search/Sort"}</h2>
-        <p className="small">
-          {isKoLocale
-            ? "출퇴근/휴가 요청을 통합 목록에서 검색하고, 대기 우선 또는 시간순으로 정렬해 후속 조치 대상을 빠르게 찾습니다."
-            : "Search attendance/leave requests and sort by pending priority or time to find follow-up targets quickly."}
-        </p>
+        <div className="employee-request-monitoring-panel-head">
+          <div>
+            <h2>{isKoLocale ? "요청 검색/정렬" : "Request Search/Sort"}</h2>
+            <p className="small">
+              {isKoLocale
+                ? "출퇴근/휴가 요청을 통합 목록에서 검색하고, 대기 우선 또는 시간순으로 정렬해 후속 조치 대상을 빠르게 찾습니다."
+                : "Search attendance/leave requests and sort by pending priority or time to find follow-up targets quickly."}
+            </p>
+          </div>
+          <span className="workspace-hero-chip">
+            {isKoLocale ? "후속 대상 찾기" : "Find follow-up work"}
+          </span>
+        </div>
         <div className="request-search-toolbar">
           <label>
             {isKoLocale ? "검색 범위" : "Search Scope"}
@@ -214,12 +271,19 @@ export function EmployeeRequestFeedbackPanels({
       </article>
 
       <article className="panel panel-request-timeline" id="request-timeline">
-        <h2>{isKoLocale ? "요청 이력 타임라인" : "Request Timeline"}</h2>
-        <p className="small">
-          {isKoLocale
-            ? "최근 요청을 시간순으로 보고 채널/상태 기준으로 빠르게 필터링합니다."
-            : "Review recent requests in time order and filter by channel/status."}
-        </p>
+        <div className="employee-request-monitoring-panel-head">
+          <div>
+            <h2>{isKoLocale ? "요청 이력 타임라인" : "Request Timeline"}</h2>
+            <p className="small">
+              {isKoLocale
+                ? "최근 요청을 시간순으로 보고 채널/상태 기준으로 빠르게 필터링합니다."
+                : "Review recent requests in time order and filter by channel/status."}
+            </p>
+          </div>
+          <span className="workspace-hero-chip">
+            {isKoLocale ? "이력 추적" : "Timeline follow-up"}
+          </span>
+        </div>
         <div className="timeline-filter-grid">
           <label>
             {isKoLocale ? "채널" : "Channel"}
