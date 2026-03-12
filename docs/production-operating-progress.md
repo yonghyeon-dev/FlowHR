@@ -455,3 +455,4 @@ Latest planning reset:
 - Started `WI-1201` to compact the admin payroll filing follow-up actions into a denser operator rail with clearer primary, recovery, and supporting action grouping.
 - Started `WI-1202` to compact the admin payroll filing feedback rail into a concise status strip for pending, success, and error states.
 - Started `WI-1203` to compact the admin payroll filing narrow-width layout so the setup, review, action, and feedback regions keep the new density on smaller viewports.
+- Started `WI-1204` to compact the admin payroll filing interactive field rows so setup and follow-up controls share the same denser field rhythm.

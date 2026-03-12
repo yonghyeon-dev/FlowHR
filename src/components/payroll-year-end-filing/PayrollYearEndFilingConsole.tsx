@@ -1030,7 +1030,7 @@ export default function PayrollYearEndFilingConsole() {
                   : "Set year-end baseline values and deductions before preparing the filing package."}
               </p>
             </div>
-            <div className={`input-grid ${styles.consoleDenseInputGrid}`}>
+            <div className={`input-grid ${styles.consoleCompactFieldGrid} ${styles.consoleDenseInputGrid}`}>
             <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
             <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
             <label>{copy.nonTaxableAnnualIncomeLabel}<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
@@ -1054,7 +1054,7 @@ export default function PayrollYearEndFilingConsole() {
                   : "Set export format, validation strength, notes, and settlement match keys together."}
               </p>
             </div>
-            <div className={`input-grid ${styles.consoleDenseInputGrid}`}>
+            <div className={`input-grid ${styles.consoleCompactFieldGrid} ${styles.consoleDenseInputGrid}`}>
             <label>{copy.exportFormatLabel}
               <select
                 value={exportFormat}
@@ -1228,7 +1228,7 @@ export default function PayrollYearEndFilingConsole() {
               ))}
             </div>
           ) : null}
-          <div className={`input-grid ${styles.consoleActionInputGrid}`}>
+          <div className={`input-grid ${styles.consoleCompactFieldGrid} ${styles.consoleActionInputGrid}`}>
           <label>{copy.finalizationNoteLabel}<input value={finalizedByNote} onChange={(event) => setFinalizedByNote(event.target.value)} /></label>
           <label>{copy.expectedSettlementHashExportLabel}
             <input

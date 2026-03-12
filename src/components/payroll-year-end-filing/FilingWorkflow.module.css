@@ -166,13 +166,39 @@
   margin-bottom: 0.45rem;
 }
 
+.consoleCompactFieldGrid {
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+}
+
+.consoleCompactFieldGrid label {
+  gap: 0.35rem;
+  color: #5f6f86;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.consoleCompactFieldGrid input,
+.consoleCompactFieldGrid select,
+.consoleCompactFieldGrid textarea {
+  min-height: 2.5rem;
+  border-radius: 0.85rem;
+  padding: 0.65rem 0.75rem;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.consoleCompactFieldGrid input::placeholder {
+  color: #8a97ab;
+}
+
 .consoleDenseInputGrid {
-  gap: 0.7rem;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
 }
 
 .consoleActionInputGrid {
-  gap: 0.7rem;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
 }
 
 .consoleActionRailEyebrow {
@@ -263,6 +289,10 @@
 @media (max-width: 720px) {
   .consoleDigestGrid {
     gap: 0.65rem;
+    grid-template-columns: 1fr;
+  }
+
+  .consoleCompactFieldGrid {
     grid-template-columns: 1fr;
   }
 
