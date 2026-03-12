@@ -67,6 +67,7 @@ export const testBundles = {
     "scripts/tests/e2e-wi1199-admin-payroll-filing-setup-card-compaction-follow-up.test.ts",
     "scripts/tests/e2e-wi1200-admin-payroll-filing-submissions-card-compaction-follow-up.test.ts",
     "scripts/tests/e2e-wi1201-admin-payroll-filing-follow-up-actions-compaction-follow-up.test.ts",
+    "scripts/tests/e2e-wi1202-admin-payroll-filing-feedback-rail-compaction-follow-up.test.ts",
   ],
   "ci-integration-legacy": [
     "scripts/tests/e2e-wi1107-employee-shell-grouped-navigation.test.ts",

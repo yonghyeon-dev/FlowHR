@@ -453,3 +453,4 @@ Latest planning reset:
 - Started `WI-1199` to compact the admin payroll filing setup card into a staged operator form with denser setup inputs and clearer follow-up action grouping.
 - Started `WI-1200` to compact the admin payroll filing submissions card into a review panel with denser summary pills and action-focused submission rows.
 - Started `WI-1201` to compact the admin payroll filing follow-up actions into a denser operator rail with clearer primary, recovery, and supporting action grouping.
+- Started `WI-1202` to compact the admin payroll filing feedback rail into a concise status strip for pending, success, and error states.
