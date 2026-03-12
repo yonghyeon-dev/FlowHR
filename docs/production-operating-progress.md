@@ -460,3 +460,4 @@ Latest planning reset:
 - Started `WI-1206` to compact the admin payroll filing side rail on narrow widths so summary, blocker, and recovery cards stack with stable mobile actions.
 - Started `WI-1207` to tighten the admin payroll filing top-stage guidance copy so the compact operator cards scan faster in both Korean and English.
 - Started `WI-1208` to tighten the admin payroll filing hero and lead copy so the console opens with a shorter operator scan path.
+- Started `WI-1209` to tighten the admin payroll filing action rail group copy so the compact operator lane reads faster.
