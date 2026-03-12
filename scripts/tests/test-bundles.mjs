@@ -144,5 +144,6 @@ export const testBundles = {
     "scripts/tests/e2e-wi1173-shared-workspace-primitives-and-visual-contract.test.ts",
     "scripts/tests/e2e-wi1174-admin-control-tower-and-queue-first-home-rollout.test.ts",
     "scripts/tests/e2e-wi1175-admin-operations-lane-rollout.test.ts",
+    "scripts/tests/e2e-wi1176-admin-payroll-filing-and-documents-lane-completion.test.ts",
   ],
 };

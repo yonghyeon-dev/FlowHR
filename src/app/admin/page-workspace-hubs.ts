@@ -34,7 +34,7 @@ type AdminWorkspaceHubDefinition = {
 const ADMIN_WORKSPACE_HUB_DEFINITIONS: Record<AdminShellSectionKey, AdminWorkspaceHubDefinition> = {
   controlTower: {
     description: {
-      ko: "결재, KPI, 분석 화면에서 우선순위와 정체 위험을 먼저 확인합니다.",
+      ko: "결재, KPI, 분석 화면에서 우선순위가 높은 위험과 대기열을 먼저 확인합니다.",
       en: "Track approval backlog, KPI signals, and analysis priorities."
     },
     links: [
@@ -45,7 +45,7 @@ const ADMIN_WORKSPACE_HUB_DEFINITIONS: Record<AdminShellSectionKey, AdminWorkspa
   },
   peopleAndPolicy: {
     description: {
-      ko: "직원, 조직, 온보딩, 정책 기준을 한 흐름에서 관리합니다.",
+      ko: "직원, 조직, 온보딩, 정책 기준을 하나의 흐름에서 관리합니다.",
       en: "Manage people, org structure, onboarding, and policy baselines in one flow."
     },
     links: [
@@ -93,10 +93,11 @@ const ADMIN_WORKSPACE_HUB_DEFINITIONS: Record<AdminShellSectionKey, AdminWorkspa
   },
   payrollAndFiling: {
     description: {
-      ko: "급여 마감, 명세서 배포, 연말정산과 신고 상태를 한 레인에서 연결합니다.",
-      en: "Operate payroll close, payslip delivery, year-end, and filing status in one lane."
+      ko: "급여 마감, 명세서 배포, 연말정산, 신고 후속을 하나의 레인에서 연결합니다.",
+      en: "Operate payroll close, payslip delivery, year-end, and filing follow-up in one lane."
     },
     links: [
+      { href: "/admin/payroll", label: { ko: "급여 레인", en: "Payroll lane" } },
       { href: "/admin/payroll-close", label: { ko: "급여 마감", en: "Payroll close" } },
       { href: "/admin/payroll-payslip-delivery", label: { ko: "명세서 배포", en: "Payslip delivery" } },
       { href: "/admin/payroll-year-end", label: { ko: "연말정산", en: "Year-end" } },

@@ -48,7 +48,7 @@ export function buildAdminQueueBadges(summary: AdminSummary, isKoLocale: boolean
       breakdown: isKoLocale
         ? `미확정 ${summary.previewedPayrollCount} · 미배포 ${summary.undistributedPayrollCount}`
         : `Previewed ${summary.previewedPayrollCount} · Undistributed ${summary.undistributedPayrollCount}`,
-      href: `/admin/payroll-close?source=${ADMIN_HUB_SOURCE}`,
+      href: `/admin/payroll?source=${ADMIN_HUB_SOURCE}`,
       actions: [
         {
           label: isKoLocale

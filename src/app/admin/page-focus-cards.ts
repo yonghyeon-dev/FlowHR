@@ -52,7 +52,7 @@ export function buildAdminDashboardFocusCards(summary: AdminSummary): AdminDashb
     {
       key: "payroll",
       count: summary.previewedPayrollCount,
-      href: "/admin/payroll-close",
+      href: "/admin/payroll",
       severity: toFocusSeverity(summary.previewedPayrollCount)
     }
   ];

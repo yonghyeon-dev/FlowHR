@@ -1,5 +1,6 @@
 export const ADMIN_HUB_SOURCE = "admin-hub";
 export const ADMIN_OPERATIONS_SOURCE = "admin-operations";
+export const ADMIN_PAYROLL_SOURCE = "admin-payroll";
 export const ADMIN_DASHBOARD_LEGACY_SOURCE = "admin-dashboard";
 
 export function isAdminHubSource(value: string | null) {
