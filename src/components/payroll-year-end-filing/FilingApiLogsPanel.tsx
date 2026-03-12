@@ -26,7 +26,7 @@ export default function FilingApiLogsPanel(props: FilingApiLogsPanelProps) {
     : "/admin/payroll-year-end";
 
   return (
-    <article className="panel">
+    <article className="panel workspace-section-card workspace-note-card v2-surface-card">
       <h2>{copy.apiLogsPanelTitle}</h2>
       <p className="small">
         {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} /{" "}

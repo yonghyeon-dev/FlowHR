@@ -997,7 +997,8 @@ export default function PayrollYearEndFilingConsole() {
         </article>
       </section>
 
-        <section className="panel-grid workspace-panel-grid">
+        <section className="panel-grid workspace-panel-grid v2-workspace-split">
+          <div className="v2-workspace-main">
           <article className="panel workspace-section-card workspace-toolbar-card v2-surface-card">
             <h2>{copy.inputTitle}</h2>
             {showDevTools ? (
@@ -1337,52 +1338,6 @@ export default function PayrollYearEndFilingConsole() {
           </div>
         </article>
 
-        <FilingSettlementSummaryPanels
-          copy={copy}
-          runtimeLocale={runtimeLocale}
-          finalization={finalization}
-          filingExport={filingExport}
-        />
-
-        <FilingPreflightBlockerPanel
-          locale={locale}
-          runtimeLocale={runtimeLocale}
-          checklist={preflightChecklist}
-          copy={copy}
-          showPayrollSource={showPayrollSource}
-          disabled={pendingLabel !== null}
-          onLoadChecklist={() => void runLoadPreflightChecklist()}
-          onOpenPendingSubmissions={runOpenPendingSubmissionsFromPreflight}
-          onOpenRejectedSubmissions={runOpenRejectedSubmissionsFromPreflight}
-          onPreviewFinalization={() => void runFinalization(false)}
-          onClearChecklist={() => setPreflightChecklist(null)}
-        />
-
-        {showDevTools ? (
-          <FilingApiLogsPanel
-            copy={copy}
-            stats={stats}
-            pendingLabel={pendingLabel}
-            logs={logs}
-            showPayrollSource={showPayrollSource}
-          />
-        ) : null}
-
-        {lastFailure ? (
-          <FilingFailureActionPanel
-            locale={locale}
-            copy={copy}
-            failure={lastFailure}
-            disabled={pendingLabel !== null}
-            onRetry={() => void retryLastFailureAction()}
-            onRefreshSubmissions={() => void runRefreshSubmissions()}
-            onLoadPreflightChecklist={() => void runLoadPreflightChecklist()}
-            onOpenRejectedSubmissions={runOpenRejectedSubmissionsFromPreflight}
-            onLoadAckCatalog={() => void runLoadAckCatalog()}
-            onClear={clearFailure}
-          />
-        ) : null}
-
         <article className="panel workspace-section-card v2-surface-card">
           <h2>{copy.filingSubmissionsPanelTitle}</h2>
           {!submissionListSummary ? (
@@ -1487,6 +1442,63 @@ export default function PayrollYearEndFilingConsole() {
           runtimeLocale={runtimeLocale}
           timelineEntries={timelineEntries}
         />
+          </div>
+        <aside className="workspace-side-panel v2-workspace-side" aria-label={locale === "ko" ? "신고 사이드 레일" : "Filing side rail"}>
+          <article className="panel workspace-section-card workspace-note-card v2-surface-card">
+            <h2>{locale === "ko" ? "우선 확인할 운영 보조 패널" : "Priority supporting panels"}</h2>
+            <p className="small muted">
+              {locale === "ko"
+                ? "정산 상태와 차단 항목을 먼저 보고, 실패 복구와 진단 로그는 그다음에 따라옵니다."
+                : "Review settlement state and blockers first, then failure recovery and diagnostics."}
+            </p>
+          </article>
+
+          <FilingSettlementSummaryPanels
+            copy={copy}
+            runtimeLocale={runtimeLocale}
+            finalization={finalization}
+            filingExport={filingExport}
+          />
+
+          <FilingPreflightBlockerPanel
+            locale={locale}
+            runtimeLocale={runtimeLocale}
+            checklist={preflightChecklist}
+            copy={copy}
+            showPayrollSource={showPayrollSource}
+            disabled={pendingLabel !== null}
+            onLoadChecklist={() => void runLoadPreflightChecklist()}
+            onOpenPendingSubmissions={runOpenPendingSubmissionsFromPreflight}
+            onOpenRejectedSubmissions={runOpenRejectedSubmissionsFromPreflight}
+            onPreviewFinalization={() => void runFinalization(false)}
+            onClearChecklist={() => setPreflightChecklist(null)}
+          />
+
+          {lastFailure ? (
+            <FilingFailureActionPanel
+              locale={locale}
+              copy={copy}
+              failure={lastFailure}
+              disabled={pendingLabel !== null}
+              onRetry={() => void retryLastFailureAction()}
+              onRefreshSubmissions={() => void runRefreshSubmissions()}
+              onLoadPreflightChecklist={() => void runLoadPreflightChecklist()}
+              onOpenRejectedSubmissions={runOpenRejectedSubmissionsFromPreflight}
+              onLoadAckCatalog={() => void runLoadAckCatalog()}
+              onClear={clearFailure}
+            />
+          ) : null}
+
+          {showDevTools ? (
+            <FilingApiLogsPanel
+              copy={copy}
+              stats={stats}
+              pendingLabel={pendingLabel}
+              logs={logs}
+              showPayrollSource={showPayrollSource}
+            />
+          ) : null}
+        </aside>
       </section>
     </RouteWorkspaceShell>
   );
