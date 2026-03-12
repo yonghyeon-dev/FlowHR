@@ -258,9 +258,9 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 4. Next Queue
 
-1. Close `WI-1170` by getting V2 shell adoption green through PR CI and then extend the V2 baseline into admin and employee core routes.
-2. Start `WI-1172` to roll the V2 shell baseline into the main admin/employee route entry surfaces.
-3. Start `WI-1173` to lock the shared workspace primitives and visual contract before broader route rollout.
+- Close `WI-1188` by resetting mainline CI to the V2 current baseline and moving pre-V2 shell/route guards behind explicit legacy/full scripts.
+- Then resume `WI-1174` so `/admin` becomes the first true queue-first customer-admin control tower on the V2 shell.
+- After `WI-1174`, continue Phase B rollout with `WI-1175` and `WI-1176`.
 
 ## 5. Blockers Or Watch Items
 
