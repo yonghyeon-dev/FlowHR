@@ -21,9 +21,9 @@ function run() {
   assert.match(adminSettingsPage, /workspace-summary-strip/);
   assert.match(adminSettingsPage, /workspace-section-card workspace-toolbar-card/);
   assert.match(adminSettingsPage, /workspace-section-card workspace-note-card/);
-  assert.match(adminSettingsPage, /회계연도 시작 월/);
+  assert.match(adminSettingsPage, /회계연도 시작/);
   assert.match(adminSettingsPage, /출퇴근 보안 설정/);
-  assert.match(adminSettingsPage, /운영 기본값 입력/);
+  assert.match(adminSettingsPage, /회사 운영 기본값/);
 
   assert.match(employeeSettingsPage, /workspace-shell employee-workspace-shell/);
   assert.match(employeeSettingsPage, /workspace-page-header employee-workspace-status-header/);

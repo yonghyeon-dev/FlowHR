@@ -7,20 +7,8 @@ function readUtf8(...parts: string[]) {
 }
 
 function run() {
-  const workspaceContent = readUtf8(
-    "src",
-    "app",
-    "employee",
-    "requests",
-    "workspace-content.tsx"
-  );
-  const requestsClient = readUtf8(
-    "src",
-    "app",
-    "employee",
-    "requests",
-    "page-client.tsx"
-  );
+  const workspaceContent = readUtf8("src", "app", "employee", "requests", "workspace-content.tsx");
+  const requestsClient = readUtf8("src", "app", "employee", "requests", "page-client.tsx");
   const resubmitPanel = readUtf8(
     "src",
     "components",
@@ -28,22 +16,16 @@ function run() {
     "EmployeeRequestsResubmitWorkspacePanel.tsx"
   );
   const globalsCss = readUtf8("src", "app", "globals.css");
-  const workItem = readUtf8(
-    "work-items",
-    "WI-1165-employee-requests-visual-hierarchy.md"
-  );
+  const workItem = readUtf8("work-items", "WI-1165-employee-requests-visual-hierarchy.md");
 
   assert.match(workspaceContent, /employee-requests-hub-grid/);
   assert.match(workspaceContent, /employee-requests-hub-card/);
   assert.match(workspaceContent, /employee-requests-hub-primary/);
   assert.match(workspaceContent, /employee-requests-hub-secondary/);
+  assert.match(workspaceContent, /요청 상태 추적|Request monitoring/);
   assert.match(
     workspaceContent,
-    /\uC694\uCCAD \uC0C1\uD0DC\uC640 \uD6C4\uC18D \uC870\uCE58|Request monitoring/
-  );
-  assert.match(
-    workspaceContent,
-    /\uC65C \uC694\uCCAD \uC6CC\uD06C\uC2A4\uD398\uC774\uC2A4\uB97C \uB354 \uC138\uBD84\uD654\uD558\uB098\uC694\?|Why promote request monitoring into subroutes\?/
+    /왜 요청을 전용 경로로 나누었나요\?|Why split requests into dedicated routes\?/
   );
 
   assert.match(requestsClient, /employee-requests-status-strip/);
@@ -52,10 +34,7 @@ function run() {
 
   assert.match(resubmitPanel, /employee-requests-resubmit-summary/);
   assert.match(resubmitPanel, /candidateCountLabel/);
-  assert.match(
-    resubmitPanel,
-    /\uC7AC\uC81C\uCD9C \uD6C4\uBCF4 \d+\uAC74|resubmit candidates/
-  );
+  assert.match(resubmitPanel, /재제출 후보 \d+건|resubmit candidates/);
 
   assert.match(globalsCss, /\.employee-requests-hub-grid \{/);
   assert.match(globalsCss, /\.employee-requests-resubmit-summary \{/);
