@@ -60,6 +60,7 @@ export const testBundles = {
     "scripts/tests/e2e-wi1192-admin-payroll-filing-workflow-visual-follow-up.test.ts",
     "scripts/tests/e2e-wi1193-admin-payroll-filing-workspace-density-follow-up.test.ts",
     "scripts/tests/e2e-wi1194-admin-payroll-filing-side-rail-priority-follow-up.test.ts",
+    "scripts/tests/e2e-wi1195-admin-payroll-filing-diagnostics-density-follow-up.test.ts",
   ],
   "ci-integration-legacy": [
     "scripts/tests/e2e-wi1107-employee-shell-grouped-navigation.test.ts",
