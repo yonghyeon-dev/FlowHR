@@ -89,7 +89,10 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
     : "/admin/payroll-year-end/preflight";
 
   return (
-    <article className="panel workspace-section-card workspace-note-card v2-surface-card">
+    <article className="panel workspace-section-card workspace-note-card v2-surface-card admin-payroll-blocker-card">
+      <p className="eyebrow admin-payroll-blocker-eyebrow">
+        {locale === "ko" ? "우선 차단" : "Priority blockers"}
+      </p>
       <h2>{panelCopy.title}</h2>
       <p className="small">{panelCopy.description}</p>
       <div className="panel-actions">
@@ -106,29 +109,33 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
         <p className="small">{panelCopy.noChecklist}</p>
       ) : (
         <>
-          <ul className="simple-list">
-            <li>
+          <div className="admin-payroll-blocker-summary">
+            <div className="admin-payroll-blocker-pill">
               <span>{panelCopy.summaryLabel}</span>
               <strong>{checklist.checklist.summary.readyToFinalize ? copy.yesLabel : copy.noLabel}</strong>
-            </li>
-            <li>
+            </div>
+            <div className="admin-payroll-blocker-pill">
               <span>{panelCopy.passFailWarnLabel}</span>
               <strong>
                 {checklist.checklist.summary.passCount}/{checklist.checklist.summary.failCount}/
                 {checklist.checklist.summary.warnCount}
               </strong>
-            </li>
-          </ul>
+            </div>
+          </div>
           {failedChecks.length === 0 ? (
             <p className="small ok">{panelCopy.noFailures}</p>
           ) : (
             <>
               <h3>{panelCopy.failedChecksTitle}</h3>
-              <ul className="log-list">
+              <div className="admin-payroll-blocker-list" role="list">
                 {failedChecks.map((check) => (
-                  <li key={check.key}>
-                    <span className="fail">{copy.failLabel}</span> {check.label} / {check.detail}
-                    <div className="panel-actions">
+                  <article key={check.key} className="admin-payroll-blocker-item" role="listitem">
+                    <div className="admin-payroll-blocker-item-copy">
+                      <span className="fail">{copy.failLabel}</span>
+                      <strong>{check.label}</strong>
+                      <p>{check.detail}</p>
+                    </div>
+                    <div className="panel-actions admin-payroll-blocker-actions">
                       {check.key === "no_pending_filing_submissions" ? (
                         <button
                           className="btn btn-secondary"
@@ -168,20 +175,24 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
                         </Link>
                       ) : null}
                     </div>
-                  </li>
+                  </article>
                 ))}
-              </ul>
+              </div>
             </>
           )}
           {warningChecks.length > 0 ? (
             <>
               <h3>{panelCopy.warningChecksTitle}</h3>
-              <ul className="log-list">
+              <div className="admin-payroll-blocker-list" role="list">
                 {warningChecks.map((check) => (
-                  <li key={check.key}>
-                    <span className="small">{panelCopy.warnLabel}</span> {check.label} / {check.detail}
+                  <article key={check.key} className="admin-payroll-blocker-item admin-payroll-blocker-item-warn" role="listitem">
+                    <div className="admin-payroll-blocker-item-copy">
+                      <span className="small">{panelCopy.warnLabel}</span>
+                      <strong>{check.label}</strong>
+                      <p>{check.detail}</p>
+                    </div>
                     {check.key === "settlement_hash_available" ? (
-                      <div className="panel-actions">
+                      <div className="panel-actions admin-payroll-blocker-actions">
                         <button
                           className="btn btn-secondary"
                           onClick={onPreviewFinalization}
@@ -192,7 +203,7 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
                       </div>
                     ) : null}
                     {check.key === "no_rejected_filing_submissions" ? (
-                      <div className="panel-actions">
+                      <div className="panel-actions admin-payroll-blocker-actions">
                         <button
                           className="btn btn-secondary"
                           onClick={onOpenRejectedSubmissions}
@@ -202,9 +213,9 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
                         </button>
                       </div>
                     ) : null}
-                  </li>
+                  </article>
                 ))}
-              </ul>
+              </div>
             </>
           ) : null}
           <p className="small">

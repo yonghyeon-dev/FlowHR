@@ -930,6 +930,63 @@ body {
   line-height: 1.45;
   font-size: 0.86rem;
 }
+.admin-payroll-blocker-card {
+  gap: 12px;
+}
+.admin-payroll-blocker-eyebrow {
+  margin: 0;
+  color: #92612f;
+}
+.admin-payroll-blocker-summary {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+}
+.admin-payroll-blocker-pill {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(154, 120, 73, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 252, 246, 0.92);
+}
+.admin-payroll-blocker-pill span {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.admin-payroll-blocker-list {
+  display: grid;
+  gap: 10px;
+}
+.admin-payroll-blocker-item {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(154, 120, 73, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+}
+.admin-payroll-blocker-item-warn {
+  border-color: rgba(176, 150, 88, 0.22);
+  background: rgba(255, 252, 245, 0.94);
+}
+.admin-payroll-blocker-item-copy {
+  display: grid;
+  gap: 6px;
+}
+.admin-payroll-blocker-item-copy strong {
+  color: var(--text-strong);
+}
+.admin-payroll-blocker-item-copy p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  font-size: 0.84rem;
+}
+.admin-payroll-blocker-actions {
+  margin-top: 0;
+  justify-content: flex-start;
+}
 .admin-payroll-lane-side {
   display: grid;
   gap: 16px;
