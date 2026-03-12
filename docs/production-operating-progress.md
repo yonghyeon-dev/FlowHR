@@ -450,3 +450,4 @@ Latest planning reset:
 - Re-verified `WI-1170` on the delivery path and confirmed both `ci` (`22992491557`) and `vercel-production-deploy` (`22992491571`) stay green after the V2 shell and design system baseline rollout.
 - Started `WI-1188` to reset the CI baseline around the V2 shell because repeated `quality-gates` failures were dominated by stale pre-V2 shell assertions instead of current product regressions.
 - Started `WI-1172` to roll the V2 route shell into the admin settings route and the employee requests route while reclassifying the remaining pre-V2 shell guards that blocked the new baseline.
+- Started `WI-1199` to compact the admin payroll filing setup card into a staged operator form with denser setup inputs and clearer follow-up action grouping.
