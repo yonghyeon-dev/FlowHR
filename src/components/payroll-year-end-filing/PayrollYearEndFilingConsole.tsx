@@ -383,6 +383,34 @@ export default function PayrollYearEndFilingConsole() {
     setLastFailure(null);
   }
 
+  function formatSubmissionReviewMeta(submission: PayrollYearEndFilingSubmission) {
+    const transportLabel =
+      submission.transport === "manual_portal"
+        ? copy.transportShortManualLabel
+        : submission.transport === "hometax_upload"
+          ? copy.transportShortHometaxLabel
+          : copy.transportShortNtsApiMockLabel;
+    const chips = [
+      transportLabel,
+      copy.exportFormatOptionLabels[submission.format] ?? submission.format,
+      copy.validationModeOptionLabels[submission.validationMode] ?? submission.validationMode
+    ];
+
+    if (submission.resubmissionReason) {
+      chips.push(`${copy.timelineReasonLabel}: ${submission.resubmissionReason}`);
+    }
+
+    if (submission.ack) {
+      chips.push(
+        `${copy.timelineAckPrefix} ${copy.ackStatusOptionLabels[submission.ack.ackStatus] ?? submission.ack.ackStatus}${
+          submission.ack.rejectionReasonDetail ? ` / ${submission.ack.rejectionReasonDetail}` : ""
+        }`
+      );
+    }
+
+    return chips.join(" · ");
+  }
+
   async function runFinalization(apply: boolean) {
     const action = apply ? "finalization_apply" : "finalization_preview";
     const actionLabel = apply ? copy.logFinalizeSettlement : copy.logPreviewFinalization;
@@ -1423,13 +1451,7 @@ export default function PayrollYearEndFilingConsole() {
                     <time>{new Date(submission.submittedAt).toLocaleString(runtimeLocale)}</time>
                   </div>
                   <p className="admin-payroll-submission-item-copy">
-                    {copy.submissionTransportOptionLabels[submission.transport] ?? submission.transport} / {copy.exportFormatOptionLabels[submission.format] ?? submission.format} / {copy.validationModeOptionLabels[submission.validationMode] ?? submission.validationMode}
-                    {submission.resubmissionReason ? ` / ${copy.timelineReasonLabel}: ${submission.resubmissionReason}` : ""}
-                    {submission.ack
-                      ? ` / ${copy.timelineAckPrefix} ${copy.ackStatusOptionLabels[submission.ack.ackStatus] ?? submission.ack.ackStatus}${
-                          submission.ack.rejectionReasonDetail ? ` / ${submission.ack.rejectionReasonDetail}` : ""
-                        }`
-                      : ""}
+                    {formatSubmissionReviewMeta(submission)}
                   </p>
                   <div className="panel-actions admin-payroll-submission-item-actions">
                     {submission.status === "submitted" ? (
