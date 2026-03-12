@@ -48,7 +48,7 @@ export default function FilingFailureActionPanel(props: FilingFailureActionPanel
     failure.action === "submission_reopen";
 
   return (
-    <article className="panel">
+    <article className="panel workspace-section-card workspace-note-card v2-surface-card">
       <h2>{copy.failureActionPanelTitle}</h2>
       <p className="small fail">{failure.message}</p>
       <ul className="simple-list">

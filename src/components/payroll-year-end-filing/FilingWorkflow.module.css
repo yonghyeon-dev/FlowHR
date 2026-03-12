@@ -93,6 +93,82 @@
   gap: 0.75rem;
 }
 
+.consoleDigestGrid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  margin-bottom: 1rem;
+}
+
+.consoleDigestCard {
+  border: 1px solid rgba(180, 203, 228, 0.3);
+  border-radius: 0.95rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 251, 255, 0.92) 100%);
+  padding: 0.9rem 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.consoleDigestCard span {
+  color: #5f6f86;
+  font-size: 0.76rem;
+}
+
+.consoleDigestCard strong {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.consoleFieldSection {
+  display: grid;
+  gap: 0.8rem;
+  padding-top: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid rgba(180, 203, 228, 0.24);
+}
+
+.consoleFieldSection:first-of-type {
+  padding-top: 0;
+  margin-top: 0;
+  border-top: 0;
+}
+
+.consoleFieldHeader {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.consoleFieldHeader h3 {
+  margin: 0;
+  font-size: 0.96rem;
+}
+
+.consoleActionStack {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.consoleActionGroup {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.consoleActionGroupTitle {
+  margin: 0;
+  color: #5f6f86;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.consoleFeedbackStack {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
 .stepPanelGrid {
   display: grid;
   gap: 1rem;

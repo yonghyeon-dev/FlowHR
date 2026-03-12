@@ -9,6 +9,7 @@ import FilingFailureActionPanel from "@/components/payroll-year-end-filing/Filin
 import FilingPreflightBlockerPanel from "@/components/payroll-year-end-filing/FilingPreflightBlockerPanel";
 import FilingSettlementSummaryPanels from "@/components/payroll-year-end-filing/FilingSettlementSummaryPanels";
 import FilingSubmissionTimelinePanel from "@/components/payroll-year-end-filing/FilingSubmissionTimelinePanel";
+import styles from "@/components/payroll-year-end-filing/FilingWorkflow.module.css";
 import { payrollYearEndFilingCopyByLocale } from "@/components/payroll-year-end-filing/copy";
 import {
   appendApiLogEntry,
@@ -35,6 +36,10 @@ import {
   formatAdminSessionConnectionState,
   formatWorkspaceConnectionState
 } from "@/lib/product-language";
+import {
+  RouteWorkspaceShell,
+  RouteWorkspaceStatus
+} from "@/components/workspace/RouteWorkspacePrimitives";
 import {
   currentYear,
   type PayrollYearEndPreflightChecklistResponse
@@ -225,6 +230,27 @@ export default function PayrollYearEndFilingConsole() {
     filingExport,
     submissionListSummary
   ].filter(Boolean).length;
+  const setupDigestItems = [
+    {
+      label: locale === "ko" ? "정산 기준값" : "Settlement baseline",
+      value: `${copy.nonTaxableAnnualIncomeLabel} ${nonTaxableAnnualIncomeKrw} · ${copy.additionalTaxCreditLabel} ${additionalTaxCreditKrw}`
+    },
+    {
+      label: locale === "ko" ? "제출 준비" : "Submission readiness",
+      value: `${copy.submissionNoteLabel}: ${submissionNote.trim() || copy.dashLabel}`
+    },
+    {
+      label: locale === "ko" ? "응답 카탈로그" : "Response catalog",
+      value:
+        ackCatalog !== null
+          ? locale === "ko"
+            ? "불러옴"
+            : "Loaded"
+          : locale === "ko"
+            ? "미확인"
+            : "Not loaded"
+    }
+  ];
 
   useEffect(() => {
     if (ackCodeOptions.length === 0) {
@@ -911,7 +937,7 @@ export default function PayrollYearEndFilingConsole() {
   }
 
   return (
-    <main className="saas-content workspace-shell admin-workspace-shell">
+    <RouteWorkspaceShell tone="admin">
       <header className="page-header workspace-page-header">
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
@@ -972,7 +998,7 @@ export default function PayrollYearEndFilingConsole() {
       </section>
 
         <section className="panel-grid workspace-panel-grid">
-          <article className="panel workspace-section-card workspace-toolbar-card">
+          <article className="panel workspace-section-card workspace-toolbar-card v2-surface-card">
             <h2>{copy.inputTitle}</h2>
             {showDevTools ? (
               <p className="small muted workspace-source-banner">
@@ -982,6 +1008,23 @@ export default function PayrollYearEndFilingConsole() {
                 <strong>{formatAdminSessionConnectionState(Boolean(adminActorId.trim()), runtimeLocale)}</strong>
               </p>
             ) : null}
+            <div className={styles.consoleDigestGrid}>
+              {setupDigestItems.map((item) => (
+                <div key={item.label} className={styles.consoleDigestCard}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
+            </div>
+            <div className={styles.consoleFieldSection}>
+            <div className={styles.consoleFieldHeader}>
+              <h3>{locale === "ko" ? "정산 기준 입력" : "Settlement baseline inputs"}</h3>
+              <p className="small muted">
+                {locale === "ko"
+                  ? "연말정산 기준값과 공제 항목을 먼저 맞춘 뒤 제출 패키지를 준비합니다."
+                  : "Set year-end baseline values and deductions before preparing the filing package."}
+              </p>
+            </div>
             <div className="input-grid">
             <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
             <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
@@ -995,6 +1038,18 @@ export default function PayrollYearEndFilingConsole() {
             <label>{copy.educationExpenseLabel}<input value={educationExpenseKrw} onChange={(event) => setEducationExpenseKrw(event.target.value)} /></label>
             <label>{copy.donationLabel}<input value={donationKrw} onChange={(event) => setDonationKrw(event.target.value)} /></label>
             <label>{copy.housingSavingsLabel}<input value={housingSavingsKrw} onChange={(event) => setHousingSavingsKrw(event.target.value)} /></label>
+            </div>
+            </div>
+            <div className={styles.consoleFieldSection}>
+            <div className={styles.consoleFieldHeader}>
+              <h3>{locale === "ko" ? "제출 준비와 검증 기준" : "Submission setup and validation"}</h3>
+              <p className="small muted">
+                {locale === "ko"
+                  ? "내보내기 형식, 검증 방식, 제출 메모와 정산 일치 키를 한 번에 맞춥니다."
+                  : "Set export format, validation strength, notes, and settlement match keys together."}
+              </p>
+            </div>
+            <div className="input-grid">
             <label>{copy.exportFormatLabel}
               <select
                 value={exportFormat}
@@ -1129,7 +1184,17 @@ export default function PayrollYearEndFilingConsole() {
                 <option value="asc">{copy.submissionSortDirectionOptionLabels.asc}</option>
               </select>
             </label>
-          </div>
+            </div>
+            </div>
+            <div className={styles.consoleFieldSection}>
+            <div className={styles.consoleFieldHeader}>
+              <h3>{locale === "ko" ? "응답과 재제출 후속 조치" : "Response and recovery follow-up"}</h3>
+              <p className="small muted">
+                {locale === "ko"
+                  ? "응답 저장, 재제출, 취소, 재개, 타임라인 추적을 같은 후속 조치 묶음으로 처리합니다."
+                  : "Handle response save, resubmission, cancellation, reopen, and timeline follow-up together."}
+              </p>
+            </div>
           {settlementHashFilterChips.length > 0 ? (
             <div className="panel-actions">
               <button
@@ -1157,6 +1222,7 @@ export default function PayrollYearEndFilingConsole() {
               ))}
             </div>
           ) : null}
+          <div className="input-grid">
           <label>{copy.finalizationNoteLabel}<input value={finalizedByNote} onChange={(event) => setFinalizedByNote(event.target.value)} /></label>
           <label>{copy.expectedSettlementHashExportLabel}
             <input
@@ -1221,23 +1287,54 @@ export default function PayrollYearEndFilingConsole() {
           <label>{copy.reopenSubmissionIdLabel}<input value={reopenSubmissionId} onChange={(event) => setReopenSubmissionId(event.target.value)} /></label>
           <label>{copy.timelineSubmissionIdLabel}<input value={timelineSubmissionId} onChange={(event) => setTimelineSubmissionId(event.target.value)} /></label>
           <label>{copy.evidenceNoteLabel}<input value={evidenceNote} onChange={(event) => setEvidenceNote(event.target.value)} /></label>
-          <div className="panel-actions">
+          </div>
+          <div className={styles.consoleActionStack}>
+            <div className={styles.consoleActionGroup}>
+              <p className={styles.consoleActionGroupTitle}>
+                {locale === "ko" ? "핵심 진행" : "Primary flow"}
+              </p>
+              <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void runFinalization(false)} disabled={pendingLabel !== null}>{copy.previewFinalizationAction}</button>
             <button className="btn btn-primary" onClick={() => void runFinalization(true)} disabled={pendingLabel !== null}>{copy.finalizeSettlementAction}</button>
             <button className="btn btn-secondary" onClick={() => void runFilingExport()} disabled={pendingLabel !== null}>{copy.exportFilingDataAction}</button>
             <button className="btn btn-primary" onClick={() => void runSubmitFilingPackage()} disabled={pendingLabel !== null}>{copy.submitFilingPackageAction}</button>
+              </div>
+            </div>
+            <div className={styles.consoleActionGroup}>
+              <p className={styles.consoleActionGroupTitle}>
+                {locale === "ko" ? "응답과 복구" : "Response and recovery"}
+              </p>
+              <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void runAcknowledgeSubmission()} disabled={pendingLabel !== null}>{copy.acknowledgeSubmissionAction}</button>
             <button className="btn btn-secondary" onClick={() => void runResubmitSubmission()} disabled={pendingLabel !== null}>{copy.resubmitSubmissionAction}</button>
             <button className="btn btn-secondary" onClick={() => void runCancelSubmission()} disabled={pendingLabel !== null}>{copy.cancelSubmissionAction}</button>
             <button className="btn btn-secondary" onClick={() => void runReopenSubmission()} disabled={pendingLabel !== null}>{copy.reopenSubmissionAction}</button>
+              </div>
+            </div>
+            <div className={styles.consoleActionGroup}>
+              <p className={styles.consoleActionGroupTitle}>
+                {locale === "ko" ? "보조 점검" : "Supporting checks"}
+              </p>
+              <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void runRefreshSubmissions()} disabled={pendingLabel !== null}>{copy.refreshSubmissionsAction}</button>
             <button className="btn btn-secondary" onClick={resetSubmissionFilters} disabled={pendingLabel !== null}>{copy.resetFiltersAction}</button>
             <button className="btn btn-secondary" onClick={() => void runLoadAckCatalog()} disabled={pendingLabel !== null}>{copy.loadAckCatalogAction}</button>
             <button className="btn btn-secondary" onClick={() => void runLoadSubmissionTimeline()} disabled={pendingLabel !== null}>{copy.loadSubmissionTimelineAction}</button>
             <button className="btn btn-secondary" onClick={() => void runAddEvidenceNote()} disabled={pendingLabel !== null}>{copy.addEvidenceNoteAction}</button>
+              </div>
+            </div>
           </div>
-          {statusMessage ? <p className="small workspace-inline-status">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail workspace-inline-status">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
+          <div className={styles.consoleFeedbackStack}>
+          <RouteWorkspaceStatus
+            message={lastFailure ? pendingLabel : pendingLabel ?? statusMessage}
+            tone={pendingLabel ? "info" : "success"}
+          />
+          <RouteWorkspaceStatus
+            message={supabaseSessionError ? `${copy.sessionErrorPrefix}: ${supabaseSessionError}` : null}
+            tone="error"
+          />
+          </div>
+          </div>
         </article>
 
         <FilingSettlementSummaryPanels
@@ -1286,7 +1383,7 @@ export default function PayrollYearEndFilingConsole() {
           />
         ) : null}
 
-        <article className="panel workspace-section-card">
+        <article className="panel workspace-section-card v2-surface-card">
           <h2>{copy.filingSubmissionsPanelTitle}</h2>
           {!submissionListSummary ? (
             <p className="small">{copy.noSubmissionSummaryYet}</p>
@@ -1391,6 +1488,6 @@ export default function PayrollYearEndFilingConsole() {
           timelineEntries={timelineEntries}
         />
       </section>
-    </main>
+    </RouteWorkspaceShell>
   );
 }

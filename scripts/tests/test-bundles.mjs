@@ -58,6 +58,7 @@ export const testBundles = {
     "scripts/tests/e2e-wi1190-admin-payroll-lane-journey-completion.test.ts",
     "scripts/tests/e2e-wi1191-admin-payroll-preflight-and-filing-ops-follow-up.test.ts",
     "scripts/tests/e2e-wi1192-admin-payroll-filing-workflow-visual-follow-up.test.ts",
+    "scripts/tests/e2e-wi1193-admin-payroll-filing-workspace-density-follow-up.test.ts",
   ],
   "ci-integration-legacy": [
     "scripts/tests/e2e-wi1107-employee-shell-grouped-navigation.test.ts",
