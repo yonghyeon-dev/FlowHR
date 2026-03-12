@@ -12,7 +12,7 @@ export default function FilingSubmissionTimelinePanel(props: FilingSubmissionTim
   const { copy, runtimeLocale, timelineEntries } = props;
 
   return (
-    <article className="panel">
+    <article className="panel workspace-section-card workspace-note-card v2-surface-card">
       <h2>{copy.submissionTimelinePanelTitle}</h2>
       {timelineEntries.length === 0 ? (
         <p className="small">{copy.noTimelineLoaded}</p>

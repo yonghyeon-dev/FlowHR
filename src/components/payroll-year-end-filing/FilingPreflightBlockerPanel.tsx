@@ -89,7 +89,7 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
     : "/admin/payroll-year-end/preflight";
 
   return (
-    <article className="panel">
+    <article className="panel workspace-section-card workspace-note-card v2-surface-card">
       <h2>{panelCopy.title}</h2>
       <p className="small">{panelCopy.description}</p>
       <div className="panel-actions">

@@ -17,7 +17,7 @@ export default function FilingSettlementSummaryPanels(props: FilingSettlementSum
 
   return (
     <>
-      <article className="panel">
+      <article className="panel workspace-section-card workspace-note-card v2-surface-card">
         <h2>{copy.finalizationPanelTitle}</h2>
         {!finalization ? (
           <p className="small">{copy.noFinalizationSummaryYet}</p>
@@ -47,7 +47,7 @@ export default function FilingSettlementSummaryPanels(props: FilingSettlementSum
         )}
       </article>
 
-      <article className="panel">
+      <article className="panel workspace-section-card workspace-note-card v2-surface-card">
         <h2>{copy.filingExportPanelTitle}</h2>
         {!filingExport ? (
           <p className="small">{copy.noExportYet}</p>
