@@ -4,7 +4,7 @@ const filingCopyEn = {
   heroEyebrow: "FlowHR Admin",
   title: "Payroll Year-End Finalization and Filing",
   description:
-    "Finalize year-end settlement, manage filing submissions with clear filters, and review the submission timeline and evidence notes.",
+    "Finalize settlement, track filing submissions, and review timeline evidence in one operator lane.",
   inputTitle: "Submission Setup",
   yearLabel: "Year",
   employeeIdLabel: "Employee number",
@@ -260,7 +260,7 @@ export const payrollYearEndFilingCopyByLocale: Record<FlowLocale, PayrollYearEnd
     heroEyebrow: "FlowHR 관리자",
     title: "연말정산 확정 및 신고 관리",
     description:
-      "연말정산을 확정하고, 신고 제출 현황을 명확한 필터로 관리하며, 제출 이력과 증빙 메모를 확인합니다.",
+      "연말정산을 확정하고, 신고 제출 현황과 타임라인 증적을 한 레일에서 관리합니다.",
     inputTitle: "신고 준비",
     yearLabel: "연도",
     employeeIdLabel: "직원 번호",

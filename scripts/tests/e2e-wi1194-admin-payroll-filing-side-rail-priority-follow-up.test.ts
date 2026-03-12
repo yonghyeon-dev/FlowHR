@@ -28,7 +28,7 @@ function run() {
   assert.match(filingConsole, /v2-workspace-split/);
   assert.match(filingConsole, /v2-workspace-main/);
   assert.match(filingConsole, /v2-workspace-side/);
-  assert.match(filingConsole, /Priority supporting panels/);
+  assert.match(filingConsole, /Priority support panels/);
 
   const summaryIndex = filingConsole.indexOf("<FilingSettlementSummaryPanels");
   const blockersIndex = filingConsole.indexOf("<FilingPreflightBlockerPanel");
