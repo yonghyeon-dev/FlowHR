@@ -2,7 +2,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AdminContractsWorkspaceHeader } from "@/components/contracts/AdminContractsWorkspaceHeader";
-import { isAdminHubSource } from "@/app/admin/source-context";
+import { isAdminHubSource, isAdminPayrollSource } from "@/app/admin/source-context";
 import {
   adminContractsCopyByLocale,
   contractApprovalStatusLabelByLocale,
@@ -47,6 +47,8 @@ export default function AdminContractsWorkspace({ accessToken }: { accessToken: 
   const analyticsFocus = normalizeContractsAnalyticsFocusMetric(searchParams.get("analyticsFocus"));
   const analyticsBackHref = resolveContractsAnalyticsBackHref(analyticsSource, analyticsFocus);
   const analyticsBackLabel = locale === "ko" ? "분석으로 돌아가기" : "Back to analytics";
+  const payrollBackHref = isAdminPayrollSource(analyticsSource) ? "/admin/payroll" : "";
+  const payrollFocusLabel = locale === "ko" ? "문서 후속" : "Document follow-up";
   const analyticsFocusLabel = analyticsFocusMetric === "contractSlaOverdueCount" ? copy.overdueSlaCountLabel : analyticsFocusMetric === "contractDecisionQueueCount" ? copy.decisionQueueCountLabel : copy.documentsKpiLabel;
   const categoryLabels = contractCategoryLabelByLocale[locale];
   const templateStatusLabels = contractTemplateStatusLabelByLocale[locale];
@@ -125,13 +127,24 @@ export default function AdminContractsWorkspace({ accessToken }: { accessToken: 
         heroEyebrow={copy.heroEyebrow}
         title={copy.title}
         description={copy.description}
-        analyticsSource={isAdminHubSource(analyticsSource) ? "admin-hub" : analyticsSource}
+        analyticsSource={
+          isAdminHubSource(analyticsSource)
+            ? "admin-hub"
+            : isAdminPayrollSource(analyticsSource)
+              ? "admin-payroll"
+              : analyticsSource
+        }
         analyticsFocusLabel={analyticsFocusLabel}
         analyticsSourceBanner={copy.analyticsSourceBanner}
         analyticsSourceFocusLabel={copy.analyticsSourceFocusLabel}
         dashboardSourceBanner={copy.dashboardSourceBanner}
         dashboardSourceFocusLabel={copy.dashboardSourceFocusLabel}
         dashboardFocusLabel={dashboardFocusLabel}
+        payrollSourceBanner={copy.payrollSourceBanner}
+        payrollSourceFocusLabel={copy.payrollSourceFocusLabel}
+        payrollFocusLabel={payrollFocusLabel}
+        payrollBackHref={payrollBackHref}
+        payrollBackLabel={copy.payrollBackLabel}
         analyticsBackHref={analyticsBackHref}
         analyticsBackLabel={analyticsBackLabel}
         openTemplateBuilderAction={copy.openTemplateBuilderAction}

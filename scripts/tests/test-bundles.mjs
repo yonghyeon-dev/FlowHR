@@ -53,6 +53,7 @@ export const testBundles = {
     "scripts/tests/e2e-wi1096-login-session-surface-productization.test.ts",
     "scripts/tests/e2e-wi1097-employee-session-guidance-productization.test.ts",
     "scripts/tests/e2e-wi1099-ui-ux-wave1-confirmation-feedback-and-empty-state-recovery.test.ts",
+    "scripts/tests/e2e-wi1177-admin-payroll-document-detail-follow-up.test.ts",
   ],
   "ci-integration-legacy": [
     "scripts/tests/e2e-wi1107-employee-shell-grouped-navigation.test.ts",

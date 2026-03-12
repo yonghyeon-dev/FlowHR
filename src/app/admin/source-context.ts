@@ -8,6 +8,10 @@ export function isAdminHubSource(value: string | null) {
   return normalized === ADMIN_HUB_SOURCE || normalized === ADMIN_DASHBOARD_LEGACY_SOURCE;
 }
 
+export function isAdminPayrollSource(value: string | null) {
+  return (value ?? "").trim().toLowerCase() === ADMIN_PAYROLL_SOURCE;
+}
+
 export function withAdminHubSource(href: string) {
   return withAdminSource(href, ADMIN_HUB_SOURCE);
 }

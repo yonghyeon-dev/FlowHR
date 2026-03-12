@@ -9,6 +9,7 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 2. Completed In This Wave
 
+- Started `WI-1177` to keep payroll detail surfaces source-aware so payslip delivery and contract documents stay attached to the new `/admin/payroll` lane instead of falling back to the generic admin hub.
 - Started `WI-1176` to promote payroll, payslip delivery, year-end, filing, and document follow-up into a dedicated `/admin/payroll` route-first lane and unify every admin payroll entry on that route.
 - Started `WI-1175` to promote the admin operations group into a dedicated route-first lane so attendance, leave, employee-facing operations, and contract follow-up open from one customer-admin operations station.
 - Started `WI-1174` to turn `/admin` into a queue-first customer-admin control tower using the V2 workspace primitives and current CI baseline.

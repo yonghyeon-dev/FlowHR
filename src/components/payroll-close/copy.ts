@@ -6,6 +6,8 @@ export type PayrollCloseCopy = {
   description: string;
   dashboardSourceBanner: string;
   dashboardSourceFocusLabel: string;
+  payrollSourceBanner: string;
+  payrollSourceFocusLabel: string;
   focusPreviewedLabel: string;
   focusUndistributedLabel: string;
   focusAllLabel: string;
@@ -54,6 +56,7 @@ export type PayrollCloseCopy = {
   apiLogsRunningLabel: string;
   noApiCallYet: string;
   backToAdmin: string;
+  backToPayroll: string;
   statusRequestFailed: string;
   statusLoadedCloseSummaryPrefix: string;
   statusLoadedCloseSummaryBlocked: string;
@@ -74,6 +77,8 @@ const copyEn: PayrollCloseCopy = {
     "Preview or apply period close workflow with settlement deltas from confirmed payroll runs.",
   dashboardSourceBanner: "Opened from admin hub",
   dashboardSourceFocusLabel: "Focused queue",
+  payrollSourceBanner: "Opened from payroll lane",
+  payrollSourceFocusLabel: "Focused lane",
   focusPreviewedLabel: "Previewed runs",
   focusUndistributedLabel: "Undistributed runs",
   focusAllLabel: "Payroll close queue",
@@ -122,6 +127,7 @@ const copyEn: PayrollCloseCopy = {
   apiLogsRunningLabel: "running",
   noApiCallYet: "No API call yet.",
   backToAdmin: "Back to Admin",
+  backToPayroll: "Back to payroll lane",
   statusRequestFailed: "We couldn't complete the request. Review the current state and try again.",
   statusLoadedCloseSummaryPrefix: "loaded close summary; remittance delta",
   statusLoadedCloseSummaryBlocked: "loaded close summary with blocking reasons",
@@ -141,6 +147,8 @@ const copyKo: PayrollCloseCopy = {
   description: "확정 급여 실행 기준으로 정산 차이를 미리 보고 마감 적용 여부를 확인합니다.",
   dashboardSourceBanner: "관리자 허브에서 이동했습니다",
   dashboardSourceFocusLabel: "집중 대기함",
+  payrollSourceBanner: "급여 레인에서 이동했습니다",
+  payrollSourceFocusLabel: "집중 레인",
   focusPreviewedLabel: "미확정 실행",
   focusUndistributedLabel: "미배포 실행",
   focusAllLabel: "급여 마감 대기함",
@@ -189,6 +197,7 @@ const copyKo: PayrollCloseCopy = {
   apiLogsRunningLabel: "실행 중",
   noApiCallYet: "아직 API 호출 이력이 없습니다.",
   backToAdmin: "관리자 화면으로",
+  backToPayroll: "급여 레인으로",
   statusRequestFailed: "요청을 완료하지 못했습니다. 현재 상태를 확인한 뒤 다시 시도해 주세요.",
   statusLoadedCloseSummaryPrefix: "마감 요약을 불러왔습니다. 납부 차이",
   statusLoadedCloseSummaryBlocked: "차단 사유가 있는 마감 요약을 불러왔습니다.",
