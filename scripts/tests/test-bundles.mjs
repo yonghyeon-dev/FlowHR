@@ -168,5 +168,6 @@ export const testBundles = {
     "scripts/tests/e2e-wi1208-admin-payroll-filing-operator-hero-copy-tightening-follow-up.test.ts",
     "scripts/tests/e2e-wi1209-admin-payroll-filing-action-rail-copy-tightening-follow-up.test.ts",
     "scripts/tests/e2e-wi1210-admin-payroll-filing-submission-row-copy-tightening-follow-up.test.ts",
+    "scripts/tests/e2e-wi1211-admin-payroll-filing-submission-row-action-label-tightening-follow-up.test.ts",
   ],
 };
