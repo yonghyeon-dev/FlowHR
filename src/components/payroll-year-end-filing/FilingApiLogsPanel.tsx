@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { withAdminSource } from "@/app/admin/source-context";
 import type { PayrollYearEndFilingCopy } from "@/components/payroll-year-end-filing/copy";
 import type { ApiLog } from "@/components/payroll-year-end-filing/types";
 
@@ -12,10 +13,17 @@ type FilingApiLogsPanelProps = {
   };
   pendingLabel: string | null;
   logs: ApiLog[];
+  showPayrollSource: boolean;
 };
 
 export default function FilingApiLogsPanel(props: FilingApiLogsPanelProps) {
-  const { copy, stats, pendingLabel, logs } = props;
+  const { copy, stats, pendingLabel, logs, showPayrollSource } = props;
+  const filingOpsHref = showPayrollSource
+    ? withAdminSource("/admin/payroll-year-end-filing/ops", "admin-payroll")
+    : "/admin/payroll-year-end-filing/ops";
+  const yearEndHref = showPayrollSource
+    ? withAdminSource("/admin/payroll-year-end", "admin-payroll")
+    : "/admin/payroll-year-end";
 
   return (
     <article className="panel">
@@ -39,12 +47,17 @@ export default function FilingApiLogsPanel(props: FilingApiLogsPanelProps) {
         </ul>
       )}
       <div className="panel-actions">
-        <Link href="/admin/payroll-year-end-filing/ops" className="btn btn-secondary">
+        <Link href={filingOpsHref} className="btn btn-secondary">
           {copy.openFilingOpsDashboardAction}
         </Link>
-        <Link href="/admin/payroll-year-end" className="btn btn-secondary">
+        <Link href={yearEndHref} className="btn btn-secondary">
           {copy.backToYearEndAction}
         </Link>
+        {showPayrollSource ? (
+          <Link href="/admin/payroll" className="btn btn-secondary">
+            Back to payroll lane
+          </Link>
+        ) : null}
         <Link href="/admin" className="btn btn-secondary">
           {copy.backToAdminAction}
         </Link>

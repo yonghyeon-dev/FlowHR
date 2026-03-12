@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { withAdminSource } from "@/app/admin/source-context";
 import type { PayrollYearEndFilingCopy } from "@/components/payroll-year-end-filing/copy";
 import type { PayrollYearEndPreflightChecklistResponse } from "@/components/payroll-year-end/types";
 import type { FlowLocale } from "@/lib/i18n/locales";
@@ -11,6 +12,7 @@ type FilingPreflightBlockerPanelProps = {
   runtimeLocale: string;
   checklist: PayrollYearEndPreflightChecklistResponse | null;
   copy: PayrollYearEndFilingCopy;
+  showPayrollSource: boolean;
   disabled: boolean;
   onLoadChecklist: () => void;
   onOpenPendingSubmissions: () => void;
@@ -65,6 +67,7 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
     runtimeLocale,
     checklist,
     copy,
+    showPayrollSource,
     disabled,
     onLoadChecklist,
     onOpenPendingSubmissions,
@@ -75,6 +78,15 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
   const panelCopy = preflightPanelCopyByLocale[locale];
   const failedChecks = checklist?.checklist.checks.filter((check) => check.status === "fail") ?? [];
   const warningChecks = checklist?.checklist.checks.filter((check) => check.status === "warn") ?? [];
+  const payrollCloseHref = showPayrollSource
+    ? withAdminSource("/admin/payroll-close", "admin-payroll")
+    : "/admin/payroll-close";
+  const payslipDeliveryHref = showPayrollSource
+    ? withAdminSource("/admin/payroll-payslip-delivery", "admin-payroll")
+    : "/admin/payroll-payslip-delivery";
+  const preflightHref = showPayrollSource
+    ? withAdminSource("/admin/payroll-year-end/preflight", "admin-payroll")
+    : "/admin/payroll-year-end/preflight";
 
   return (
     <article className="panel">
@@ -136,12 +148,12 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
                         </button>
                       ) : null}
                       {check.key === "confirmed_runs_present" || check.key === "no_previewed_runs" ? (
-                        <Link href="/admin/payroll-close" className="btn btn-secondary">
+                        <Link href={payrollCloseHref} className="btn btn-secondary">
                           {panelCopy.openPayrollCloseAction}
                         </Link>
                       ) : null}
                       {check.key === "no_undistributed_runs" || check.key === "no_pending_receipts" ? (
-                        <Link href="/admin/payroll-payslip-delivery" className="btn btn-secondary">
+                        <Link href={payslipDeliveryHref} className="btn btn-secondary">
                           {panelCopy.openPayslipDeliveryAction}
                         </Link>
                       ) : null}
@@ -151,7 +163,7 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
                       check.key !== "no_previewed_runs" &&
                       check.key !== "no_undistributed_runs" &&
                       check.key !== "no_pending_receipts" ? (
-                        <Link href="/admin/payroll-year-end/preflight" className="btn btn-secondary">
+                        <Link href={preflightHref} className="btn btn-secondary">
                           {panelCopy.detailsAction}
                         </Link>
                       ) : null}

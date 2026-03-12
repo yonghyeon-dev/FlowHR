@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
+import { withAdminSource } from "@/app/admin/source-context";
 import FilingActionLog from "@/components/payroll-year-end-filing/FilingActionLog";
 import FilingExportBundle from "@/components/payroll-year-end-filing/FilingExportBundle";
 import FilingGateCard from "@/components/payroll-year-end-filing/FilingGateCard";
@@ -16,10 +18,16 @@ import { useFilingWorkflow } from "@/contexts/FilingWorkflowContext";
 
 export default function FilingStepPanel() {
   const workflow = useFilingWorkflow();
+  const searchParams = useSearchParams();
+  const source = searchParams.get("source");
   const current = getFilingStepDefinition(workflow.currentStep);
   const previousStep = getPreviousFilingWorkflowStep(workflow.currentStep);
   const nextStep = getNextFilingWorkflowStep(workflow.currentStep);
   const gateSummary = summarizeFilingWorkflowGates(workflow.gates);
+  const alertStepHref =
+    source === "admin-payroll"
+      ? withAdminSource("/admin/payroll-year-end-filing/ops/alert", "admin-payroll")
+      : "/admin/payroll-year-end-filing/ops/alert";
 
   return (
     <section className="panel" id={`filing-workflow-step-${workflow.currentStep}`}>
@@ -32,14 +40,15 @@ export default function FilingStepPanel() {
       </p>
 
       <div className="panel-actions">
-        <Link href="/admin/payroll-year-end-filing/ops/alert" className="btn btn-secondary btn-small">
+        <Link href={alertStepHref} className="btn btn-secondary btn-small">
           Back to Alert Step
         </Link>
         <Link
           href={buildFilingOpsStepHref({
             step: previousStep,
             metadata: workflow.metadata,
-            gates: workflow.gates
+            gates: workflow.gates,
+            source
           })}
           className="btn btn-secondary btn-small"
         >
@@ -49,7 +58,8 @@ export default function FilingStepPanel() {
           href={buildFilingOpsStepHref({
             step: nextStep,
             metadata: workflow.metadata,
-            gates: workflow.gates
+            gates: workflow.gates,
+            source
           })}
           className="btn btn-secondary btn-small"
         >
