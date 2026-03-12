@@ -451,3 +451,4 @@ Latest planning reset:
 - Started `WI-1188` to reset the CI baseline around the V2 shell because repeated `quality-gates` failures were dominated by stale pre-V2 shell assertions instead of current product regressions.
 - Started `WI-1172` to roll the V2 route shell into the admin settings route and the employee requests route while reclassifying the remaining pre-V2 shell guards that blocked the new baseline.
 - Started `WI-1199` to compact the admin payroll filing setup card into a staged operator form with denser setup inputs and clearer follow-up action grouping.
+- Started `WI-1200` to compact the admin payroll filing submissions card into a review panel with denser summary pills and action-focused submission rows.

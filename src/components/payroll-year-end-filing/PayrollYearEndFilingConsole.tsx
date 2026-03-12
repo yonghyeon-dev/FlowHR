@@ -1343,43 +1343,72 @@ export default function PayrollYearEndFilingConsole() {
           </div>
         </article>
 
-        <article className="panel workspace-section-card v2-surface-card">
+        <article className="panel workspace-section-card v2-surface-card admin-payroll-submissions-card">
+          <p className="eyebrow admin-payroll-submissions-eyebrow">
+            {locale === "ko" ? "검토 패널" : "Review panel"}
+          </p>
           <h2>{copy.filingSubmissionsPanelTitle}</h2>
           {!submissionListSummary ? (
             <p className="small">{copy.noSubmissionSummaryYet}</p>
           ) : (
-            <ul className="simple-list">
-              <li><span>{copy.totalFilteredLabel}</span><strong>{submissionListSummary.totalCount} / {submissionListSummary.filteredCount}</strong></li>
-              <li><span>{copy.statusSummaryLabel}</span><strong>{copy.submissionStatusOptionLabels.submitted} {submissionListSummary.statusCounts.submitted} / {copy.submissionStatusOptionLabels.acknowledged} {submissionListSummary.statusCounts.acknowledged} / {copy.submissionStatusOptionLabels.canceled} {submissionListSummary.statusCounts.canceled}</strong></li>
-              <li><span>{copy.ackStatusSummaryLabel}</span><strong>{copy.ackStatusOptionLabels.accepted} {submissionListSummary.ackStatusCounts.accepted} / {copy.ackStatusOptionLabels.rejected} {submissionListSummary.ackStatusCounts.rejected} / {copy.ackStatusOptionLabels.none} {submissionListSummary.ackStatusCounts.none}</strong></li>
-              <li><span>{copy.validationSummaryLabel}</span><strong>{copy.validationStatusOptionLabels.pass} {submissionListSummary.validationStatusCounts.pass} / {copy.validationStatusOptionLabels.fail} {submissionListSummary.validationStatusCounts.fail}</strong></li>
-              <li><span>{copy.transportSummaryLabel}</span><strong>{copy.transportShortManualLabel} {submissionListSummary.transportCounts.manual_portal} / {copy.transportShortHometaxLabel} {submissionListSummary.transportCounts.hometax_upload} / {copy.transportShortNtsApiMockLabel} {submissionListSummary.transportCounts.nts_api_mock}</strong></li>
-              <li><span>{copy.activeFiltersLabel}</span><strong>{activeSubmissionFiltersSummary}</strong></li>
-            </ul>
+            <div className="admin-payroll-submissions-summary">
+              <div className="admin-payroll-submissions-pill">
+                <span>{copy.totalFilteredLabel}</span>
+                <strong>{submissionListSummary.totalCount} / {submissionListSummary.filteredCount}</strong>
+              </div>
+              <div className="admin-payroll-submissions-pill">
+                <span>{copy.statusSummaryLabel}</span>
+                <strong>{copy.submissionStatusOptionLabels.submitted} {submissionListSummary.statusCounts.submitted} / {copy.submissionStatusOptionLabels.acknowledged} {submissionListSummary.statusCounts.acknowledged} / {copy.submissionStatusOptionLabels.canceled} {submissionListSummary.statusCounts.canceled}</strong>
+              </div>
+              <div className="admin-payroll-submissions-pill">
+                <span>{copy.ackStatusSummaryLabel}</span>
+                <strong>{copy.ackStatusOptionLabels.accepted} {submissionListSummary.ackStatusCounts.accepted} / {copy.ackStatusOptionLabels.rejected} {submissionListSummary.ackStatusCounts.rejected} / {copy.ackStatusOptionLabels.none} {submissionListSummary.ackStatusCounts.none}</strong>
+              </div>
+              <div className="admin-payroll-submissions-pill">
+                <span>{copy.validationSummaryLabel}</span>
+                <strong>{copy.validationStatusOptionLabels.pass} {submissionListSummary.validationStatusCounts.pass} / {copy.validationStatusOptionLabels.fail} {submissionListSummary.validationStatusCounts.fail}</strong>
+              </div>
+              <div className="admin-payroll-submissions-pill">
+                <span>{copy.transportSummaryLabel}</span>
+                <strong>{copy.transportShortManualLabel} {submissionListSummary.transportCounts.manual_portal} / {copy.transportShortHometaxLabel} {submissionListSummary.transportCounts.hometax_upload} / {copy.transportShortNtsApiMockLabel} {submissionListSummary.transportCounts.nts_api_mock}</strong>
+              </div>
+              <div className="admin-payroll-submissions-pill">
+                <span>{copy.activeFiltersLabel}</span>
+                <strong>{activeSubmissionFiltersSummary}</strong>
+              </div>
+            </div>
           )}
           {submissions.length === 0 ? <p className="small">{hasFilteredSubmissionEmptyState ? copy.noSubmissionMatchesFilters : copy.noFilingSubmissionYet}</p> : (
-            <ul className="log-list">
+            <div className="admin-payroll-submissions-list">
               {submissions.map((submission) => (
-                <li key={submission.submissionId}>
-                  <span
-                    className={
-                      submission.status === "acknowledged"
-                        ? "ok"
-                        : submission.status === "canceled"
-                          ? "fail"
-                          : "small"
-                    }
-                  >
-                    {copy.submissionStatusBadgeLabels[submission.status] ?? submission.status}
-                  </span>{" "}
-                  {copy.timelineAttemptLabel} {submission.attempt} / {copy.submissionTransportOptionLabels[submission.transport] ?? submission.transport} / {copy.exportFormatOptionLabels[submission.format] ?? submission.format} / {copy.validationModeOptionLabels[submission.validationMode] ?? submission.validationMode}
-                  {submission.resubmissionReason ? ` / ${copy.timelineReasonLabel}: ${submission.resubmissionReason}` : ""}
-                  {submission.ack
-                    ? ` / ${copy.timelineAckPrefix} ${copy.ackStatusOptionLabels[submission.ack.ackStatus] ?? submission.ack.ackStatus}${
-                        submission.ack.rejectionReasonDetail ? ` / ${submission.ack.rejectionReasonDetail}` : ""
-                      }`
-                    : ""}
-                  <div className="panel-actions">
+                <article key={submission.submissionId} className="admin-payroll-submission-item">
+                  <div className="admin-payroll-submission-item-head">
+                    <div className="admin-payroll-submission-item-meta">
+                      <span
+                        className={
+                          submission.status === "acknowledged"
+                            ? "ok"
+                            : submission.status === "canceled"
+                              ? "fail"
+                              : "small"
+                        }
+                      >
+                        {copy.submissionStatusBadgeLabels[submission.status] ?? submission.status}
+                      </span>
+                      <strong>{copy.timelineAttemptLabel} {submission.attempt}</strong>
+                    </div>
+                    <time>{new Date(submission.submittedAt).toLocaleString(runtimeLocale)}</time>
+                  </div>
+                  <p className="admin-payroll-submission-item-copy">
+                    {copy.submissionTransportOptionLabels[submission.transport] ?? submission.transport} / {copy.exportFormatOptionLabels[submission.format] ?? submission.format} / {copy.validationModeOptionLabels[submission.validationMode] ?? submission.validationMode}
+                    {submission.resubmissionReason ? ` / ${copy.timelineReasonLabel}: ${submission.resubmissionReason}` : ""}
+                    {submission.ack
+                      ? ` / ${copy.timelineAckPrefix} ${copy.ackStatusOptionLabels[submission.ack.ackStatus] ?? submission.ack.ackStatus}${
+                          submission.ack.rejectionReasonDetail ? ` / ${submission.ack.rejectionReasonDetail}` : ""
+                        }`
+                      : ""}
+                  </p>
+                  <div className="panel-actions admin-payroll-submission-item-actions">
                     {submission.status === "submitted" ? (
                       <>
                         <button
@@ -1435,10 +1464,9 @@ export default function PayrollYearEndFilingConsole() {
                       {copy.timelineAction}
                     </button>
                   </div>
-                  <time>{new Date(submission.submittedAt).toLocaleString(runtimeLocale)}</time>
-                </li>
+                </article>
               ))}
-            </ul>
+            </div>
           )}
         </article>
 
