@@ -139,5 +139,6 @@ export const testBundles = {
     "scripts/tests/e2e-wi0397-scheduling-dedicated-admin-employee-workspace-baseline.test.ts",
     "scripts/tests/e2e-wi1170-v2-shell-design-system-adoption.test.ts",
     "scripts/tests/e2e-wi1172-v2-core-route-shell-rollout.test.ts",
+    "scripts/tests/e2e-wi1173-shared-workspace-primitives-and-visual-contract.test.ts",
   ],
 };
