@@ -798,6 +798,73 @@ body {
     #fff;
   box-shadow: 0 16px 36px rgba(58, 42, 24, 0.06);
 }
+.admin-payroll-submissions-card {
+  gap: 12px;
+}
+.admin-payroll-submissions-eyebrow {
+  margin: 0;
+  color: #6e7f93;
+}
+.admin-payroll-submissions-summary {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+}
+.admin-payroll-submissions-pill {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(140, 157, 182, 0.2);
+  border-radius: 14px;
+  background: rgba(248, 251, 255, 0.9);
+}
+.admin-payroll-submissions-pill span {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.admin-payroll-submissions-pill strong {
+  color: var(--text-strong);
+  line-height: 1.4;
+  word-break: break-word;
+}
+.admin-payroll-submissions-list {
+  display: grid;
+  gap: 10px;
+}
+.admin-payroll-submission-item {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(140, 157, 182, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+}
+.admin-payroll-submission-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.admin-payroll-submission-item-head time {
+  color: var(--muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.admin-payroll-submission-item-copy {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  font-size: 0.86rem;
+}
+.admin-payroll-submission-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.admin-payroll-submission-item-actions {
+  margin-top: 0;
+  justify-content: flex-start;
+}
 .admin-payroll-diagnostics-card {
   gap: 12px;
   border-style: solid;
