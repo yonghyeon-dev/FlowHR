@@ -9,6 +9,7 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 2. Completed In This Wave
 
+- Started `WI-1188` to reset the CI baseline for the V2 shell rollout because repeated `quality-gates` failures are now dominated by stale pre-V2 shell expectations rather than real product regressions.
 - Started `WI-1171` to freeze the service-readiness execution map so the UI/UX-first refactor now lands as a concrete phase-and-WI program rather than a loose roadmap.
 - Started `WI-1170` to adopt the V2 shell and design system from `flowhr_V2/flowhr-ui` as the new frontend baseline for landing, login, and shared role shells.
 - Started `WI-1168` to rebuild employee request feedback and failure-cause rows into clearer monitoring cards after the search/timeline tidy pass.
@@ -430,3 +431,6 @@ Latest planning reset:
 - Closed `WI-1160` with merge `fa002e3ec84987801c5a194f54ea601304ad24fb`.
 - Re-verified `WI-1160` on the delivery path and confirmed both `ci` (`22965846039`) and `vercel-production-deploy` (`22965846016`) stay green after the nineteenth shared workspace visual wave.
 - Started `WI-1161` to replace the legacy employee guide landing with the route-first employee workspace shell and align guide entry copy with the current home/request model.
+- Closed `WI-1170` with merge `b040511cba7e7cffa2be8ed0a66e0901af3ff693`.
+- Re-verified `WI-1170` on the delivery path and confirmed both `ci` (`22992491557`) and `vercel-production-deploy` (`22992491571`) stay green after the V2 shell and design system baseline rollout.
+- Started `WI-1188` to reset the CI baseline around the V2 shell because repeated `quality-gates` failures were dominated by stale pre-V2 shell assertions instead of current product regressions.

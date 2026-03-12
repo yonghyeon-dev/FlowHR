@@ -134,9 +134,10 @@ Exit criteria:
 ## 4. Active Sequence
 
 1. Close `WI-1170`
-2. Start `WI-1172`
-3. Start `WI-1173`
-4. Then split admin and employee rollout waves under the program above
+2. Reset CI truth through `WI-1188`
+3. Start `WI-1172`
+4. Start `WI-1173`
+5. Then split admin and employee rollout waves under the program above
 
 ## 5. Completion Rule
 
