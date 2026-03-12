@@ -457,3 +457,4 @@ Latest planning reset:
 - Started `WI-1203` to compact the admin payroll filing narrow-width layout so the setup, review, action, and feedback regions keep the new density on smaller viewports.
 - Started `WI-1204` to compact the admin payroll filing interactive field rows so setup and follow-up controls share the same denser field rhythm.
 - Started `WI-1205` to compact the admin payroll filing side rail so settlement, blocker, and recovery cards match the denser operator console.
+- Started `WI-1206` to compact the admin payroll filing side rail on narrow widths so summary, blocker, and recovery cards stack with stable mobile actions.
