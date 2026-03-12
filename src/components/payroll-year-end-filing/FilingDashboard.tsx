@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { buildFilingOpsStepHref, summarizeFilingWorkflowGates } from "@/components/payroll-year-end-filing/filing-workflow-helpers";
 import { FILING_STEP_DEFINITIONS } from "@/components/payroll-year-end-filing/filing-types";
@@ -13,6 +14,8 @@ type FilingDashboardProps = {
 
 export default function FilingDashboard({ title = "Filing Workflow Dashboard" }: FilingDashboardProps) {
   const workflow = useFilingWorkflow();
+  const searchParams = useSearchParams();
+  const source = searchParams.get("source");
   const gateSummary = summarizeFilingWorkflowGates(workflow.gates);
 
   return (
@@ -35,7 +38,8 @@ export default function FilingDashboard({ title = "Filing Workflow Dashboard" }:
               href={buildFilingOpsStepHref({
                 step: step.step,
                 metadata: workflow.metadata,
-                gates: workflow.gates
+                gates: workflow.gates,
+                source
               })}
             >
               Open {step.title}

@@ -6,6 +6,7 @@ import {
   type FilingWorkflowMetadata,
   type FilingWorkflowStep
 } from "@/components/payroll-year-end-filing/filing-types";
+import { isAdminPayrollSource } from "@/app/admin/source-context";
 
 const FILING_WORKFLOW_STEP_SEGMENTS: Record<FilingWorkflowStep, string> = {
   alert: "alert",
@@ -95,6 +96,7 @@ export function buildFilingOpsStepHref(options: {
   step: FilingWorkflowStep;
   metadata: FilingWorkflowMetadata;
   gates: FilingWorkflowGates;
+  source?: string | null;
 }) {
   const query = new URLSearchParams({
     metric: options.metadata.metric,
@@ -111,6 +113,9 @@ export function buildFilingOpsStepHref(options: {
   }
   for (const key of FILING_WORKFLOW_GATE_KEYS) {
     query.set(key, options.gates[key] ? "1" : "0");
+  }
+  if (isAdminPayrollSource(options.source ?? null)) {
+    query.set("source", "admin-payroll");
   }
 
   return `/admin/payroll-year-end-filing/ops/${getFilingWorkflowStepSegment(options.step)}?${query.toString()}`;

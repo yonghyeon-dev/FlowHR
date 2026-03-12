@@ -1252,6 +1252,7 @@ export default function PayrollYearEndFilingConsole() {
           runtimeLocale={runtimeLocale}
           checklist={preflightChecklist}
           copy={copy}
+          showPayrollSource={showPayrollSource}
           disabled={pendingLabel !== null}
           onLoadChecklist={() => void runLoadPreflightChecklist()}
           onOpenPendingSubmissions={runOpenPendingSubmissionsFromPreflight}
@@ -1266,6 +1267,7 @@ export default function PayrollYearEndFilingConsole() {
             stats={stats}
             pendingLabel={pendingLabel}
             logs={logs}
+            showPayrollSource={showPayrollSource}
           />
         ) : null}
 

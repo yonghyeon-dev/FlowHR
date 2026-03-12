@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { isAdminPayrollSource, withAdminSource } from "@/app/admin/source-context";
 import { isTruthyFlag } from "@/app/admin/page-helpers";
 import { payrollYearEndPreflightCopyByLocale } from "@/components/payroll-year-end/copy";
 import { buildPayrollYearEndFailureMessage } from "@/components/payroll-year-end/request-failure-guidance";
@@ -28,6 +30,7 @@ function parseRequiredInt(value: string, fieldName: string, nonNegativeIntegerLa
 }
 
 export default function PayrollYearEndPreflightConsole() {
+  const searchParams = useSearchParams();
   const [employeeId, setEmployeeId] = useState("EMP-1001");
   const [year, setYear] = useState(String(currentYear()));
   const [nonTaxableAnnualIncomeKrw, setNonTaxableAnnualIncomeKrw] = useState("0");
@@ -44,6 +47,8 @@ export default function PayrollYearEndPreflightConsole() {
   const { locale } = useI18n();
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = payrollYearEndPreflightCopyByLocale[locale];
+  const source = searchParams.get("source");
+  const showPayrollSource = isAdminPayrollSource(source);
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
@@ -156,15 +161,34 @@ export default function PayrollYearEndPreflightConsole() {
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
-        <p className="small muted workspace-source-banner">
+        <p className="small muted workspace-source-banner" hidden={showPayrollSource}>
           {locale === "ko"
             ? "연말정산 확정 전에 사전 점검 항목을 빠르게 검토하는 운영 작업 화면입니다."
             : "Review preflight checks before finalizing year-end settlement."}
         </p>
+        {showPayrollSource ? (
+          <p className="small muted workspace-source-banner">
+            {locale === "ko"
+              ? "급여 레인에서 이동했습니다 · 집중 레인: 연말정산 사전점검"
+              : "Opened from payroll lane · Focused lane: year-end preflight"}
+          </p>
+        ) : null}
         <div className="page-actions" style={{ marginTop: 8 }}>
-          <Link href="/admin/payroll-year-end" className="btn btn-secondary btn-small">
+          <Link
+            href={
+              showPayrollSource
+                ? withAdminSource("/admin/payroll-year-end", "admin-payroll")
+                : "/admin/payroll-year-end"
+            }
+            className="btn btn-secondary btn-small"
+          >
             {copy.backToYearEndAction}
           </Link>
+          {showPayrollSource ? (
+            <Link href="/admin/payroll" className="btn btn-secondary btn-small">
+              {locale === "ko" ? "급여 레인으로" : "Back to payroll lane"}
+            </Link>
+          ) : null}
           <Link href="/admin" className="btn btn-secondary btn-small">
             {copy.backToAdminAction}
           </Link>
@@ -344,9 +368,21 @@ export default function PayrollYearEndPreflightConsole() {
               </ul>
             )}
             <div className="panel-actions">
-              <Link href="/admin/payroll-year-end" className="btn btn-secondary">
+              <Link
+                href={
+                  showPayrollSource
+                    ? withAdminSource("/admin/payroll-year-end", "admin-payroll")
+                    : "/admin/payroll-year-end"
+                }
+                className="btn btn-secondary"
+              >
                 {copy.backToYearEndAction}
               </Link>
+              {showPayrollSource ? (
+                <Link href="/admin/payroll" className="btn btn-secondary">
+                  {locale === "ko" ? "급여 레인으로" : "Back to payroll lane"}
+                </Link>
+              ) : null}
               <Link href="/admin" className="btn btn-secondary">
                 {copy.backToAdminAction}
               </Link>
