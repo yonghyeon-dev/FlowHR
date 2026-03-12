@@ -3046,6 +3046,42 @@ button.queue-badge:hover {
   gap: 8px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+.employee-request-monitoring-summary-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.employee-request-monitoring-summary-card {
+  border: 1px solid rgba(176, 209, 195, 0.42);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fffb 100%);
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+}
+.employee-request-monitoring-summary-card p,
+.employee-request-monitoring-summary-card span {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.employee-request-monitoring-summary-card strong {
+  font-size: 1.05rem;
+  color: var(--text-strong);
+}
+.employee-request-monitoring-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.employee-request-monitoring-panel-head .small {
+  margin-bottom: 0;
+}
+.employee-request-monitoring-toolbar {
+  margin-top: 0;
+}
 .feedback-kpi-card {
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -4813,6 +4849,13 @@ button.queue-badge:hover {
   #request-feedback .feedback-kpi-grid {
     grid-template-columns: 1fr;
   }
+  .employee-request-monitoring-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .employee-request-monitoring-panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
   #request-feedback .request-filter-row label {
     max-width: none;
   }
@@ -4873,6 +4916,9 @@ button.queue-badge:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   #request-timeline .timeline-filter-grid {
+    grid-template-columns: 1fr;
+  }
+  .employee-request-monitoring-summary-grid {
     grid-template-columns: 1fr;
   }
   .employee-requests-hub-grid {
