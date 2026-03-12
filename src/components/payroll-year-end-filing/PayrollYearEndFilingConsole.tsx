@@ -1499,7 +1499,7 @@ export default function PayrollYearEndFilingConsole() {
           timelineEntries={timelineEntries}
         />
           </div>
-        <aside className="workspace-side-panel v2-workspace-side" aria-label={locale === "ko" ? "신고 사이드 레일" : "Filing side rail"}>
+        <aside className="workspace-side-panel v2-workspace-side admin-payroll-side-rail" aria-label={locale === "ko" ? "신고 사이드 레일" : "Filing side rail"}>
           <article className="panel workspace-section-card workspace-note-card v2-surface-card admin-payroll-diagnostics-card admin-payroll-diagnostics-intro">
             <p className="eyebrow admin-payroll-diagnostics-eyebrow">
               {locale === "ko" ? "참고 레일" : "Reference rail"}
