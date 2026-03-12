@@ -162,6 +162,12 @@
   font-size: 0.96rem;
 }
 
+.consoleFieldHeader p {
+  margin: 0;
+  max-width: 34ch;
+  line-height: 1.4;
+}
+
 .consoleCardEyebrow {
   margin-bottom: 0.45rem;
 }
@@ -307,6 +313,10 @@
   .consoleActionStack,
   .consoleFeedbackRail {
     gap: 0.65rem;
+  }
+
+  .consoleFieldHeader p {
+    max-width: none;
   }
 
   .consoleActionStack {

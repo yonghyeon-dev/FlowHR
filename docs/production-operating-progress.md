@@ -458,3 +458,4 @@ Latest planning reset:
 - Started `WI-1204` to compact the admin payroll filing interactive field rows so setup and follow-up controls share the same denser field rhythm.
 - Started `WI-1205` to compact the admin payroll filing side rail so settlement, blocker, and recovery cards match the denser operator console.
 - Started `WI-1206` to compact the admin payroll filing side rail on narrow widths so summary, blocker, and recovery cards stack with stable mobile actions.
+- Started `WI-1207` to tighten the admin payroll filing top-stage guidance copy so the compact operator cards scan faster in both Korean and English.

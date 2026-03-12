@@ -1026,8 +1026,8 @@ export default function PayrollYearEndFilingConsole() {
               <h3>{locale === "ko" ? "정산 기준 입력" : "Settlement baseline inputs"}</h3>
               <p className="small muted">
                 {locale === "ko"
-                  ? "연말정산 기준값과 공제 항목을 먼저 맞춘 뒤 제출 패키지를 준비합니다."
-                  : "Set year-end baseline values and deductions before preparing the filing package."}
+                  ? "기준값과 공제 항목을 먼저 맞춘 뒤 정산 패키지를 준비합니다."
+                  : "Set baseline values and deductions before preparing the package."}
               </p>
             </div>
             <div className={`input-grid ${styles.consoleCompactFieldGrid} ${styles.consoleDenseInputGrid}`}>
@@ -1050,8 +1050,8 @@ export default function PayrollYearEndFilingConsole() {
               <h3>{locale === "ko" ? "제출 준비와 검증 기준" : "Submission setup and validation"}</h3>
               <p className="small muted">
                 {locale === "ko"
-                  ? "내보내기 형식, 검증 방식, 제출 메모와 정산 일치 키를 한 번에 맞춥니다."
-                  : "Set export format, validation strength, notes, and settlement match keys together."}
+                  ? "형식, 검증, 전송, 필터를 한 흐름으로 맞춥니다."
+                  : "Align format, validation, transport, and filters in one pass."}
               </p>
             </div>
             <div className={`input-grid ${styles.consoleCompactFieldGrid} ${styles.consoleDenseInputGrid}`}>
@@ -1197,8 +1197,8 @@ export default function PayrollYearEndFilingConsole() {
               <h3>{locale === "ko" ? "응답과 재제출 후속 조치" : "Response and recovery follow-up"}</h3>
               <p className="small muted">
                 {locale === "ko"
-                  ? "응답 저장, 재제출, 취소, 재개, 타임라인 추적을 같은 후속 조치 묶음으로 처리합니다."
-                  : "Handle response save, resubmission, cancellation, reopen, and timeline follow-up together."}
+                  ? "응답 저장과 재제출, 취소, 재개, 타임라인 추적을 묶어 처리합니다."
+                  : "Handle save, resubmit, cancel, reopen, and timeline follow-up together."}
               </p>
             </div>
           {settlementHashFilterChips.length > 0 ? (
