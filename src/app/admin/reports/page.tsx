@@ -1,9 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
+import {
+  RouteWorkspaceEmptyState,
+  RouteWorkspaceHeader,
+  RouteWorkspaceSectionCard,
+  RouteWorkspaceShell,
+  RouteWorkspaceSplit,
+  RouteWorkspaceStatus,
+  RouteWorkspaceSummary,
+  RouteWorkspaceTabs
+} from "@/components/workspace/RouteWorkspacePrimitives";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import {
@@ -42,6 +51,7 @@ type ReportsCopy = {
   queryLabel: string;
   loadingLabel: string;
   emptyLabel: string;
+  emptyDescription: string;
   dateFromLabel: string;
   dateToLabel: string;
   yearLabel: string;
@@ -49,6 +59,7 @@ type ReportsCopy = {
   summaryTabLabel: string;
   summaryItemsLabel: string;
   summaryRangeLabel: string;
+  summaryActionsLabel: string;
   tabs: Record<TabKey, string>;
   panelTitles: Record<TabKey, string>;
   panelDescriptions: Record<TabKey, string>;
@@ -63,12 +74,13 @@ function getCopy(locale: string): ReportsCopy {
     return {
       pageTitle: "운영 리포트",
       pageSubtitle: "근태, 초과근무, 휴가, 급여 데이터를 조회하고 필요한 보고서를 내보냅니다.",
-      sourceHint: "운영 리포트는 관리자 허브의 인사이트 레인과 월간 점검 흐름을 바로 지원합니다.",
+      sourceHint: "운영 리포트는 관리자 허브의 인사이트 레인과 반복 검토 흐름을 바로 지원합니다.",
       backToHubLabel: "관리자 허브",
       exportLabel: "CSV 내보내기",
-      queryLabel: "조회",
+      queryLabel: "리포트 불러오기",
       loadingLabel: "불러오는 중...",
       emptyLabel: "표시할 데이터가 없습니다.",
+      emptyDescription: "조회 조건을 확인한 뒤 다시 불러오거나 다른 리포트 탭으로 이동해 주세요.",
       dateFromLabel: "시작일",
       dateToLabel: "종료일",
       yearLabel: "연도",
@@ -76,6 +88,7 @@ function getCopy(locale: string): ReportsCopy {
       summaryTabLabel: "현재 리포트",
       summaryItemsLabel: "불러온 항목",
       summaryRangeLabel: "조회 범위",
+      summaryActionsLabel: "다음 작업",
       tabs: {
         overtime: "초과근무",
         attendance: "근태 요약",
@@ -84,25 +97,25 @@ function getCopy(locale: string): ReportsCopy {
       },
       panelTitles: {
         overtime: "초과근무 리포트",
-        attendance: "근태 부서 요약",
+        attendance: "근태 부서별 요약",
         leave: "휴가 리포트",
         payroll: "급여 리포트"
       },
       panelDescriptions: {
-        overtime: "월 기준으로 초과근무 현황을 조회하고 CSV로 내보냅니다.",
+        overtime: "월 기준 초과근무 현황을 조회하고 CSV로 내보냅니다.",
         attendance: "기간 기준으로 부서별 출근, 결근, 지각 현황을 확인합니다.",
-        leave: "기간 기준 휴가 데이터를 CSV로 내보냅니다.",
-        payroll: "기간 기준 급여 데이터를 CSV로 내보냅니다."
+        leave: "선택한 기간의 휴가 데이터를 CSV로 내보냅니다.",
+        payroll: "선택한 기간의 급여 데이터를 CSV로 내보냅니다."
       },
       tableHeaders: {
-        overtime: ["직원명", "부서", "정규 시간", "초과 시간", "합계", "주 평균", "초과 주 수"],
-        attendance: ["부서", "총원", "출근", "결근", "지각"]
+        overtime: ["직원", "부서", "정규 시간", "초과 시간", "합계", "주 평균", "초과 주차"],
+        attendance: ["부서", "인원", "출근", "결근", "지각"]
       }
     };
   }
 
   return {
-    pageTitle: "Operational Reports",
+    pageTitle: "Operational reports",
     pageSubtitle: "Review attendance, overtime, leave, and payroll data and export the reports you need.",
     sourceHint: "Operational reports support the admin hub insight lane and recurring review workflows.",
     backToHubLabel: "Admin hub",
@@ -110,6 +123,7 @@ function getCopy(locale: string): ReportsCopy {
     queryLabel: "Load report",
     loadingLabel: "Loading...",
     emptyLabel: "No data to display.",
+    emptyDescription: "Review the current query conditions or switch to another report tab.",
     dateFromLabel: "Start date",
     dateToLabel: "End date",
     yearLabel: "Year",
@@ -117,6 +131,7 @@ function getCopy(locale: string): ReportsCopy {
     summaryTabLabel: "Current report",
     summaryItemsLabel: "Loaded items",
     summaryRangeLabel: "Query range",
+    summaryActionsLabel: "Next action",
     tabs: {
       overtime: "Overtime",
       attendance: "Attendance summary",
@@ -146,6 +161,7 @@ export default function AdminReportsPage() {
   const { loading: sessionLoading } = useSupabaseSession();
   const { locale } = useI18n();
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const isKoLocale = locale === "ko";
   const copy = useMemo(() => getCopy(locale), [locale]);
 
   const [tab, setTab] = useState<TabKey>("overtime");
@@ -160,14 +176,14 @@ export default function AdminReportsPage() {
   const [fromDate, setFromDate] = useState(new Date().toISOString().slice(0, 10));
   const [toDate, setToDate] = useState(new Date().toISOString().slice(0, 10));
 
-  const tabs: { key: TabKey; label: string }[] = useMemo(
+  const tabs = useMemo(
     () => [
-      { key: "overtime", label: copy.tabs.overtime },
-      { key: "attendance", label: copy.tabs.attendance },
-      { key: "leave", label: copy.tabs.leave },
-      { key: "payroll", label: copy.tabs.payroll }
+      { label: copy.tabs.overtime, active: tab === "overtime", key: "overtime" as const },
+      { label: copy.tabs.attendance, active: tab === "attendance", key: "attendance" as const },
+      { label: copy.tabs.leave, active: tab === "leave", key: "leave" as const },
+      { label: copy.tabs.payroll, active: tab === "payroll", key: "payroll" as const }
     ],
-    [copy.tabs]
+    [copy.tabs, tab]
   );
 
   const loadOvertime = useCallback(async () => {
@@ -182,16 +198,16 @@ export default function AdminReportsPage() {
         runtimeLocale
       });
       if (!result.response.ok) {
-        throw new Error(locale === "ko" ? "초과근무 리포트를 불러오지 못했습니다." : "Failed to load overtime report.");
+        throw new Error(isKoLocale ? "초과근무 리포트를 불러오지 못했습니다." : "Failed to load overtime report.");
       }
       const body = result.body as { items?: OvertimeItem[] };
-      setOvertimeItems(body?.items ?? []);
-    } catch (err) {
-      setError(formatUserFacingErrorMessage(err instanceof Error ? err.message : String(err), runtimeLocale));
+      setOvertimeItems(body.items ?? []);
+    } catch (loadError) {
+      setError(formatUserFacingErrorMessage(loadError instanceof Error ? loadError.message : String(loadError), runtimeLocale));
     } finally {
       setIsLoading(false);
     }
-  }, [locale, month, runtimeLocale, year]);
+  }, [isKoLocale, month, runtimeLocale, year]);
 
   const loadAttendance = useCallback(async () => {
     setIsLoading(true);
@@ -205,16 +221,16 @@ export default function AdminReportsPage() {
         runtimeLocale
       });
       if (!result.response.ok) {
-        throw new Error(locale === "ko" ? "근태 요약을 불러오지 못했습니다." : "Failed to load attendance summary.");
+        throw new Error(isKoLocale ? "근태 요약을 불러오지 못했습니다." : "Failed to load attendance summary.");
       }
       const body = result.body as { items?: AttendanceItem[] };
-      setAttendanceItems(body?.items ?? []);
-    } catch (err) {
-      setError(formatUserFacingErrorMessage(err instanceof Error ? err.message : String(err), runtimeLocale));
+      setAttendanceItems(body.items ?? []);
+    } catch (loadError) {
+      setError(formatUserFacingErrorMessage(loadError instanceof Error ? loadError.message : String(loadError), runtimeLocale));
     } finally {
       setIsLoading(false);
     }
-  }, [fromDate, locale, runtimeLocale, toDate]);
+  }, [fromDate, isKoLocale, runtimeLocale, toDate]);
 
   const handleExport = async (type: "overtime" | "leave" | "payroll") => {
     const fromIso = new Date(`${fromDate}T00:00:00+09:00`).toISOString();
@@ -232,18 +248,19 @@ export default function AdminReportsPage() {
         path: pathMap[type],
         runtimeLocale
       });
-      if (result.response.ok) {
-        const text = typeof result.body === "string" ? result.body : JSON.stringify(result.body);
-        const blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement("a");
-        anchor.href = url;
-        anchor.download = `${type}-report.csv`;
-        anchor.click();
-        URL.revokeObjectURL(url);
+      if (!result.response.ok) {
+        return;
       }
+      const text = typeof result.body === "string" ? result.body : JSON.stringify(result.body);
+      const blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${type}-report.csv`;
+      anchor.click();
+      URL.revokeObjectURL(url);
     } catch {
-      // best-effort export
+      // best effort export
     }
   };
 
@@ -253,224 +270,233 @@ export default function AdminReportsPage() {
 
   const currentItems =
     tab === "overtime" ? overtimeItems.length : tab === "attendance" ? attendanceItems.length : 0;
-  const rangeLabel =
-    tab === "overtime" ? `${year}-${month.padStart(2, "0")}` : `${fromDate} ~ ${toDate}`;
+  const rangeLabel = tab === "overtime" ? `${year}-${month.padStart(2, "0")}` : `${fromDate} ~ ${toDate}`;
 
   return (
-    <main className="saas-content workspace-shell admin-workspace-shell">
-      <header className="page-header workspace-page-header">
-        <div>
-          <h1 className="page-title">{copy.pageTitle}</h1>
-          <p className="page-subtitle">{copy.pageSubtitle}</p>
-          <p className="small muted workspace-source-banner">{copy.sourceHint}</p>
-        </div>
-        <div className="page-actions">
-          <Link className="btn btn-secondary" href="/admin">
-            {copy.backToHubLabel}
-          </Link>
-        </div>
-      </header>
+    <RouteWorkspaceShell tone="admin">
+      <RouteWorkspaceHeader
+        actions={[{ href: "/admin", label: copy.backToHubLabel, tone: "secondary" }]}
+        breadcrumbs={[copy.backToHubLabel, copy.pageTitle]}
+        description={copy.pageSubtitle}
+        eyebrow="reports"
+        sourceHint={copy.sourceHint}
+        title={copy.pageTitle}
+      />
 
-      <section className="kpi-strip workspace-summary-strip" aria-label={copy.pageTitle}>
-        <article className="kpi-card workspace-summary-card">
-          <p>{copy.summaryTabLabel}</p>
-          <strong>{copy.tabs[tab]}</strong>
-        </article>
-        <article className="kpi-card workspace-summary-card">
-          <p>{copy.summaryItemsLabel}</p>
-          <strong>{currentItems}</strong>
-        </article>
-        <article className="kpi-card workspace-summary-card">
-          <p>{copy.summaryRangeLabel}</p>
-          <strong>{rangeLabel}</strong>
-        </article>
-      </section>
+      <RouteWorkspaceTabs
+        ariaLabel={copy.pageTitle}
+        tabs={tabs.map((tabItem) => ({
+          active: tabItem.active,
+          label: tabItem.label,
+          onClick: () => setTab(tabItem.key)
+        }))}
+      />
 
-      {error ? <p className="small fail workspace-inline-status">{error}</p> : null}
+      <RouteWorkspaceSummary
+        ariaLabel={copy.pageTitle}
+        items={[
+          { label: copy.summaryTabLabel, value: copy.tabs[tab] },
+          { label: copy.summaryItemsLabel, value: currentItems },
+          { label: copy.summaryRangeLabel, value: rangeLabel }
+        ]}
+      />
 
-      <section className="panel-grid workspace-panel-grid">
-        <article className="panel workspace-section-card workspace-toolbar-card">
-          <div className="section-heading">
-            <div>
-              <h2>{copy.panelTitles[tab]}</h2>
-              <p className="small muted">{copy.panelDescriptions[tab]}</p>
-            </div>
-          </div>
+      <RouteWorkspaceStatus message={error} tone="error" />
 
-          <nav style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            {tabs.map((tabItem) => (
-              <button
-                key={tabItem.key}
-                type="button"
-                className={tabItem.key === tab ? "btn btn-primary" : "btn btn-secondary"}
-                onClick={() => setTab(tabItem.key)}
-              >
-                {tabItem.label}
-              </button>
-            ))}
-          </nav>
+      <RouteWorkspaceSplit
+        main={
+          <>
+            <RouteWorkspaceSectionCard
+              className="workspace-toolbar-card"
+              description={copy.panelDescriptions[tab]}
+              title={copy.panelTitles[tab]}
+            >
+              {tab === "overtime" ? (
+                <div className="form-grid">
+                  <label className="stack gap-8">
+                    <span>{copy.yearLabel}</span>
+                    <input max={2030} min={2020} onChange={(event) => setYear(event.target.value)} type="number" value={year} />
+                  </label>
+                  <label className="stack gap-8">
+                    <span>{copy.monthLabel}</span>
+                    <input max={12} min={1} onChange={(event) => setMonth(event.target.value)} type="number" value={month} />
+                  </label>
+                </div>
+              ) : (
+                <div className="form-grid">
+                  <label className="stack gap-8">
+                    <span>{copy.dateFromLabel}</span>
+                    <input onChange={(event) => setFromDate(event.target.value)} type="date" value={fromDate} />
+                  </label>
+                  <label className="stack gap-8">
+                    <span>{copy.dateToLabel}</span>
+                    <input onChange={(event) => setToDate(event.target.value)} type="date" value={toDate} />
+                  </label>
+                </div>
+              )}
 
-          {tab === "overtime" ? (
-            <div className="form-grid">
-              <label className="stack gap-8">
-                <span>{copy.yearLabel}</span>
-                <input type="number" value={year} onChange={(event) => setYear(event.target.value)} min={2020} max={2030} />
-              </label>
-              <label className="stack gap-8">
-                <span>{copy.monthLabel}</span>
-                <input type="number" value={month} onChange={(event) => setMonth(event.target.value)} min={1} max={12} />
-              </label>
-            </div>
-          ) : (
-            <div className="form-grid">
-              <label className="stack gap-8">
-                <span>{copy.dateFromLabel}</span>
-                <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
-              </label>
-              <label className="stack gap-8">
-                <span>{copy.dateToLabel}</span>
-                <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
-              </label>
-            </div>
-          )}
+              <div className="panel-actions">
+                {tab === "overtime" ? (
+                  <>
+                    <button className="btn btn-primary" onClick={() => void loadOvertime()} type="button">
+                      {copy.queryLabel}
+                    </button>
+                    <button className="btn btn-secondary" onClick={() => void handleExport("overtime")} type="button">
+                      {copy.exportLabel}
+                    </button>
+                  </>
+                ) : null}
 
-          <div className="panel-actions">
-            {tab === "overtime" ? (
-              <>
-                <button className="btn btn-primary" type="button" onClick={() => void loadOvertime()}>
-                  {copy.queryLabel}
-                </button>
-                <button className="btn btn-secondary" type="button" onClick={() => void handleExport("overtime")}>
-                  {copy.exportLabel}
-                </button>
-              </>
-            ) : null}
-            {tab === "attendance" ? (
-              <button className="btn btn-primary" type="button" onClick={() => void loadAttendance()}>
-                {copy.queryLabel}
-              </button>
-            ) : null}
-            {tab === "leave" ? (
-              <button className="btn btn-secondary" type="button" onClick={() => void handleExport("leave")}>
-                {copy.exportLabel}
-              </button>
-            ) : null}
-            {tab === "payroll" ? (
-              <button className="btn btn-secondary" type="button" onClick={() => void handleExport("payroll")}>
-                {copy.exportLabel}
-              </button>
-            ) : null}
-          </div>
-        </article>
+                {tab === "attendance" ? (
+                  <button className="btn btn-primary" onClick={() => void loadAttendance()} type="button">
+                    {copy.queryLabel}
+                  </button>
+                ) : null}
 
-        <article className="panel workspace-section-card workspace-note-card">
-          <div className="section-heading">
-            <div>
-              <h2>{copy.summaryTabLabel}</h2>
-              <p className="small muted">{copy.panelDescriptions[tab]}</p>
-            </div>
-          </div>
-          <dl className="definition-grid">
-            <div>
-              <dt>{copy.summaryTabLabel}</dt>
-              <dd>{copy.tabs[tab]}</dd>
-            </div>
-            <div>
-              <dt>{copy.summaryItemsLabel}</dt>
-              <dd>{currentItems}</dd>
-            </div>
-            <div>
-              <dt>{copy.summaryRangeLabel}</dt>
-              <dd>{rangeLabel}</dd>
-            </div>
-          </dl>
-        </article>
+                {tab === "leave" ? (
+                  <button className="btn btn-secondary" onClick={() => void handleExport("leave")} type="button">
+                    {copy.exportLabel}
+                  </button>
+                ) : null}
 
-        <article className="panel workspace-section-card">
-          <div className="section-heading">
-            <div>
-              <h2>{copy.panelTitles[tab]}</h2>
-              <p className="small muted">{isLoading ? copy.loadingLabel : copy.panelDescriptions[tab]}</p>
-            </div>
-          </div>
+                {tab === "payroll" ? (
+                  <button className="btn btn-secondary" onClick={() => void handleExport("payroll")} type="button">
+                    {copy.exportLabel}
+                  </button>
+                ) : null}
+              </div>
+            </RouteWorkspaceSectionCard>
 
-          {tab === "overtime" ? (
-            isLoading ? (
-              <p className="small muted">{copy.loadingLabel}</p>
-            ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    {copy.tableHeaders.overtime.map((header) => (
-                      <th key={header}>{header}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {overtimeItems.length === 0 ? (
-                    <tr>
-                      <td colSpan={copy.tableHeaders.overtime.length} className="muted" style={{ textAlign: "center" }}>
-                        {copy.emptyLabel}
-                      </td>
-                    </tr>
-                  ) : (
-                    overtimeItems.map((item) => (
-                      <tr key={item.employeeId}>
-                        <td>{formatEmployeeDisplayName(item.employeeName, runtimeLocale)}</td>
-                        <td>{item.departmentName || "-"}</td>
-                        <td>{item.regularHours}</td>
-                        <td>{item.overtimeHours}</td>
-                        <td>{item.totalHours}</td>
-                        <td>{item.weeklyAverage}</td>
-                        <td>{item.exceededWeeks}</td>
+            <RouteWorkspaceSectionCard title={copy.panelTitles[tab]}>
+              {isLoading ? <p className="small muted">{copy.loadingLabel}</p> : null}
+
+              {tab === "overtime" && !isLoading ? (
+                overtimeItems.length === 0 ? (
+                  <RouteWorkspaceEmptyState
+                    action={{ label: copy.queryLabel, onClick: () => void loadOvertime(), tone: "secondary" }}
+                    description={copy.emptyDescription}
+                    title={copy.emptyLabel}
+                  />
+                ) : (
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        {copy.tableHeaders.overtime.map((header) => (
+                          <th key={header}>{header}</th>
+                        ))}
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            )
-          ) : null}
+                    </thead>
+                    <tbody>
+                      {overtimeItems.map((item) => (
+                        <tr key={item.employeeId}>
+                          <td>{formatEmployeeDisplayName(item.employeeName, runtimeLocale)}</td>
+                          <td>{item.departmentName || "-"}</td>
+                          <td>{item.regularHours}</td>
+                          <td>{item.overtimeHours}</td>
+                          <td>{item.totalHours}</td>
+                          <td>{item.weeklyAverage}</td>
+                          <td>{item.exceededWeeks}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              ) : null}
 
-          {tab === "attendance" ? (
-            isLoading ? (
-              <p className="small muted">{copy.loadingLabel}</p>
-            ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    {copy.tableHeaders.attendance.map((header) => (
-                      <th key={header}>{header}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {attendanceItems.length === 0 ? (
-                    <tr>
-                      <td colSpan={copy.tableHeaders.attendance.length} className="muted" style={{ textAlign: "center" }}>
-                        {copy.emptyLabel}
-                      </td>
-                    </tr>
-                  ) : (
-                    attendanceItems.map((item) => (
-                      <tr key={item.departmentId}>
-                        <td>{item.departmentName || "-"}</td>
-                        <td>{item.totalEmployees}</td>
-                        <td>{item.presentCount}</td>
-                        <td>{item.absentCount}</td>
-                        <td>{item.lateCount}</td>
+              {tab === "attendance" && !isLoading ? (
+                attendanceItems.length === 0 ? (
+                  <RouteWorkspaceEmptyState
+                    action={{ label: copy.queryLabel, onClick: () => void loadAttendance(), tone: "secondary" }}
+                    description={copy.emptyDescription}
+                    title={copy.emptyLabel}
+                  />
+                ) : (
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        {copy.tableHeaders.attendance.map((header) => (
+                          <th key={header}>{header}</th>
+                        ))}
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            )
-          ) : null}
+                    </thead>
+                    <tbody>
+                      {attendanceItems.map((item) => (
+                        <tr key={item.departmentId}>
+                          <td>{item.departmentName || "-"}</td>
+                          <td>{item.totalEmployees}</td>
+                          <td>{item.presentCount}</td>
+                          <td>{item.absentCount}</td>
+                          <td>{item.lateCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              ) : null}
 
-          {tab === "leave" || tab === "payroll" ? (
-            <p className="small muted">{copy.panelDescriptions[tab]}</p>
-          ) : null}
-        </article>
-      </section>
-    </main>
+              {(tab === "leave" || tab === "payroll") && !isLoading ? (
+                <RouteWorkspaceEmptyState
+                  action={{
+                    label: copy.exportLabel,
+                    onClick: () => void handleExport(tab),
+                    tone: "secondary"
+                  }}
+                  description={copy.panelDescriptions[tab]}
+                  title={copy.summaryActionsLabel}
+                />
+              ) : null}
+            </RouteWorkspaceSectionCard>
+          </>
+        }
+        side={
+          <>
+            <RouteWorkspaceSectionCard title={isKoLocale ? "요약" : "Summary"}>
+              <dl className="definition-grid">
+                <div>
+                  <dt>{copy.summaryTabLabel}</dt>
+                  <dd>{copy.tabs[tab]}</dd>
+                </div>
+                <div>
+                  <dt>{copy.summaryItemsLabel}</dt>
+                  <dd>{currentItems}</dd>
+                </div>
+                <div>
+                  <dt>{copy.summaryRangeLabel}</dt>
+                  <dd>{rangeLabel}</dd>
+                </div>
+              </dl>
+            </RouteWorkspaceSectionCard>
+
+            <RouteWorkspaceSectionCard
+              className="workspace-note-card"
+              description={copy.panelDescriptions[tab]}
+              title={copy.summaryActionsLabel}
+            >
+              <div className="panel-actions">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    if (tab === "overtime") {
+                      void loadOvertime();
+                      return;
+                    }
+                    if (tab === "attendance") {
+                      void loadAttendance();
+                      return;
+                    }
+                    if (tab === "leave" || tab === "payroll") {
+                      void handleExport(tab);
+                    }
+                  }}
+                  type="button"
+                >
+                  {tab === "leave" || tab === "payroll" ? copy.exportLabel : copy.queryLabel}
+                </button>
+              </div>
+            </RouteWorkspaceSectionCard>
+          </>
+        }
+      />
+    </RouteWorkspaceShell>
   );
 }

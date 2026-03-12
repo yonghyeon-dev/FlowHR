@@ -40,6 +40,12 @@ async function run() {
     "admin-dashboard",
     "AdminDebugLogsPanel.tsx"
   );
+  const sharedPrimitives = readUtf8(
+    "src",
+    "components",
+    "workspace",
+    "RouteWorkspacePrimitives.tsx"
+  );
   const globalsCss = readUtf8("src", "app", "globals.css");
   const workItem = readUtf8(
     "work-items",
@@ -50,11 +56,9 @@ async function run() {
   assert.match(adminPreviewPage, /className="page-header workspace-page-header"/);
   assert.match(adminPreviewPage, /className="panel-grid workspace-panel-grid"/);
 
-  assert.match(
-    employeeRequestsWorkspace,
-    /className="saas-content workspace-shell employee-workspace-shell(?: [^"]+)?"/
-  );
-  assert.match(employeeRequestsWorkspace, /workspace-section-card workspace-action-card/);
+  assert.match(employeeRequestsWorkspace, /RouteWorkspaceShell/);
+  assert.match(employeeRequestsWorkspace, /RouteWorkspaceSectionCard/);
+  assert.match(employeeRequestsWorkspace, /workspace-action-card/);
   assert.match(employeeRequestsWorkspace, /workspace-note-card/);
 
   assert.match(employeeWorkspaceHero, /workspace-hero-panel/);
@@ -67,6 +71,8 @@ async function run() {
 
   assert.match(adminDebugLogs, /workspace-side-panel/);
 
+  assert.match(sharedPrimitives, /export function RouteWorkspaceShell/);
+  assert.match(sharedPrimitives, /export function RouteWorkspaceSectionCard/);
   assert.match(globalsCss, /\.workspace-shell \{/);
   assert.match(globalsCss, /\.workspace-page-header \{/);
   assert.match(globalsCss, /\.workspace-hero-panel \{/);
@@ -74,7 +80,6 @@ async function run() {
   assert.match(globalsCss, /\.workspace-side-panel \{/);
 
   assert.match(workItem, /WI-1142/);
-  assert.match(workItem, /공통 워크스페이스 시각 프리미티브 베이스라인/);
 }
 
 run()

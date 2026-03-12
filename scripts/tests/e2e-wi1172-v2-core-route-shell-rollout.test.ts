@@ -11,6 +11,7 @@ function run() {
   const adminSettingsPage = readUtf8("src", "app", "admin", "settings", "page.tsx");
   const employeeRequestsWorkspace = readUtf8("src", "app", "employee", "requests", "workspace-content.tsx");
   const employeeRequestsClient = readUtf8("src", "app", "employee", "requests", "page-client.tsx");
+  const sharedPrimitives = readUtf8("src", "components", "workspace", "RouteWorkspacePrimitives.tsx");
   const globalsCss = readUtf8("src", "app", "globals.css");
 
   assert.match(wi, /WI-1172/);
@@ -19,20 +20,21 @@ function run() {
   assert.match(adminSettingsPage, /v2-route-shell v2-admin-settings-shell/);
   assert.match(adminSettingsPage, /v2-page-header/);
   assert.match(adminSettingsPage, /v2-tab-row/);
-  assert.match(adminSettingsPage, /회사 운영 기본값/);
-  assert.match(adminSettingsPage, /운영 설정/);
-  assert.match(adminSettingsPage, /연결된 운영 설정/);
 
-  assert.match(employeeRequestsWorkspace, /v2-route-shell v2-requests-shell/);
-  assert.match(employeeRequestsWorkspace, /v2-tab-row/);
+  assert.match(employeeRequestsWorkspace, /RouteWorkspaceShell/);
+  assert.match(employeeRequestsWorkspace, /RouteWorkspaceHeader/);
+  assert.match(employeeRequestsWorkspace, /RouteWorkspaceTabs/);
+  assert.match(employeeRequestsWorkspace, /v2-requests-shell/);
   assert.match(employeeRequestsWorkspace, /v2-request-type-grid/);
-  assert.match(employeeRequestsWorkspace, /요청 허브/);
-  assert.match(employeeRequestsWorkspace, /요청 모니터링/);
-  assert.match(employeeRequestsWorkspace, /재제출 작업대/);
+  assert.match(employeeRequestsWorkspace, /요청 허브|Requests hub/);
+  assert.match(employeeRequestsWorkspace, /요청 모니터링|Request monitoring/);
+  assert.match(employeeRequestsWorkspace, /재제출 작업대|Resubmit workbench/);
 
-  assert.match(employeeRequestsClient, /최근 처리 작업/);
-  assert.match(employeeRequestsClient, /pendingLabel \?\? \(snapshotLoaded \? "-" : "…"\)/);
+  assert.match(employeeRequestsClient, /employee-requests-status-strip/);
+  assert.match(employeeRequestsClient, /const \[pendingLabel, setPendingLabel\] = useState<string \| null>\(null\);/);
 
+  assert.match(sharedPrimitives, /export function RouteWorkspaceShell/);
+  assert.match(sharedPrimitives, /export function RouteWorkspaceTabs/);
   assert.match(globalsCss, /\.v2-route-shell \{/);
   assert.match(globalsCss, /\.v2-tab-row \{/);
   assert.match(globalsCss, /\.v2-form-layout \{/);

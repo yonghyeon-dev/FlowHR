@@ -516,6 +516,42 @@ body {
   border-color: rgba(176, 209, 195, 0.44);
   background: linear-gradient(180deg, #ffffff 0%, #f7fffb 100%);
 }
+.v2-workspace-summary {
+  gap: 16px;
+}
+.v2-workspace-summary-card {
+  min-height: 108px;
+  justify-content: space-between;
+}
+.v2-workspace-split {
+  align-items: start;
+  grid-template-columns: minmax(0, 1.8fr) minmax(280px, 0.95fr);
+}
+.v2-workspace-main,
+.v2-workspace-side {
+  display: grid;
+  gap: 16px;
+}
+.v2-workspace-feedback {
+  padding: 12px 14px;
+  border: 1px solid rgba(180, 203, 228, 0.34);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+}
+.v2-workspace-feedback.ok {
+  border-color: rgba(111, 190, 143, 0.38);
+  background: linear-gradient(180deg, #ffffff 0%, #f4fff7 100%);
+}
+.v2-workspace-feedback.fail {
+  border-color: rgba(224, 126, 126, 0.36);
+  background: linear-gradient(180deg, #ffffff 0%, #fff6f6 100%);
+}
+.v2-workspace-empty {
+  min-height: 220px;
+  border: 1px dashed rgba(180, 203, 228, 0.52);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+}
 .workspace-panel-grid {
   align-items: start;
 }
@@ -4977,7 +5013,8 @@ button.queue-badge:hover {
     padding: 20px;
   }
   .v2-form-layout,
-  .v2-request-type-grid {
+  .v2-request-type-grid,
+  .v2-workspace-split {
     grid-template-columns: 1fr;
   }
   .admin-hub-queue-grid,

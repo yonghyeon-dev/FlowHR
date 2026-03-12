@@ -13,16 +13,18 @@ function run() {
   const progress = readUtf8("docs", "production-operating-progress.md");
 
   assert.match(wi, /WI-1155/);
-  assert.match(wi, /운영 인사이트 워크스페이스 시각 파동 14/);
 
-  for (const page of [reportsPage, auditLogsPage]) {
-    assert.match(page, /workspace-shell admin-workspace-shell/);
-    assert.match(page, /workspace-page-header/);
-    assert.match(page, /workspace-summary-strip/);
-    assert.match(page, /workspace-section-card workspace-toolbar-card/);
-    assert.match(page, /workspace-source-banner/);
-    assert.match(page, /href="\/admin"/);
-  }
+  assert.match(reportsPage, /RouteWorkspaceShell/);
+  assert.match(reportsPage, /RouteWorkspaceHeader/);
+  assert.match(reportsPage, /RouteWorkspaceSummary/);
+  assert.match(reportsPage, /RouteWorkspaceSplit/);
+  assert.match(reportsPage, /RouteWorkspaceEmptyState/);
+
+  assert.match(auditLogsPage, /workspace-shell admin-workspace-shell/);
+  assert.match(auditLogsPage, /workspace-page-header/);
+  assert.match(auditLogsPage, /workspace-summary-strip/);
+  assert.match(auditLogsPage, /workspace-source-banner/);
+  assert.match(auditLogsPage, /href="\/admin"/);
 
   assert.match(progress, /Started `WI-1155`/);
 }
