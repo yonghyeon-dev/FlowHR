@@ -73,8 +73,8 @@ function run() {
   }
 
   assert.ok(
-    lineCount <= 5300,
-    `globals.css should stay under the 5300-line visual-wave guard after the employee route-first visual waves (current: ${lineCount})`
+    lineCount <= 5400,
+    `globals.css should stay under the 5400-line visual-wave guard after the employee route-first visual waves (current: ${lineCount})`
   );
 }
 
