@@ -29,7 +29,7 @@ function run() {
     filingCopy,
     /연말정산을 확정하고, 신고 제출 현황과 타임라인 증적을 한 레일에서 관리합니다\./
   );
-  assert.match(filingConsole, /Keep preview, finalization, export, and submission in one lane\./);
+  assert.match(filingConsole, /Keep preview, finalize, export, and submit in one lane\./);
   assert.match(filingConsole, /Priority support panels/);
   assert.match(filingConsole, /Review settlement state and blockers first, then recovery and diagnostics\./);
   assert.match(
