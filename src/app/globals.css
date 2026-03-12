@@ -1111,6 +1111,44 @@ body {
   .admin-payroll-submission-item-head time {
     white-space: normal;
   }
+
+  .admin-payroll-side-rail {
+    gap: 10px;
+  }
+
+  .admin-payroll-diagnostics-card,
+  .admin-payroll-summary-card,
+  .admin-payroll-blocker-card,
+  .admin-payroll-recovery-card {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .admin-payroll-diagnostics-summary,
+  .admin-payroll-blocker-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-payroll-summary-detail,
+  .admin-payroll-blocker-item,
+  .admin-payroll-recovery-card .simple-list li {
+    padding: 8px 10px;
+  }
+
+  .admin-payroll-side-rail .panel-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-payroll-side-rail .panel-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .admin-payroll-recovery-card .simple-list li {
+    align-items: flex-start;
+    gap: 6px;
+  }
 }
 .admin-payroll-queue-item {
   background: rgba(255, 252, 246, 0.9);

@@ -163,5 +163,6 @@ export const testBundles = {
     "scripts/tests/e2e-wi1176-admin-payroll-filing-and-documents-lane-completion.test.ts",
     "scripts/tests/e2e-wi1204-admin-payroll-filing-interactive-field-density-follow-up.test.ts",
     "scripts/tests/e2e-wi1205-admin-payroll-filing-side-rail-density-follow-up.test.ts",
+    "scripts/tests/e2e-wi1206-admin-payroll-filing-side-rail-mobile-follow-up.test.ts",
   ],
 };
