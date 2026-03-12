@@ -9,6 +9,7 @@ Phase 2: reset the operating roadmap so UI/UX becomes the top-level execution ax
 
 ## 2. Completed In This Wave
 
+- Started `WI-1194` to reorder the filing side rail so settlement state, blockers, failure recovery, and diagnostics follow one operator-priority sequence beside the rebalanced main workspace.
 - Started `WI-1193` to rebalance `/admin/payroll-year-end-filing` so filing setup, response follow-up, and result panels read as one staged payroll-lane workspace instead of one overloaded toolbar card.
 - Started `WI-1192` to bring the filing workflow step dashboard and step panel up to the same payroll-lane visual rhythm so filing ops reads like one customer-admin route-first station instead of legacy generic panels.
 - Started `WI-1191` to keep year-end preflight and filing ops follow-up attached to `/admin/payroll` so payroll-lane shortcuts stay source-aware after operators move into preflight or filing workflow steps.
