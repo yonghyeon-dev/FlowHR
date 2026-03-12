@@ -22,6 +22,7 @@ async function run() {
   const workItem = readUtf8("work-items", "WI-1055-admin-operational-settings-productization.md");
   const progress = readUtf8("docs", "production-operating-progress.md");
   const packageJson = readUtf8("package.json");
+  const testBundles = readUtf8("scripts", "tests", "test-bundles.mjs");
   const migrationPath = join(
     process.cwd(),
     "prisma",
@@ -51,7 +52,8 @@ async function run() {
   assert.match(payrollCases, /^85\. Admin feature management/m);
   assert.match(workItem, /Seventh execution slice productizes organization-level payroll feature management/i);
   assert.match(progress, /feature management slice/i);
-  assert.match(packageJson, /e2e-wi1055-feature-management-productization\.test\.ts/);
+  assert.match(packageJson, /"test:integration": "npm run test:integration:current"/);
+  assert.match(testBundles, /e2e-wi1055-feature-management-productization\.test\.ts/);
 }
 
 run()

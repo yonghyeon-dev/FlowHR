@@ -133,11 +133,11 @@ Exit criteria:
 
 ## 4. Active Sequence
 
-1. Close `WI-1170`
-2. Reset CI truth through `WI-1188`
-3. Start `WI-1172`
-4. Start `WI-1173`
-5. Then split admin and employee rollout waves under the program above
+1. Close `WI-1188` so V2 release truth and legacy shell regressions are no longer mixed in mainline CI.
+2. Close `WI-1174` to turn `/admin` into a queue-first control tower.
+3. Continue `WI-1175` and `WI-1176` under the control-tower layout contract.
+4. Run `WI-1177` through `WI-1179` on the employee side once the V2 workspace shell is stable.
+5. Start `WI-1180` through `WI-1182` before the final launch gate so role and tenant contradictions do not survive the shell rollout.
 
 ## 5. Completion Rule
 

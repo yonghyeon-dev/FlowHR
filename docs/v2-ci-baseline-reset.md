@@ -69,11 +69,19 @@ Historical shell-specific layout assertions should not outrank the current produ
 
 The mainline gate now treats the following as the current V2 baseline:
 
+- `test:quality-gates:current`
 - `test:integration:current`
 - `test:e2e:mvp:current`
 - `test:e2e:ko-guard:current`
 
-The old exhaustive bundle remains available through `test:e2e:full` and `test:e2e:legacy`, but it no longer defines release truth for the V2 shell rollout.
+Historical or intentionally replaced shell expectations remain available through explicit non-mainline scripts:
+
+- `test:integration:legacy`
+- `test:integration:full`
+- `test:e2e:mvp:legacy`
+- `test:e2e:full`
+- `test:e2e:legacy`
+- `test:e2e:ko-guard:legacy`
 
 This keeps the current delivery loop focused on:
 

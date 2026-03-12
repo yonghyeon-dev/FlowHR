@@ -97,9 +97,7 @@ jobs:
       - name: Unit and integration tests
         run: |
           if [ -f package.json ]; then
-            npm test --if-present
-            npm run test:integration:current --if-present
-            npm run test:e2e:current --if-present
+            npm run test:quality-gates:current --if-present
           else
             echo "No package.json found. Skipping tests."
           fi

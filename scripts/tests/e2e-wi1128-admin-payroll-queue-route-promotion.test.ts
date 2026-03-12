@@ -57,6 +57,7 @@ function run() {
     "PayrollPayslipDeliveryConsole.tsx"
   );
   const packageJson = readUtf8("package.json");
+  const testBundles = readUtf8("scripts", "tests", "test-bundles.mjs");
   const workItem = readUtf8(
     "work-items",
     "WI-1128-admin-payroll-queue-route-promotion.md"
@@ -114,8 +115,9 @@ function run() {
     /const focus = searchParams\.get\("focus"\)/
   );
 
+  assert.match(packageJson, /"test:integration:legacy": "node scripts\/tests\/run-test-bundle\.mjs ci-integration-legacy"/);
   assert.match(
-    packageJson,
+    testBundles,
     /e2e-wi1128-admin-payroll-queue-route-promotion\.test\.ts/
   );
   assert.match(workItem, /WI-1128/);
