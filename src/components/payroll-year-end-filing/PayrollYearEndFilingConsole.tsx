@@ -224,6 +224,46 @@ export default function PayrollYearEndFilingConsole() {
       submissionValidationStatusFilter
     ]
   );
+  const submissionStatusCompactSummary = useMemo(
+    () =>
+      [
+        `${copy.submissionStatusBadgeLabels.submitted} ${submissionListSummary?.statusCounts.submitted ?? 0}`,
+        `${copy.submissionStatusBadgeLabels.acknowledged} ${submissionListSummary?.statusCounts.acknowledged ?? 0}`,
+        `${copy.submissionStatusBadgeLabels.canceled} ${submissionListSummary?.statusCounts.canceled ?? 0}`
+      ].join(" · "),
+    [copy.submissionStatusBadgeLabels, submissionListSummary]
+  );
+  const submissionAckCompactSummary = useMemo(
+    () =>
+      [
+        `${copy.ackStatusOptionLabels.accepted} ${submissionListSummary?.ackStatusCounts.accepted ?? 0}`,
+        `${copy.ackStatusOptionLabels.rejected} ${submissionListSummary?.ackStatusCounts.rejected ?? 0}`,
+        `${copy.ackStatusOptionLabels.none} ${submissionListSummary?.ackStatusCounts.none ?? 0}`
+      ].join(" · "),
+    [copy.ackStatusOptionLabels, submissionListSummary]
+  );
+  const submissionValidationCompactSummary = useMemo(
+    () =>
+      [
+        `${copy.validationStatusOptionLabels.pass} ${submissionListSummary?.validationStatusCounts.pass ?? 0}`,
+        `${copy.validationStatusOptionLabels.fail} ${submissionListSummary?.validationStatusCounts.fail ?? 0}`
+      ].join(" · "),
+    [copy.validationStatusOptionLabels, submissionListSummary]
+  );
+  const submissionTransportCompactSummary = useMemo(
+    () =>
+      [
+        `${copy.transportShortManualLabel} ${submissionListSummary?.transportCounts.manual_portal ?? 0}`,
+        `${copy.transportShortHometaxLabel} ${submissionListSummary?.transportCounts.hometax_upload ?? 0}`,
+        `${copy.transportShortNtsApiMockLabel} ${submissionListSummary?.transportCounts.nts_api_mock ?? 0}`
+      ].join(" · "),
+    [
+      copy.transportShortHometaxLabel,
+      copy.transportShortManualLabel,
+      copy.transportShortNtsApiMockLabel,
+      submissionListSummary
+    ]
+  );
   const completedWorkspacePanels = [
     preflightChecklist,
     finalization,
@@ -1409,19 +1449,19 @@ export default function PayrollYearEndFilingConsole() {
               </div>
               <div className="admin-payroll-submissions-pill">
                 <span>{copy.statusSummaryLabel}</span>
-                <strong>{copy.submissionStatusOptionLabels.submitted} {submissionListSummary.statusCounts.submitted} / {copy.submissionStatusOptionLabels.acknowledged} {submissionListSummary.statusCounts.acknowledged} / {copy.submissionStatusOptionLabels.canceled} {submissionListSummary.statusCounts.canceled}</strong>
+                <strong>{submissionStatusCompactSummary}</strong>
               </div>
               <div className="admin-payroll-submissions-pill">
                 <span>{copy.ackStatusSummaryLabel}</span>
-                <strong>{copy.ackStatusOptionLabels.accepted} {submissionListSummary.ackStatusCounts.accepted} / {copy.ackStatusOptionLabels.rejected} {submissionListSummary.ackStatusCounts.rejected} / {copy.ackStatusOptionLabels.none} {submissionListSummary.ackStatusCounts.none}</strong>
+                <strong>{submissionAckCompactSummary}</strong>
               </div>
               <div className="admin-payroll-submissions-pill">
                 <span>{copy.validationSummaryLabel}</span>
-                <strong>{copy.validationStatusOptionLabels.pass} {submissionListSummary.validationStatusCounts.pass} / {copy.validationStatusOptionLabels.fail} {submissionListSummary.validationStatusCounts.fail}</strong>
+                <strong>{submissionValidationCompactSummary}</strong>
               </div>
               <div className="admin-payroll-submissions-pill">
                 <span>{copy.transportSummaryLabel}</span>
-                <strong>{copy.transportShortManualLabel} {submissionListSummary.transportCounts.manual_portal} / {copy.transportShortHometaxLabel} {submissionListSummary.transportCounts.hometax_upload} / {copy.transportShortNtsApiMockLabel} {submissionListSummary.transportCounts.nts_api_mock}</strong>
+                <strong>{submissionTransportCompactSummary}</strong>
               </div>
               <div className="admin-payroll-submissions-pill">
                 <span>{copy.activeFiltersLabel}</span>
