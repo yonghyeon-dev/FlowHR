@@ -142,5 +142,6 @@ export const testBundles = {
     "scripts/tests/e2e-wi1170-v2-shell-design-system-adoption.test.ts",
     "scripts/tests/e2e-wi1172-v2-core-route-shell-rollout.test.ts",
     "scripts/tests/e2e-wi1173-shared-workspace-primitives-and-visual-contract.test.ts",
+    "scripts/tests/e2e-wi1174-admin-control-tower-and-queue-first-home-rollout.test.ts",
   ],
 };

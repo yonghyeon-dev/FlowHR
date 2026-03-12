@@ -33,6 +33,14 @@ import { buildAdminSummaryFromApiResults } from "@/app/admin/page-summary-helper
 import { EMPTY_SUMMARY, type AdminSummary } from "@/app/admin/page-dashboard-types";
 import type { AttendanceAggregateDto, AttendanceRecordDto, LeaveRequestDto } from "@/app/admin/page-types";
 import { resolveAdminContractDocumentNextStep } from "@/components/contracts/document-action-policy";
+import {
+  RouteWorkspaceHeader,
+  RouteWorkspaceSectionCard,
+  RouteWorkspaceShell,
+  RouteWorkspaceSplit,
+  RouteWorkspaceStatus,
+  RouteWorkspaceSummary
+} from "@/components/workspace/RouteWorkspacePrimitives";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -304,259 +312,411 @@ export default function AdminDashboardPage() {
   void wi0374SetLogsToken;
   void wi0374FormatDateTimeToken;
 
+  const headerActions = [
+    {
+      label: isLoading ? (isKoLocale ? "불러오는 중..." : "Loading...") : isKoLocale ? "새로고침" : "Refresh",
+      onClick: () => void refreshSummary(),
+      tone: "primary" as const,
+      disabled: isLoading || supabaseSessionLoading || requiresLoginSession
+    },
+    {
+      label: isKoLocale ? "직원 포털" : "Employee portal",
+      href: "/employee",
+      tone: "secondary" as const
+    },
+    ...(showDevTools
+      ? [
+          {
+            label: isKoLocale ? "(개발) 운영 콘솔" : "(dev) Ops console",
+            href: "/ops/mvp-console",
+            tone: "secondary" as const
+          }
+        ]
+      : [])
+  ];
+
+  const summaryItems = [
+    {
+      label: isKoLocale ? "승인 필요" : "Need approval",
+      value: summary.pendingApprovalExecutionCount
+    },
+    {
+      label: isKoLocale ? "근태 예외" : "Attendance exceptions",
+      value: summary.pendingAttendanceCount
+    },
+    {
+      label: isKoLocale ? "휴가 대기" : "Leave backlog",
+      value: summary.pendingLeaveCount
+    },
+    {
+      label: isKoLocale ? "문서 대기" : "Document queue",
+      value: summary.contractDecisionQueueCount + summary.contractPendingResponseCount
+    },
+    {
+      label: isKoLocale ? "급여 후속" : "Payroll follow-ups",
+      value: summary.previewedPayrollCount + summary.undistributedPayrollCount
+    }
+  ];
+
+  const todayQueueItems = queueBadges.map((badge) => ({
+    ...badge,
+    priorityTone:
+      badge.critical > 0 ? "critical" : badge.watch > 0 ? "high" : badge.total > 0 ? "medium" : "low",
+    meta:
+      badge.key === "approvals"
+        ? isKoLocale
+          ? `지연 ${badge.critical}건 포함 · 결재 실행 우선 처리`
+          : `Includes ${badge.critical} stalled items · handle approval executions first`
+        : badge.key === "payroll"
+          ? isKoLocale
+            ? `미배포 ${summary.undistributedPayrollCount}건 · 마감 lane 확인`
+            : `Undistributed ${summary.undistributedPayrollCount} · check payroll lane`
+          : isKoLocale
+            ? `SLA 초과 ${summary.contractSlaOverdueCount}건 · 문서 응답 follow-up`
+            : `SLA overdue ${summary.contractSlaOverdueCount} · follow up on document responses`
+  }));
+
+  const exceptionMonitorItems = [
+    {
+      key: "approval-stalled",
+      title: isKoLocale ? "정체 결재" : "Stalled approvals",
+      count: summary.stalledApprovalExecutionCount,
+      description: isKoLocale
+        ? "24시간 이상 멈춘 결재를 먼저 비워야 합니다."
+        : "Clear approvals stalled for more than 24 hours first.",
+      href: dashboardQueueContextLinks.approvalStalled.href
+    },
+    {
+      key: "attendance-open",
+      title: isKoLocale ? "미퇴근 기록" : "Open attendance",
+      count: todayOpenAttendanceCount,
+      description: isKoLocale
+        ? "오늘 퇴근 누락 인원을 점검하세요."
+        : "Review who is still clocked in today.",
+      href: "/admin/attendance-live"
+    },
+    {
+      key: "contracts-sla",
+      title: isKoLocale ? "계약 SLA 초과" : "Contract SLA overdue",
+      count: summary.contractSlaOverdueCount,
+      description: isKoLocale
+        ? "응답이 늦어진 계약을 먼저 안내하세요."
+        : "Reach out to contracts that already missed SLA.",
+      href: dashboardQueueContextLinks.contractsQueue.href
+    },
+    {
+      key: "payroll-undistributed",
+      title: isKoLocale ? "명세 미배포" : "Undistributed payslips",
+      count: summary.undistributedPayrollCount,
+      description: isKoLocale
+        ? "배포되지 않은 급여 명세를 확인하세요."
+        : "Review payroll slips that are still undistributed.",
+      href: dashboardQueueContextLinks.payrollQueue.href
+    }
+  ];
+
+  const workspaceLaneCards = workspaceHubs.map((hub) => ({
+    ...hub,
+    primaryLink: hub.links[0] ?? null,
+    secondaryLinks: hub.links.slice(1, 3)
+  }));
+
   if (supabaseSessionLoading) {
     return null;
   }
 
   return (
-    <main className="saas-content admin-hub-shell">
-      <header className="page-header admin-hub-hero">
-        <div className="admin-hub-hero-copy">
-          <p className="eyebrow">admin hub</p>
-          <h1 className="page-title">{isKoLocale ? "관리자 허브" : "Admin hub"}</h1>
-          <p className="page-subtitle">
-            {isKoLocale ? "핵심 지표와 대기 업무를 확인하고, 각 전용 워크스페이스로 이동해 작업하세요." : "Review key metrics and work queues, then continue in dedicated workspaces."}
-          </p>
-          <div className="admin-hub-hero-meta">
-            <span className="admin-hub-chip">
-              {isKoLocale ? "결재 대기" : "Approvals"} · {summary.pendingApprovalExecutionCount}
-            </span>
-            <span className="admin-hub-chip">
-              {isKoLocale ? "급여 프리뷰" : "Payroll preview"} · {summary.previewedPayrollCount}
-            </span>
-            <span className="admin-hub-chip">
-              {isKoLocale ? "전자계약" : "Contracts"} · {summary.contractDecisionQueueCount}
-            </span>
-            <span className="admin-hub-chip">
-              {isKoLocale ? "직원 수" : "Employees"} · {summary.employeeCount}
-            </span>
-          </div>
-        </div>
-        <div className="page-actions admin-hub-hero-actions">
-          <button
-            className="btn btn-primary"
-            onClick={() => void refreshSummary()}
-            disabled={isLoading || supabaseSessionLoading || requiresLoginSession}
-          >
-            {isLoading ? (isKoLocale ? "불러오는 중..." : "Loading...") : isKoLocale ? "새로고침" : "Refresh"}
-          </button>
-          <Link className="btn btn-secondary" href="/employee">
-            {isKoLocale ? "직원 포털" : "Employee Portal"}
-          </Link>
-          {showDevTools ? (
-            <Link className="btn btn-secondary" href="/ops/mvp-console">
-              {isKoLocale ? "(개발) 운영 콘솔" : "(dev) Ops Console"}
-            </Link>
-          ) : null}
-        </div>
-      </header>
+    <RouteWorkspaceShell tone="admin" className="admin-hub-shell admin-control-tower-shell">
+      <RouteWorkspaceHeader
+        actions={headerActions}
+        className="admin-hub-hero control-tower-header"
+        description={
+          isKoLocale
+            ? "오늘 처리할 대기열과 예외를 우선순위대로 정리한 customer-admin 운영 컨트롤 타워입니다."
+            : "A queue-first customer-admin control tower that ranks today's backlogs and exceptions."
+        }
+        eyebrow="admin hub"
+        sourceHint={
+          topFocusCard
+            ? `${resolveAdminDashboardPriorityTitle(locale)} · ${resolveAdminDashboardFocusCardLabel(topFocusCard, locale)} · ${resolveAdminDashboardFocusSeverityLabel(topFocusCard, locale)}`
+            : resolveAdminDashboardPriorityDescription(locale)
+        }
+        title={isKoLocale ? "관리자 허브" : "Admin hub"}
+      />
+
+      <div className="admin-hub-hero-meta">
+        <span className="admin-hub-chip">
+          {isKoLocale ? "결재 대기" : "Approvals"} · {summary.pendingApprovalExecutionCount}
+        </span>
+        <span className="admin-hub-chip">
+          {isKoLocale ? "근태 예외" : "Attendance"} · {summary.pendingAttendanceCount}
+        </span>
+        <span className="admin-hub-chip">
+          {isKoLocale ? "급여 후속" : "Payroll"} · {summary.previewedPayrollCount + summary.undistributedPayrollCount}
+        </span>
+        <span className="admin-hub-chip">
+          {isKoLocale ? "문서 응답" : "Documents"} · {summary.contractPendingResponseCount}
+        </span>
+        <span className="admin-hub-chip">
+          {isKoLocale ? "직원 수" : "Employees"} · {summary.employeeCount}
+        </span>
+      </div>
 
       {requiresLoginSession ? (
-        <p className="small fail">
-          {productionSessionRequiredNotice} <Link href="/login">/login</Link>
-        </p>
+        <RouteWorkspaceStatus
+          message={`${productionSessionRequiredNotice} /login`}
+          tone="error"
+        />
       ) : null}
-      {loadError ? <p className="small fail">{loadError}</p> : null}
+      {loadError ? <RouteWorkspaceStatus message={loadError} tone="error" /> : null}
 
-      <section className="panel admin-hub-priority-panel">
-        <h2>{resolveAdminDashboardPriorityTitle(locale)}</h2>
-        <p className="small muted">
-          {resolveAdminDashboardPriorityDescription(locale)}
-        </p>
-        <p className="small muted">
-          {resolveAdminDashboardPrioritySummary({
-            locale,
-            critical: focusPriority.critical,
-            watch: focusPriority.watch,
-            stable: focusPriority.stable
-          })}
-        </p>
-        <div className="actions">
-          <Link className="btn btn-secondary" href={dashboardQueueContextLinks.approvalQueue.href}>
-            {isKoLocale ? "결재 대기 바로가기" : "Open approval queue"}
-          </Link>
-          {focusCards.map((card) => (
-            <Link
-              key={card.key}
-              className={card.severity === "critical" ? "btn btn-primary" : "btn btn-secondary"}
-              href={card.href}
+      <RouteWorkspaceSummary
+        ariaLabel={isKoLocale ? "관리자 허브 핵심 요약" : "Admin hub key summary"}
+        className="admin-hub-summary-strip admin-control-tower-summary"
+        items={summaryItems}
+      />
+
+      <RouteWorkspaceSplit
+        className="admin-control-tower-grid"
+        main={
+          <>
+            <RouteWorkspaceSectionCard
+              className="admin-hub-priority-panel admin-control-tower-queue-card"
+              description={resolveAdminDashboardPrioritySummary({
+                locale,
+                critical: focusPriority.critical,
+                watch: focusPriority.watch,
+                stable: focusPriority.stable
+              })}
+              title={isKoLocale ? "오늘의 대기열" : "Today queue"}
             >
-              {resolveAdminDashboardFocusCardLabel(card, locale)} ({card.count}) -{" "}
-              {resolveAdminDashboardFocusSeverityLabel(card, locale)}
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {topFocusCard ? (
-        <section className="panel admin-hub-priority-panel">
-          <h2>{isKoLocale ? "오늘의 우선 처리" : "Today's top priority"}</h2>
-          <p className="small muted">
-            {isKoLocale
-              ? "현재 대기량과 위험도를 기준으로 첫 번째 처리 대상을 제안합니다."
-              : "The highest-priority queue is suggested from current backlog volume and risk."}
-          </p>
-          <p className="small">
-            <strong>{resolveAdminDashboardFocusCardLabel(topFocusCard, locale)}</strong>
-            {" · "}
-            {resolveAdminDashboardFocusSeverityLabel(topFocusCard, locale)}
-            {" · "}
-            {topFocusCard.count}
-          </p>
-          <div className="actions">
-            <Link className="btn btn-primary" href={topFocusCard.href}>
-              {isKoLocale ? "우선 작업 열기" : "Open priority workspace"}
-            </Link>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="panel admin-hub-queue-panel">
-        <h2>{isKoLocale ? "핵심 대기함 배지" : "Core queue badges"}</h2>
-        <p className="small muted">
-          {isKoLocale
-            ? "결재·급여·계약 대기함의 총 건수와 위험 수준(긴급/주의)을 한 번에 확인하세요."
-            : "Track approval, payroll, and contract queue load with critical/watch risk badges."}
-        </p>
-        <div className="kpi-strip admin-hub-queue-grid">
-          {queueBadges.map((badge) => (
-            <article className="kpi-card admin-hub-queue-card" key={badge.key}>
-              <p>{badge.label}</p>
-              <strong>{badge.total}</strong>
-              <small>
-                {isKoLocale
-                  ? `긴급 ${badge.critical} · 주의 ${badge.watch}`
-                  : `Critical ${badge.critical} · Watch ${badge.watch}`}
-              </small>
-              <small>{badge.breakdown}</small>
-              <div className="actions" style={{ marginTop: 8 }}>
-                <Link className="btn btn-secondary btn-small" href={badge.href}>
-                  {isKoLocale ? "대기함 열기" : "Open queue"}
-                </Link>
-                {badge.actions.map((action) => (
-                  <Link key={action.href} className="btn btn-secondary btn-small" href={action.href}>
-                    {action.label}
+              <div className="admin-control-tower-focus-strip">
+                {focusCards.map((card) => (
+                  <Link
+                    key={card.key}
+                    className={`admin-hub-chip admin-control-tower-focus-chip tone-${card.severity}`}
+                    href={card.href}
+                  >
+                    {resolveAdminDashboardFocusCardLabel(card, locale)} · {card.count}
                   </Link>
                 ))}
-                {badge.key === "approvals" ? (
-                  <>
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-small"
-                      onClick={() => void runApprovalQuickAction("leave")}
-                      disabled={
-                        requiresLoginSession ||
-                        approvalQuickActionPending !== null ||
-                        firstPendingLeave === null
-                      }
-                    >
-                      {isKoLocale ? "휴가 1건 승인" : "Approve one leave"}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-small"
-                      onClick={() => void runApprovalQuickAction("attendance")}
-                      disabled={
-                        requiresLoginSession ||
-                        approvalQuickActionPending !== null ||
-                        firstPendingAttendance === null
-                      }
-                    >
-                      {isKoLocale ? "출퇴근 1건 승인" : "Approve one attendance"}
-                    </button>
-                  </>
-                ) : null}
               </div>
-              {badge.key === "approvals" && approvalQuickActionNotice ? (
-                <small className={approvalQuickActionNotice.ok ? "ok" : "fail"}>
-                  {approvalQuickActionNotice.message}
-                </small>
+              <div className="queue-list admin-control-tower-queue-list">
+                {todayQueueItems.map((item) => (
+                  <article className="queue-item admin-control-tower-queue-item" key={item.key}>
+                    <div className={`q-priority ${item.priorityTone}`} />
+                    <div className="q-content">
+                      <div className="q-title">
+                        {item.label} · {item.total}
+                      </div>
+                      <div className="q-meta">{item.breakdown}</div>
+                      <div className="q-meta">{item.meta}</div>
+                    </div>
+                    <div className="q-action">
+                      <div className="actions admin-control-tower-queue-actions">
+                        <Link className="btn btn-primary" href={item.href}>
+                          {isKoLocale ? "대기열 열기" : "Open queue"}
+                        </Link>
+                        {item.actions.map((action) => (
+                          <Link className="btn btn-secondary" href={action.href} key={action.href}>
+                            {action.label}
+                          </Link>
+                        ))}
+                        {item.key === "approvals" ? (
+                          <>
+                            <button
+                              className="btn btn-secondary"
+                              disabled={
+                                requiresLoginSession ||
+                                approvalQuickActionPending !== null ||
+                                firstPendingLeave === null
+                              }
+                              onClick={() => void runApprovalQuickAction("leave")}
+                              type="button"
+                            >
+                              {isKoLocale ? "휴가 1건 승인" : "Approve one leave"}
+                            </button>
+                            <button
+                              className="btn btn-secondary"
+                              disabled={
+                                requiresLoginSession ||
+                                approvalQuickActionPending !== null ||
+                                firstPendingAttendance === null
+                              }
+                              onClick={() => void runApprovalQuickAction("attendance")}
+                              type="button"
+                            >
+                              {isKoLocale ? "출퇴근 1건 승인" : "Approve one attendance"}
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              {approvalQuickActionNotice ? (
+                <RouteWorkspaceStatus
+                  message={approvalQuickActionNotice.message}
+                  tone={approvalQuickActionNotice.ok ? "success" : "error"}
+                />
               ) : null}
-            </article>
-          ))}
-        </div>
-      </section>
+            </RouteWorkspaceSectionCard>
 
-      <section className="panel admin-hub-status-panel">
-        <h2>{isKoLocale ? "핵심 현황" : "Core status"}</h2>
-        <div className="kpi-strip admin-hub-status-grid">
-          <article className="kpi-card admin-hub-status-card">
-            <p>{isKoLocale ? "오늘 출근/퇴근" : "Today's clock-ins/outs"}</p>
-            <strong>{todayClockInCount}</strong>
-          </article>
-          <article className="kpi-card admin-hub-status-card">
-            <p>{isKoLocale ? "미퇴근 근로자" : "Open attendance records"}</p>
-            <strong>{todayOpenAttendanceCount}</strong>
-          </article>
-          <article className="kpi-card admin-hub-status-card">
-            <p>{isKoLocale ? "휴가 사용 일수" : "Leave days used"}</p>
-            <strong>{monthlyApprovedLeaveCount}</strong>
-          </article>
-          <article className="kpi-card admin-hub-status-card">
-            <p>{isKoLocale ? "연장 근로 시간" : "Overtime worked"}</p>
-            <strong>{minutesToHours(todayOvertimeMinutes)}</strong>
-          </article>
-        </div>
-      </section>
+            <RouteWorkspaceSectionCard
+              className="admin-hub-workspace-panel admin-control-tower-lanes-card"
+              description={
+                isKoLocale
+                  ? "카드 탐색보다 실제 작업 lane을 먼저 열어 처리하도록 진입점을 재정렬했습니다."
+                  : "Entries are reordered so operators open real work lanes before browsing summaries."
+              }
+              title={isKoLocale ? "운영 레인" : "Operations lanes"}
+            >
+              <div className="actions admin-control-tower-entry-strip">
+                {dashboardEntryLinks.map((entry) => (
+                  <Link className="btn btn-secondary" href={entry.href} key={entry.key}>
+                    {entry.label}
+                  </Link>
+                ))}
+              </div>
+              <div className="panel-grid admin-hub-workspace-grid">
+                {workspaceLaneCards.map((lane) => (
+                  <article className="panel admin-hub-workspace-card admin-control-tower-lane-card" key={lane.key}>
+                    <h2>{lane.title}</h2>
+                    <p className="small muted">{lane.description}</p>
+                    <div className="actions">
+                      {lane.primaryLink ? (
+                        <Link className="btn btn-primary" href={withAdminHubSource(lane.primaryLink.href)}>
+                          {lane.primaryLink.label}
+                        </Link>
+                      ) : null}
+                      {lane.secondaryLinks.map((link) => (
+                        <Link className="btn btn-secondary" href={withAdminHubSource(link.href)} key={link.href}>
+                          {link.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </RouteWorkspaceSectionCard>
+          </>
+        }
+        side={
+          <div className="admin-control-tower-side-stack">
+            <RouteWorkspaceSectionCard
+              className="admin-hub-status-panel admin-control-tower-side-card"
+              description={
+                isKoLocale
+                  ? "오늘 인원과 근태 상태를 요약해 운영 온도를 빠르게 파악합니다."
+                  : "A quick snapshot of today's people and attendance temperature."
+              }
+              title={isKoLocale ? "조직 스냅샷" : "Org snapshot"}
+            >
+              <div className="v2-stat-list">
+                <div className="v2-stat-row">
+                  <div className="v2-stat-copy">
+                    <strong>{isKoLocale ? "전체 직원" : "Employees"}</strong>
+                    <p>{isKoLocale ? "현재 workspace에 연결된 인원" : "People connected to the current workspace"}</p>
+                  </div>
+                  <strong>{summary.employeeCount}</strong>
+                </div>
+                <div className="v2-stat-row">
+                  <div className="v2-stat-copy">
+                    <strong>{isKoLocale ? "오늘 출근 기록" : "Today's clock-ins"}</strong>
+                    <p>{isKoLocale ? "당일 출근/퇴근 기록 수" : "Attendance records captured today"}</p>
+                  </div>
+                  <strong>{todayClockInCount}</strong>
+                </div>
+                <div className="v2-stat-row">
+                  <div className="v2-stat-copy">
+                    <strong>{isKoLocale ? "미퇴근 인원" : "Still clocked in"}</strong>
+                    <p>{isKoLocale ? "퇴근 누락 가능성이 있는 인원" : "People who may still be missing clock-out"}</p>
+                  </div>
+                  <strong>{todayOpenAttendanceCount}</strong>
+                </div>
+                <div className="v2-stat-row">
+                  <div className="v2-stat-copy">
+                    <strong>{isKoLocale ? "이번 달 승인 휴가" : "Approved leave this month"}</strong>
+                    <p>{isKoLocale ? "이번 달 승인 완료된 휴가 요청 수" : "Approved leave requests recorded this month"}</p>
+                  </div>
+                  <strong>{monthlyApprovedLeaveCount}</strong>
+                </div>
+                <div className="v2-stat-row">
+                  <div className="v2-stat-copy">
+                    <strong>{isKoLocale ? "연장 근로" : "Overtime"}</strong>
+                    <p>{isKoLocale ? "오늘 집계된 연장 근로 시간" : "Today's accumulated overtime"}</p>
+                  </div>
+                  <strong>{minutesToHours(todayOvertimeMinutes)}</strong>
+                </div>
+              </div>
+            </RouteWorkspaceSectionCard>
 
-      <section className="kpi-strip admin-hub-summary-strip">
-        <article className="kpi-card admin-hub-summary-card">
-          <p>{isKoLocale ? "출퇴근 승인 대기" : "Pending attendance approvals"}</p>
-          <strong>{summary.pendingAttendanceCount}</strong>
-        </article>
-        <article className="kpi-card admin-hub-summary-card">
-          <p>{isKoLocale ? "휴가 승인 대기" : "Pending leave approvals"}</p>
-          <strong>{summary.pendingLeaveCount}</strong>
-        </article>
-        <article className="kpi-card admin-hub-summary-card">
-          <p>{isKoLocale ? "급여 프리뷰 대기" : "Pending payroll previews"}</p>
-          <strong>{summary.previewedPayrollCount}</strong>
-        </article>
-        <article className="kpi-card admin-hub-summary-card">
-          <p>{isKoLocale ? "직원 수" : "Employees"}</p>
-          <strong>{summary.employeeCount}</strong>
-        </article>
-        <article className="kpi-card admin-hub-summary-card">
-          <p>{isKoLocale ? "최근 갱신" : "Last refreshed"}</p>
-          <strong>{summary.refreshedAt ?? "-"}</strong>
-        </article>
-      </section>
+            <RouteWorkspaceSectionCard
+              className="admin-control-tower-side-card"
+              description={
+                isKoLocale
+                  ? "지금 바로 놓치면 안 되는 예외만 옆에서 계속 감시합니다."
+                  : "Keep a running eye on exceptions that should not be missed."
+              }
+              title={isKoLocale ? "예외 모니터" : "Exception monitor"}
+            >
+              <div className="v2-stat-list">
+                {exceptionMonitorItems.map((item) => (
+                  <Link className="v2-stat-row admin-control-tower-alert-row" href={item.href} key={item.key}>
+                    <div className="v2-stat-copy">
+                      <strong>{item.title}</strong>
+                      <p>{item.description}</p>
+                    </div>
+                    <strong>{item.count}</strong>
+                  </Link>
+                ))}
+              </div>
+            </RouteWorkspaceSectionCard>
 
-      <section className="panel admin-hub-workspace-panel">
-        <h2>{isKoLocale ? "핵심 워크스페이스 허브" : "Core workspace hub"}</h2>
-        <p className="small muted">
-          {isKoLocale
-            ? "관리자 홈에서는 요약만 확인하고, 상세 작업은 각 전용 워크스페이스에서 처리하세요."
-            : "Use the dashboard for summary only and continue detailed work in dedicated routes."}
-        </p>
-        <div className="actions">
-          {dashboardEntryLinks.map((entry) => (
-            <Link className="btn btn-secondary" href={entry.href} key={entry.key}>
-              {entry.label}
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel-grid admin-hub-workspace-grid">
-        {workspaceHubs.map((hub) => (
-          <article className="panel admin-hub-workspace-card" key={hub.key}>
-            <h2>{hub.title}</h2>
-            <p className="small muted">{hub.description}</p>
-            <div className="actions">
-              {hub.links.map((link, index) => (
-                <Link
-                  className={index === 0 ? "btn btn-primary" : "btn btn-secondary"}
-                  href={withAdminHubSource(link.href)}
-                  key={link.href}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </article>
-        ))}
-      </section>
-    </main>
+            <RouteWorkspaceSectionCard
+              className="admin-control-tower-side-card"
+              description={
+                isKoLocale
+                  ? "문서와 급여 후속을 한쪽에서 묶어 확인합니다."
+                  : "Track document and payroll follow-ups in one side rail."
+              }
+              title={isKoLocale ? "문서 · 급여 watch" : "Documents · payroll watch"}
+            >
+              <div className="v2-stat-list">
+                <div className="v2-stat-row">
+                  <div className="v2-stat-copy">
+                    <strong>{isKoLocale ? "계약 의사결정 대기" : "Contract decision queue"}</strong>
+                    <p>{isKoLocale ? "검토 또는 승인 대기 중인 계약" : "Contracts waiting for review or approval"}</p>
+                  </div>
+                  <strong>{summary.contractDecisionQueueCount}</strong>
+                </div>
+                <div className="v2-stat-row">
+                  <div className="v2-stat-copy">
+                    <strong>{isKoLocale ? "계약 응답 대기" : "Contract pending response"}</strong>
+                    <p>{isKoLocale ? "전송 후 응답을 기다리는 계약" : "Sent contracts still waiting for response"}</p>
+                  </div>
+                  <strong>{summary.contractPendingResponseCount}</strong>
+                </div>
+                <div className="v2-stat-row">
+                  <div className="v2-stat-copy">
+                    <strong>{isKoLocale ? "급여 프리뷰" : "Payroll preview"}</strong>
+                    <p>{isKoLocale ? "마감 전 확인이 필요한 급여 건" : "Payroll runs still waiting for review"}</p>
+                  </div>
+                  <strong>{summary.previewedPayrollCount}</strong>
+                </div>
+                <div className="v2-stat-row">
+                  <div className="v2-stat-copy">
+                    <strong>{isKoLocale ? "명세 미배포" : "Undistributed payslips"}</strong>
+                    <p>{isKoLocale ? "배포가 남아 있는 급여 명세" : "Payslips that still need delivery"}</p>
+                  </div>
+                  <strong>{summary.undistributedPayrollCount}</strong>
+                </div>
+              </div>
+            </RouteWorkspaceSectionCard>
+          </div>
+        }
+      />
+    </RouteWorkspaceShell>
   );
 }
