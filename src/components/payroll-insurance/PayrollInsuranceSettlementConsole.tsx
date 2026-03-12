@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { isAdminPayrollSource, withAdminSource } from "@/app/admin/source-context";
 import { PayrollInsuranceInputPanel } from "@/components/payroll-insurance/PayrollInsuranceSettlementInputPanel";
 import {
   PayrollInsuranceComponentsPanel,
@@ -56,6 +58,7 @@ function isTruthyFlag(value: string | undefined) {
 }
 
 export default function PayrollInsuranceSettlementConsole() {
+  const searchParams = useSearchParams();
   const range = defaultMonthRange();
   const [employeeId, setEmployeeId] = useState("EMP-1001");
   const [periodStartDate, setPeriodStartDate] = useState(range.periodStartDate);
@@ -89,6 +92,8 @@ export default function PayrollInsuranceSettlementConsole() {
   const { locale } = useI18n();
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = payrollInsuranceCopyByLocale[locale];
+  const source = searchParams.get("source");
+  const showPayrollSource = isAdminPayrollSource(source);
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const adminActorId = (supabaseSession?.actorId ?? "PAY-1001").trim() || "PAY-1001";
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
@@ -277,12 +282,24 @@ export default function PayrollInsuranceSettlementConsole() {
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
-        <p className="small muted workspace-source-banner">
+        <p className="small muted workspace-source-banner" hidden={showPayrollSource}>
           {locale === "ko"
             ? "급여 마감 전에 보험 기여금과 차액을 먼저 점검하는 운영 작업 화면입니다."
             : "Review insurance contributions and settlement deltas before payroll close."}
         </p>
+        {showPayrollSource ? (
+          <p className="small muted workspace-source-banner">
+            {locale === "ko"
+              ? "급여 레인에서 이동했습니다 · 집중 레인: 보험 정산"
+              : "Opened from payroll lane · Focused lane: insurance settlement"}
+          </p>
+        ) : null}
         <div className="page-actions" style={{ marginTop: 8 }}>
+          {showPayrollSource ? (
+            <Link href="/admin/payroll" className="btn btn-secondary btn-small">
+              {locale === "ko" ? "급여 레인으로" : "Back to payroll lane"}
+            </Link>
+          ) : null}
           <Link href="/admin" className="btn btn-secondary btn-small">
             {copy.backToAdmin}
           </Link>
@@ -377,9 +394,22 @@ export default function PayrollInsuranceSettlementConsole() {
           <article className="panel workspace-section-card workspace-note-card">
             <h2>{locale === "ko" ? "워크스페이스 이동" : "Workspace shortcuts"}</h2>
             <div className="panel-actions">
+              {showPayrollSource ? (
+                <Link href="/admin/payroll" className="btn btn-secondary">
+                  {locale === "ko" ? "급여 레인으로" : "Back to payroll lane"}
+                </Link>
+              ) : null}
               <Link href="/admin" className="btn btn-secondary">
                 {copy.backToAdmin}
               </Link>
+              {showPayrollSource ? (
+                <Link
+                  href={withAdminSource("/admin/payroll-close", "admin-payroll")}
+                  className="btn btn-secondary"
+                >
+                  {locale === "ko" ? "급여 마감으로" : "Open payroll close"}
+                </Link>
+              ) : null}
             </div>
           </article>
         )}
