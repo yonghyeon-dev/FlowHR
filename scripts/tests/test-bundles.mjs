@@ -63,6 +63,7 @@ export const testBundles = {
     "scripts/tests/e2e-wi1195-admin-payroll-filing-diagnostics-density-follow-up.test.ts",
     "scripts/tests/e2e-wi1196-admin-payroll-filing-summary-card-compaction-follow-up.test.ts",
     "scripts/tests/e2e-wi1197-admin-payroll-filing-timeline-card-compaction-follow-up.test.ts",
+    "scripts/tests/e2e-wi1198-admin-payroll-filing-blocker-card-compaction-follow-up.test.ts",
   ],
   "ci-integration-legacy": [
     "scripts/tests/e2e-wi1107-employee-shell-grouped-navigation.test.ts",
