@@ -473,6 +473,10 @@ export default function PayrollYearEndFilingConsole() {
     return parsed.toLocaleString(runtimeLocale);
   }
 
+  function formatReviewAttemptChip(value: number) {
+    return locale === "ko" ? `${value}${copy.reviewAttemptPrefix}` : `${copy.reviewAttemptPrefix} ${value}`;
+  }
+
   async function runFinalization(apply: boolean) {
     const action = apply ? "finalization_apply" : "finalization_preview";
     const actionLabel = apply ? copy.logFinalizeSettlement : copy.logPreviewFinalization;
@@ -1508,7 +1512,7 @@ export default function PayrollYearEndFilingConsole() {
                       >
                         {copy.submissionStatusBadgeLabels[submission.status] ?? submission.status}
                       </span>
-                      <strong>{copy.timelineAttemptLabel} {submission.attempt}</strong>
+                      <strong>{formatReviewAttemptChip(submission.attempt)}</strong>
                     </div>
                       <time
                         dateTime={submission.submittedAt}
