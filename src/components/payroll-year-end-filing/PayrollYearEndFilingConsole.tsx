@@ -470,12 +470,28 @@ export default function PayrollYearEndFilingConsole() {
     return validationMode === "basic" ? "Base" : "Strict";
   }
 
+  function buildSubmissionResubmissionChip(reason: string, compact: boolean) {
+    const normalized = reason.replace(/\s+/g, " ").trim();
+    if (!normalized) {
+      return "";
+    }
+
+    if (!compact) {
+      return `${copy.reviewResubmissionReasonPrefix} ${normalized}`;
+    }
+
+    const compactReason =
+      normalized.length > 20 ? `${normalized.slice(0, 20).trimEnd()}…` : normalized;
+    return `${copy.reviewResubmissionReasonPrefix} ${compactReason}`;
+  }
+
   function buildSubmissionReviewMetaChips(
     submission: PayrollYearEndFilingSubmission,
     compactAckDetail: boolean,
     compactTransport: boolean,
     compactFormat: boolean,
-    compactValidation: boolean
+    compactValidation: boolean,
+    compactResubmission: boolean
   ) {
     const transportLabel = buildSubmissionTransportChip(submission.transport, compactTransport);
     const formatLabel = buildSubmissionFormatChip(submission.format, compactFormat);
@@ -490,7 +506,7 @@ export default function PayrollYearEndFilingConsole() {
     ];
 
     if (submission.resubmissionReason) {
-      chips.push(`${copy.reviewResubmissionReasonPrefix} ${submission.resubmissionReason}`);
+      chips.push(buildSubmissionResubmissionChip(submission.resubmissionReason, compactResubmission));
     }
 
     if (submission.ack) {
@@ -510,11 +526,11 @@ export default function PayrollYearEndFilingConsole() {
   }
 
   function formatSubmissionReviewMeta(submission: PayrollYearEndFilingSubmission) {
-    return buildSubmissionReviewMetaChips(submission, true, true, true, true).join(" · ");
+    return buildSubmissionReviewMetaChips(submission, true, true, true, true, true).join(" · ");
   }
 
   function formatSubmissionReviewMetaTitle(submission: PayrollYearEndFilingSubmission) {
-    return buildSubmissionReviewMetaChips(submission, false, false, false, false).join(" · ");
+    return buildSubmissionReviewMetaChips(submission, false, false, false, false, false).join(" · ");
   }
 
   function formatReviewSubmittedAt(value: string) {
