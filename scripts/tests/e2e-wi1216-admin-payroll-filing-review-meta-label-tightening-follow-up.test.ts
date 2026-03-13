@@ -30,7 +30,7 @@ function run() {
   assert.match(filingConsole, /const ackDetail = submission\.ack\.rejectionReasonDetail/);
   assert.match(filingConsole, /formatReviewAckDetail\(submission\.ack\.rejectionReasonDetail\)/);
   assert.match(filingConsole, /ackDetail \? ` .* \$\{ackDetail\}` : ""/);
-  assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, true, true\)\.join\(/);
+  assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, true, true, true\)\.join\(/);
   assert.match(
     bundles,
     /"scripts\/tests\/e2e-wi1216-admin-payroll-filing-review-meta-label-tightening-follow-up\.test\.ts"/

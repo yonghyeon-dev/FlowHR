@@ -20,8 +20,8 @@ const testBundles = fs.readFileSync(path.join(repoRoot, "scripts", "tests", "tes
 assert.match(workItem, /# WI-1223:/);
 assert.match(filingConsole, /function buildSubmissionTransportChip\(/);
 assert.match(filingConsole, /copy\.submissionTransportOptionLabels\[transport\] \?\? transport/);
-assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, true, true\)\.join\(/);
-assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, false, false\)\.join\(/);
+assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, true, true, true\)\.join\(/);
+assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, false, false, false\)\.join\(/);
 assert.match(filingCopy, /manual_portal: "Manual portal"/);
 assert.match(filingCopy, /hometax_upload: "Hometax upload"/);
 assert.match(
