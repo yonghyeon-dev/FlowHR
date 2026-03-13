@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -433,16 +433,27 @@ export default function PayrollYearEndFilingConsole() {
     return `${copy.reviewAckDetailPrefix} ${compact}`;
   }
 
+  function buildSubmissionTransportChip(
+    transport: PayrollYearEndFilingSubmission["transport"],
+    compact: boolean
+  ) {
+    if (!compact) {
+      return copy.submissionTransportOptionLabels[transport] ?? transport;
+    }
+
+    return transport === "manual_portal"
+      ? copy.transportShortManualLabel
+      : transport === "hometax_upload"
+        ? copy.transportShortHometaxLabel
+        : copy.transportShortNtsApiMockLabel;
+  }
+
   function buildSubmissionReviewMetaChips(
     submission: PayrollYearEndFilingSubmission,
-    compactAckDetail: boolean
+    compactAckDetail: boolean,
+    compactTransport: boolean
   ) {
-    const transportLabel =
-      submission.transport === "manual_portal"
-        ? copy.transportShortManualLabel
-        : submission.transport === "hometax_upload"
-          ? copy.transportShortHometaxLabel
-          : copy.transportShortNtsApiMockLabel;
+    const transportLabel = buildSubmissionTransportChip(submission.transport, compactTransport);
     const chips = [
       transportLabel,
       copy.exportFormatOptionLabels[submission.format] ?? submission.format,
@@ -470,11 +481,11 @@ export default function PayrollYearEndFilingConsole() {
   }
 
   function formatSubmissionReviewMeta(submission: PayrollYearEndFilingSubmission) {
-    return buildSubmissionReviewMetaChips(submission, true).join(" · ");
+    return buildSubmissionReviewMetaChips(submission, true, true).join(" · ");
   }
 
   function formatSubmissionReviewMetaTitle(submission: PayrollYearEndFilingSubmission) {
-    return buildSubmissionReviewMetaChips(submission, false).join(" · ");
+    return buildSubmissionReviewMetaChips(submission, false, false).join(" · ");
   }
 
   function formatReviewSubmittedAt(value: string) {

@@ -474,3 +474,4 @@ Latest planning reset:
 - Started `WI-1220` to tighten the admin payroll filing acknowledgement detail chip so rejected review rows keep a compact detail marker without losing operator context.
 - Started `WI-1221` to add overflow tooltip affordance for compact admin payroll filing review chips so operators can still inspect the full acknowledgement detail on demand.
 - Started `WI-1222` to tighten the admin payroll filing review transport chip wording so manual portal and mock labels keep the compact review row width under control.
+- Started `WI-1223` to restore the full transport route wording inside the compact review-row tooltip while keeping the visible transport chip short.

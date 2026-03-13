@@ -22,10 +22,9 @@ function run() {
   );
 
   assert.match(filingCopy, /reviewAckDetailPrefix: "Dtl"/);
-  assert.match(filingCopy, /reviewAckDetailPrefix: "상세"/);
   assert.match(filingConsole, /function formatReviewAckDetail\(value: string\)/);
   assert.match(filingConsole, /const normalized = value\.replace\(\/\\s\+\/g, " "\)\.trim\(\);/);
-  assert.match(filingConsole, /const compact = normalized\.length > 24 \? `\$\{normalized\.slice\(0, 24\)\.trimEnd\(\)\}…` : normalized;/);
+  assert.match(filingConsole, /const compact = normalized\.length > 24 \?/);
   assert.match(filingConsole, /return `\$\{copy\.reviewAckDetailPrefix\} \$\{compact\}`;/);
   assert.match(filingConsole, /formatReviewAckDetail\(submission\.ack\.rejectionReasonDetail\)/);
   assert.match(

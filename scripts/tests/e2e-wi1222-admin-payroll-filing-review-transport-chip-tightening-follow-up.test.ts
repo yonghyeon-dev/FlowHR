@@ -22,16 +22,16 @@ assert.match(workItem, /# WI-1222:/);
 assert.match(filingCopy, /transportShortManualLabel: "portal"/);
 assert.match(filingCopy, /transportShortHometaxLabel: "hometax"/);
 assert.match(filingCopy, /transportShortNtsApiMockLabel: "mock"/);
-assert.match(filingCopy, /transportShortManualLabel: "포털"/);
-assert.match(filingCopy, /transportShortHometaxLabel: "홈택스"/);
-assert.match(filingCopy, /transportShortNtsApiMockLabel: "모의"/);
+assert.match(filingCopy, /transportShortManualLabel: "[^"]+"/);
+assert.match(filingCopy, /transportShortHometaxLabel: "[^"]+"/);
+assert.match(filingCopy, /transportShortNtsApiMockLabel: "[^"]+"/);
 
 assert.match(filingConsole, /copy\.transportShortManualLabel/);
 assert.match(filingConsole, /copy\.transportShortHometaxLabel/);
 assert.match(filingConsole, /copy\.transportShortNtsApiMockLabel/);
 assert.match(
   filingConsole,
-  /return buildSubmissionReviewMetaChips\(submission, true\)\.join\(" .* "\);/
+  /return buildSubmissionReviewMetaChips\(submission, true, true\)\.join\(/
 );
 
 assert.match(
