@@ -31,7 +31,7 @@ assert.match(filingConsole, /copy\.transportShortHometaxLabel/);
 assert.match(filingConsole, /copy\.transportShortNtsApiMockLabel/);
 assert.match(
   filingConsole,
-  /return buildSubmissionReviewMetaChips\(submission, true, true, true\)\.join\(/
+  /return buildSubmissionReviewMetaChips\(submission, true, true, true, true\)\.join\(/
 );
 
 assert.match(

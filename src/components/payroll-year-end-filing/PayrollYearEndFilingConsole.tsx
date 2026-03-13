@@ -459,18 +459,34 @@ export default function PayrollYearEndFilingConsole() {
     return format === "hometax_csv" ? "HTX CSV" : copy.exportFormatOptionLabels[format] ?? format;
   }
 
+  function buildSubmissionValidationChip(
+    validationMode: PayrollYearEndFilingSubmission["validationMode"],
+    compact: boolean
+  ) {
+    if (!compact) {
+      return copy.validationModeOptionLabels[validationMode] ?? validationMode;
+    }
+
+    return validationMode === "basic" ? "Base" : "Strict";
+  }
+
   function buildSubmissionReviewMetaChips(
     submission: PayrollYearEndFilingSubmission,
     compactAckDetail: boolean,
     compactTransport: boolean,
-    compactFormat: boolean
+    compactFormat: boolean,
+    compactValidation: boolean
   ) {
     const transportLabel = buildSubmissionTransportChip(submission.transport, compactTransport);
     const formatLabel = buildSubmissionFormatChip(submission.format, compactFormat);
+    const validationLabel = buildSubmissionValidationChip(
+      submission.validationMode,
+      compactValidation
+    );
     const chips = [
       transportLabel,
       formatLabel,
-      copy.validationModeOptionLabels[submission.validationMode] ?? submission.validationMode
+      validationLabel
     ];
 
     if (submission.resubmissionReason) {
@@ -494,11 +510,11 @@ export default function PayrollYearEndFilingConsole() {
   }
 
   function formatSubmissionReviewMeta(submission: PayrollYearEndFilingSubmission) {
-    return buildSubmissionReviewMetaChips(submission, true, true, true).join(" · ");
+    return buildSubmissionReviewMetaChips(submission, true, true, true, true).join(" · ");
   }
 
   function formatSubmissionReviewMetaTitle(submission: PayrollYearEndFilingSubmission) {
-    return buildSubmissionReviewMetaChips(submission, false, false, false).join(" · ");
+    return buildSubmissionReviewMetaChips(submission, false, false, false, false).join(" · ");
   }
 
   function formatReviewSubmittedAt(value: string) {
