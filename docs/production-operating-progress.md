@@ -464,3 +464,4 @@ Latest planning reset:
 - Started `WI-1210` to tighten the admin payroll filing submission row metadata so the review panel scans faster with compact transport and response chips.
 - Started `WI-1211` to tighten the admin payroll filing submission-row quick action labels so the review panel actions stay compact.
 - Started `WI-1212` to tighten the admin payroll filing summary pill labels so the review panel metrics scan faster.
+- Started `WI-1213` to tighten the admin payroll filing summary value lines so the review metrics scan faster with compact counts.
