@@ -473,3 +473,4 @@ Latest planning reset:
 - Started `WI-1219` to tighten the admin payroll filing submission-row attempt chip wording so each review row keeps a shorter retry marker without losing sequence clarity.
 - Started `WI-1220` to tighten the admin payroll filing acknowledgement detail chip so rejected review rows keep a compact detail marker without losing operator context.
 - Started `WI-1221` to add overflow tooltip affordance for compact admin payroll filing review chips so operators can still inspect the full acknowledgement detail on demand.
+- Started `WI-1222` to tighten the admin payroll filing review transport chip wording so manual portal and mock labels keep the compact review row width under control.
