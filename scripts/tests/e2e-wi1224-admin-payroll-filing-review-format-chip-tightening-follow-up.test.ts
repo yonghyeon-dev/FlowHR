@@ -17,8 +17,8 @@ assert.match(workItem, /# WI-1224:/);
 assert.match(filingConsole, /function buildSubmissionFormatChip\(/);
 assert.match(filingConsole, /copy\.exportFormatOptionLabels\[format\] \?\? format/);
 assert.match(filingConsole, /return format === "hometax_csv" \? "HTX CSV" : copy\.exportFormatOptionLabels\[format\] \?\? format;/);
-assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, true, true, true, true\)\.join\(/);
-assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, false, false, false, false\)\.join\(/);
+assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, true, true, true, true, true\)\.join\(/);
+assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, false, false, false, false, false\)\.join\(/);
 assert.match(
   testBundles,
   /"scripts\/tests\/e2e-wi1224-admin-payroll-filing-review-format-chip-tightening-follow-up\.test\.ts"/

@@ -477,3 +477,4 @@ Latest planning reset:
 - Started `WI-1223` to restore the full transport route wording inside the compact review-row tooltip while keeping the visible transport chip short.
 - Started `WI-1224` to tighten the admin payroll filing review export-format chip wording so the visible row stays compact while the tooltip preserves the full format label.
 - Started `WI-1225` to tighten the admin payroll filing review validation chip wording so the visible row stays compact while the tooltip preserves the full validation label.
+- Started `WI-1226` to tighten the admin payroll filing review resubmission chip wording so the visible row stays compact while the tooltip preserves the full retry reason.
