@@ -451,6 +451,28 @@ export default function PayrollYearEndFilingConsole() {
     return chips.join(" · ");
   }
 
+  function formatReviewSubmittedAt(value: string) {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const day = String(parsed.getDate()).padStart(2, "0");
+    const hours = String(parsed.getHours()).padStart(2, "0");
+    const minutes = String(parsed.getMinutes()).padStart(2, "0");
+    return locale === "ko" ? `${month}.${day} ${hours}:${minutes}` : `${month}/${day} ${hours}:${minutes}`;
+  }
+
+  function formatReviewSubmittedAtTitle(value: string) {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+
+    return parsed.toLocaleString(runtimeLocale);
+  }
+
   async function runFinalization(apply: boolean) {
     const action = apply ? "finalization_apply" : "finalization_preview";
     const actionLabel = apply ? copy.logFinalizeSettlement : copy.logPreviewFinalization;
@@ -1488,7 +1510,12 @@ export default function PayrollYearEndFilingConsole() {
                       </span>
                       <strong>{copy.timelineAttemptLabel} {submission.attempt}</strong>
                     </div>
-                    <time>{new Date(submission.submittedAt).toLocaleString(runtimeLocale)}</time>
+                      <time
+                        dateTime={submission.submittedAt}
+                        title={formatReviewSubmittedAtTitle(submission.submittedAt)}
+                      >
+                        {formatReviewSubmittedAt(submission.submittedAt)}
+                      </time>
                   </div>
                   <p className="admin-payroll-submission-item-copy">
                     {formatSubmissionReviewMeta(submission)}
