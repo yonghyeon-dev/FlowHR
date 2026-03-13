@@ -448,15 +448,28 @@ export default function PayrollYearEndFilingConsole() {
         : copy.transportShortNtsApiMockLabel;
   }
 
+  function buildSubmissionFormatChip(
+    format: PayrollYearEndFilingSubmission["format"],
+    compact: boolean
+  ) {
+    if (!compact) {
+      return copy.exportFormatOptionLabels[format] ?? format;
+    }
+
+    return format === "hometax_csv" ? "HTX CSV" : copy.exportFormatOptionLabels[format] ?? format;
+  }
+
   function buildSubmissionReviewMetaChips(
     submission: PayrollYearEndFilingSubmission,
     compactAckDetail: boolean,
-    compactTransport: boolean
+    compactTransport: boolean,
+    compactFormat: boolean
   ) {
     const transportLabel = buildSubmissionTransportChip(submission.transport, compactTransport);
+    const formatLabel = buildSubmissionFormatChip(submission.format, compactFormat);
     const chips = [
       transportLabel,
-      copy.exportFormatOptionLabels[submission.format] ?? submission.format,
+      formatLabel,
       copy.validationModeOptionLabels[submission.validationMode] ?? submission.validationMode
     ];
 
@@ -481,11 +494,11 @@ export default function PayrollYearEndFilingConsole() {
   }
 
   function formatSubmissionReviewMeta(submission: PayrollYearEndFilingSubmission) {
-    return buildSubmissionReviewMetaChips(submission, true, true).join(" · ");
+    return buildSubmissionReviewMetaChips(submission, true, true, true).join(" · ");
   }
 
   function formatSubmissionReviewMetaTitle(submission: PayrollYearEndFilingSubmission) {
-    return buildSubmissionReviewMetaChips(submission, false, false).join(" · ");
+    return buildSubmissionReviewMetaChips(submission, false, false, false).join(" · ");
   }
 
   function formatReviewSubmittedAt(value: string) {

@@ -181,5 +181,6 @@ export const testBundles = {
     "scripts/tests/e2e-wi1221-admin-payroll-filing-review-chip-overflow-tooltip-follow-up.test.ts",
     "scripts/tests/e2e-wi1222-admin-payroll-filing-review-transport-chip-tightening-follow-up.test.ts",
     "scripts/tests/e2e-wi1223-admin-payroll-filing-review-transport-tooltip-follow-up.test.ts",
+    "scripts/tests/e2e-wi1224-admin-payroll-filing-review-format-chip-tightening-follow-up.test.ts",
   ],
 };

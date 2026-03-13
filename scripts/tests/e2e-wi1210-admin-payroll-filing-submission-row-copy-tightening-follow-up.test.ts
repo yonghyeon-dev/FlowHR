@@ -24,7 +24,7 @@ function run() {
   assert.match(filingConsole, /copy\.transportShortManualLabel/);
   assert.match(filingConsole, /copy\.transportShortHometaxLabel/);
   assert.match(filingConsole, /copy\.transportShortNtsApiMockLabel/);
-  assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, true, true\)\.join\(/);
+  assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, true, true, true\)\.join\(/);
   assert.doesNotMatch(
     filingConsole,
     /copy\.submissionTransportOptionLabels\[submission\.transport\] \?\? submission\.transport\} \/ \{copy\.exportFormatOptionLabels/
