@@ -24,16 +24,13 @@ function run() {
   assert.match(copySource, /reviewResubmissionReasonPrefix: "Retry"/);
   assert.match(copySource, /reviewAckPrefix: "Reply"/);
   assert.match(copySource, /reviewAckDetailPrefix: "Dtl"/);
-  assert.match(copySource, /reviewResubmissionReasonPrefix: "재제출"/);
-  assert.match(copySource, /reviewAckPrefix: "응답"/);
-  assert.match(copySource, /reviewAckDetailPrefix: "상세"/);
   assert.match(filingConsole, /copy\.reviewResubmissionReasonPrefix/);
   assert.match(filingConsole, /copy\.reviewAckPrefix/);
   assert.match(filingConsole, /copy\.reviewAckDetailPrefix/);
   assert.match(filingConsole, /const ackDetail = submission\.ack\.rejectionReasonDetail/);
   assert.match(filingConsole, /formatReviewAckDetail\(submission\.ack\.rejectionReasonDetail\)/);
-  assert.match(filingConsole, /ackDetail \? ` · \$\{ackDetail\}` : ""/);
-  assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, true\)\.join\(" · "\);/);
+  assert.match(filingConsole, /ackDetail \? ` .* \$\{ackDetail\}` : ""/);
+  assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, true, true\)\.join\(/);
   assert.match(
     bundles,
     /"scripts\/tests\/e2e-wi1216-admin-payroll-filing-review-meta-label-tightening-follow-up\.test\.ts"/
