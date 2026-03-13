@@ -433,7 +433,10 @@ export default function PayrollYearEndFilingConsole() {
     return `${copy.reviewAckDetailPrefix} ${compact}`;
   }
 
-  function formatSubmissionReviewMeta(submission: PayrollYearEndFilingSubmission) {
+  function buildSubmissionReviewMetaChips(
+    submission: PayrollYearEndFilingSubmission,
+    compactAckDetail: boolean
+  ) {
     const transportLabel =
       submission.transport === "manual_portal"
         ? copy.transportShortManualLabel
@@ -451,14 +454,27 @@ export default function PayrollYearEndFilingConsole() {
     }
 
     if (submission.ack) {
+      const ackDetail = submission.ack.rejectionReasonDetail
+        ? compactAckDetail
+          ? formatReviewAckDetail(submission.ack.rejectionReasonDetail)
+          : submission.ack.rejectionReasonDetail.replace(/\s+/g, " ").trim()
+        : "";
       chips.push(
         `${copy.reviewAckPrefix} ${copy.ackStatusOptionLabels[submission.ack.ackStatus] ?? submission.ack.ackStatus}${
-          submission.ack.rejectionReasonDetail ? ` · ${formatReviewAckDetail(submission.ack.rejectionReasonDetail)}` : ""
+          ackDetail ? ` · ${ackDetail}` : ""
         }`
       );
     }
 
-    return chips.join(" · ");
+    return chips;
+  }
+
+  function formatSubmissionReviewMeta(submission: PayrollYearEndFilingSubmission) {
+    return buildSubmissionReviewMetaChips(submission, true).join(" · ");
+  }
+
+  function formatSubmissionReviewMetaTitle(submission: PayrollYearEndFilingSubmission) {
+    return buildSubmissionReviewMetaChips(submission, false).join(" · ");
   }
 
   function formatReviewSubmittedAt(value: string) {
@@ -1531,7 +1547,10 @@ export default function PayrollYearEndFilingConsole() {
                         {formatReviewSubmittedAt(submission.submittedAt)}
                       </time>
                   </div>
-                  <p className="admin-payroll-submission-item-copy">
+                  <p
+                    className="admin-payroll-submission-item-copy"
+                    title={formatSubmissionReviewMetaTitle(submission)}
+                  >
                     {formatSubmissionReviewMeta(submission)}
                   </p>
                   <div className="panel-actions admin-payroll-submission-item-actions">

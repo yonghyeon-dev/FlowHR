@@ -30,11 +30,10 @@ function run() {
   assert.match(filingConsole, /copy\.reviewResubmissionReasonPrefix/);
   assert.match(filingConsole, /copy\.reviewAckPrefix/);
   assert.match(filingConsole, /copy\.reviewAckDetailPrefix/);
-  assert.match(
-    filingConsole,
-    /submission\.ack\.rejectionReasonDetail \? ` · \$\{formatReviewAckDetail\(submission\.ack\.rejectionReasonDetail\)\}` : ""/
-  );
-  assert.match(filingConsole, /return chips\.join\(" · "\);/);
+  assert.match(filingConsole, /const ackDetail = submission\.ack\.rejectionReasonDetail/);
+  assert.match(filingConsole, /formatReviewAckDetail\(submission\.ack\.rejectionReasonDetail\)/);
+  assert.match(filingConsole, /ackDetail \? ` · \$\{ackDetail\}` : ""/);
+  assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, true\)\.join\(" · "\);/);
   assert.match(
     bundles,
     /"scripts\/tests\/e2e-wi1216-admin-payroll-filing-review-meta-label-tightening-follow-up\.test\.ts"/

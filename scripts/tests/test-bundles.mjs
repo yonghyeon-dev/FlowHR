@@ -178,5 +178,6 @@ export const testBundles = {
     "scripts/tests/e2e-wi1218-admin-payroll-filing-review-time-copy-tightening-follow-up.test.ts",
     "scripts/tests/e2e-wi1219-admin-payroll-filing-review-attempt-chip-tightening-follow-up.test.ts",
     "scripts/tests/e2e-wi1220-admin-payroll-filing-review-ack-chip-detail-copy-tightening-follow-up.test.ts",
+    "scripts/tests/e2e-wi1221-admin-payroll-filing-review-chip-overflow-tooltip-follow-up.test.ts",
   ],
 };
