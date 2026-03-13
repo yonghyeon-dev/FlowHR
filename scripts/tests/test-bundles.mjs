@@ -176,5 +176,6 @@ export const testBundles = {
     "scripts/tests/e2e-wi1216-admin-payroll-filing-review-meta-label-tightening-follow-up.test.ts",
     "scripts/tests/e2e-wi1217-admin-payroll-filing-review-action-chip-copy-tightening-follow-up.test.ts",
     "scripts/tests/e2e-wi1218-admin-payroll-filing-review-time-copy-tightening-follow-up.test.ts",
+    "scripts/tests/e2e-wi1219-admin-payroll-filing-review-attempt-chip-tightening-follow-up.test.ts",
   ],
 };
