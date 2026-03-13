@@ -49,13 +49,59 @@ export function buildActiveSubmissionFiltersSummary(input: BuildActiveSubmission
     submissionSortBy,
     submissionSortDirection
   } = input;
-  return [
-    `${copy.submissionStatusFilterLabel}: ${copy.submissionStatusOptionLabels[submissionStatusFilter] ?? submissionStatusFilter}`,
-    `${copy.ackStatusFilterLabel}: ${copy.ackStatusOptionLabels[submissionAckStatusFilter] ?? submissionAckStatusFilter}`,
-    `${copy.validationStatusFilterLabel}: ${copy.validationStatusOptionLabels[submissionValidationStatusFilter] ?? submissionValidationStatusFilter}`,
-    `${copy.transportFilterLabel}: ${copy.submissionTransportOptionLabels[submissionTransportFilter] ?? submissionTransportFilter}`,
-    `${copy.settlementHashFilterLabel}: ${submissionSettlementHashFilter.trim() || copy.dashLabel}`,
-    `${copy.submissionSearchLabel}: ${submissionSearch.trim() || copy.dashLabel}`,
-    `${copy.submissionSortByLabel}: ${copy.submissionSortByOptionLabels[submissionSortBy] ?? submissionSortBy} / ${copy.submissionSortDirectionOptionLabels[submissionSortDirection] ?? submissionSortDirection}`
-  ].join(", ");
+  const parts: string[] = [];
+
+  if (submissionStatusFilter !== "all") {
+    parts.push(
+      `${copy.statusSummaryLabel} ${
+        copy.submissionStatusOptionLabels[submissionStatusFilter] ?? submissionStatusFilter
+      }`
+    );
+  }
+
+  if (submissionAckStatusFilter !== "all") {
+    parts.push(
+      `${copy.ackStatusSummaryLabel} ${
+        copy.ackStatusOptionLabels[submissionAckStatusFilter] ?? submissionAckStatusFilter
+      }`
+    );
+  }
+
+  if (submissionValidationStatusFilter !== "all") {
+    parts.push(
+      `${copy.validationSummaryLabel} ${
+        copy.validationStatusOptionLabels[submissionValidationStatusFilter] ??
+        submissionValidationStatusFilter
+      }`
+    );
+  }
+
+  if (submissionTransportFilter !== "all") {
+    parts.push(
+      `${copy.transportSummaryLabel} ${
+        copy.submissionTransportOptionLabels[submissionTransportFilter] ?? submissionTransportFilter
+      }`
+    );
+  }
+
+  const settlementHash = submissionSettlementHashFilter.trim();
+  if (settlementHash.length > 0) {
+    parts.push(`${copy.compactMatchLabel} ${settlementHash}`);
+  }
+
+  const search = submissionSearch.trim();
+  if (search.length > 0) {
+    parts.push(`${copy.compactSearchLabel} ${search}`);
+  }
+
+  const usesDefaultSort = submissionSortBy === "submittedAt" && submissionSortDirection === "desc";
+  if (!usesDefaultSort) {
+    parts.push(
+      `${copy.compactSortLabel} ${
+        copy.submissionSortByOptionLabels[submissionSortBy] ?? submissionSortBy
+      } ${copy.submissionSortDirectionOptionLabels[submissionSortDirection] ?? submissionSortDirection}`
+    );
+  }
+
+  return parts.length > 0 ? parts.join(" · ") : copy.defaultSubmissionFiltersSummary;
 }
