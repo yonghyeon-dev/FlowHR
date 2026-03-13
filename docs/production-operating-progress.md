@@ -468,3 +468,4 @@ Latest planning reset:
 - Started `WI-1214` to tighten the admin payroll filing active filter summary so the review panel only surfaces active constraints and keeps the default sort implicit.
 - Started `WI-1215` to tighten the admin payroll filing review empty-state wording so the compact panel keeps the same operator tone when no summary or submissions are present.
 - Started `WI-1216` to tighten the admin payroll filing submission-row metadata labels so transport, validation, retry, and response chips scan faster.
+- Started `WI-1217` to tighten the admin payroll filing submission-row action chips so retry and log actions stay compact without losing operator clarity.

@@ -18,29 +18,22 @@ function run() {
   const progress = readUtf8("docs", "production-operating-progress.md");
   const workItem = readUtf8(
     "work-items",
-    "WI-1211-admin-payroll-filing-submission-row-action-label-tightening-follow-up.md"
+    "WI-1217-admin-payroll-filing-review-action-chip-copy-tightening-follow-up.md"
   );
 
-  assert.match(filingCopy, /quickAckAcceptedAction: "Accept"/);
-  assert.match(filingCopy, /quickCancelAction: "Cancel"/);
   assert.match(filingCopy, /quickResubmitAction: "Retry"/);
-  assert.match(filingCopy, /quickReopenAction: "Reopen"/);
   assert.match(filingCopy, /timelineAction: "Log"/);
-  assert.match(filingCopy, /quickAckAcceptedAction: "승인"/);
-  assert.match(filingCopy, /quickCancelAction: "취소"/);
   assert.match(filingCopy, /quickResubmitAction: "재시도"/);
-  assert.match(filingCopy, /quickReopenAction: "재개"/);
   assert.match(filingCopy, /timelineAction: "기록"/);
-  assert.match(filingConsole, /copy\.quickAckAcceptedAction/);
+  assert.match(filingConsole, /copy\.quickResubmitAction/);
   assert.match(filingConsole, /copy\.timelineAction/);
-
   assert.match(
     bundles,
-    /"scripts\/tests\/e2e-wi1211-admin-payroll-filing-submission-row-action-label-tightening-follow-up\.test\.ts"/
+    /"scripts\/tests\/e2e-wi1217-admin-payroll-filing-review-action-chip-copy-tightening-follow-up\.test\.ts"/
   );
-  assert.match(progress, /Started `WI-1211`/);
-  assert.match(workItem, /WI-1211/);
+  assert.match(progress, /Started `WI-1217`/);
+  assert.match(workItem, /WI-1217/);
 }
 
 run();
-console.log("e2e-wi1211-admin-payroll-filing-submission-row-action-label-tightening-follow-up.test passed");
+console.log("e2e-wi1217-admin-payroll-filing-review-action-chip-copy-tightening-follow-up.test passed");
