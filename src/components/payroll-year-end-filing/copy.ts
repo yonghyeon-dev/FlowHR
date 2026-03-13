@@ -189,9 +189,9 @@ const filingCopyEn = {
   failLabel: "FAIL",
   readyLabel: "ready",
   dashLabel: "-",
-  transportShortManualLabel: "manual",
+  transportShortManualLabel: "portal",
   transportShortHometaxLabel: "hometax",
-  transportShortNtsApiMockLabel: "mock API",
+  transportShortNtsApiMockLabel: "mock",
   exportFormatOptionLabels: {
     json: "JSON",
     csv: "CSV",
@@ -454,9 +454,9 @@ export const payrollYearEndFilingCopyByLocale: Record<FlowLocale, PayrollYearEnd
     okLabel: "성공",
     failLabel: "실패",
     readyLabel: "준비됨",
-    transportShortManualLabel: "수동",
+    transportShortManualLabel: "포털",
     transportShortHometaxLabel: "홈택스",
-    transportShortNtsApiMockLabel: "모의 API",
+    transportShortNtsApiMockLabel: "모의",
     submissionTransportOptionLabels: {
       manual_portal: "수동 제출",
       hometax_upload: "홈택스 업로드",
