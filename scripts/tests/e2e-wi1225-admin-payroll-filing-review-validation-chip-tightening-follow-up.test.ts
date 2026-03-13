@@ -4,7 +4,7 @@ import path from "node:path";
 
 const repoRoot = path.resolve(__dirname, "..", "..");
 const workItem = fs.readFileSync(
-  path.join(repoRoot, "work-items", "WI-1224-admin-payroll-filing-review-format-chip-tightening-follow-up.md"),
+  path.join(repoRoot, "work-items", "WI-1225-admin-payroll-filing-review-validation-chip-tightening-follow-up.md"),
   "utf8"
 );
 const filingConsole = fs.readFileSync(
@@ -13,15 +13,15 @@ const filingConsole = fs.readFileSync(
 );
 const testBundles = fs.readFileSync(path.join(repoRoot, "scripts", "tests", "test-bundles.mjs"), "utf8");
 
-assert.match(workItem, /# WI-1224:/);
-assert.match(filingConsole, /function buildSubmissionFormatChip\(/);
-assert.match(filingConsole, /copy\.exportFormatOptionLabels\[format\] \?\? format/);
-assert.match(filingConsole, /return format === "hometax_csv" \? "HTX CSV" : copy\.exportFormatOptionLabels\[format\] \?\? format;/);
+assert.match(workItem, /# WI-1225:/);
+assert.match(filingConsole, /function buildSubmissionValidationChip\(/);
+assert.match(filingConsole, /copy\.validationModeOptionLabels\[validationMode\] \?\? validationMode/);
+assert.match(filingConsole, /return validationMode === "basic" \? "Base" : "Strict";/);
 assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, true, true, true, true\)\.join\(/);
 assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, false, false, false, false\)\.join\(/);
 assert.match(
   testBundles,
-  /"scripts\/tests\/e2e-wi1224-admin-payroll-filing-review-format-chip-tightening-follow-up\.test\.ts"/
+  /"scripts\/tests\/e2e-wi1225-admin-payroll-filing-review-validation-chip-tightening-follow-up\.test\.ts"/
 );
 
-console.log("e2e-wi1224-admin-payroll-filing-review-format-chip-tightening-follow-up.test passed");
+console.log("e2e-wi1225-admin-payroll-filing-review-validation-chip-tightening-follow-up.test passed");

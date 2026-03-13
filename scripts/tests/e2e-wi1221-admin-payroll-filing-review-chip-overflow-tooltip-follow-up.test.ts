@@ -22,11 +22,11 @@ function run() {
 
   assert.match(
     filingConsole,
-    /function buildSubmissionReviewMetaChips\(\s*submission: PayrollYearEndFilingSubmission,\s*compactAckDetail: boolean,\s*compactTransport: boolean,\s*compactFormat: boolean\s*\)/
+    /function buildSubmissionReviewMetaChips\(\s*submission: PayrollYearEndFilingSubmission,\s*compactAckDetail: boolean,\s*compactTransport: boolean,\s*compactFormat: boolean,\s*compactValidation: boolean\s*\)/
   );
   assert.match(filingConsole, /function formatSubmissionReviewMetaTitle\(submission: PayrollYearEndFilingSubmission\)/);
-  assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, true, true, true\)\.join\(/);
-  assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, false, false, false\)\.join\(/);
+  assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, true, true, true, true\)\.join\(/);
+  assert.match(filingConsole, /return buildSubmissionReviewMetaChips\(submission, false, false, false, false\)\.join\(/);
   assert.match(
     filingConsole,
     /title=\{formatSubmissionReviewMetaTitle\(submission\)\}/
