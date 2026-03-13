@@ -437,13 +437,13 @@ export default function PayrollYearEndFilingConsole() {
     ];
 
     if (submission.resubmissionReason) {
-      chips.push(`${copy.timelineReasonLabel}: ${submission.resubmissionReason}`);
+      chips.push(`${copy.reviewResubmissionReasonPrefix} ${submission.resubmissionReason}`);
     }
 
     if (submission.ack) {
       chips.push(
-        `${copy.timelineAckPrefix} ${copy.ackStatusOptionLabels[submission.ack.ackStatus] ?? submission.ack.ackStatus}${
-          submission.ack.rejectionReasonDetail ? ` / ${submission.ack.rejectionReasonDetail}` : ""
+        `${copy.reviewAckPrefix} ${copy.ackStatusOptionLabels[submission.ack.ackStatus] ?? submission.ack.ackStatus}${
+          submission.ack.rejectionReasonDetail ? ` · ${submission.ack.rejectionReasonDetail}` : ""
         }`
       );
     }
