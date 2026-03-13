@@ -471,3 +471,4 @@ Latest planning reset:
 - Started `WI-1217` to tighten the admin payroll filing submission-row action chips so retry and log actions stay compact without losing operator clarity.
 - Started `WI-1218` to tighten the admin payroll filing submission-row time copy so each review row keeps a compact time chip with the full timestamp on demand.
 - Started `WI-1219` to tighten the admin payroll filing submission-row attempt chip wording so each review row keeps a shorter retry marker without losing sequence clarity.
+- Started `WI-1220` to tighten the admin payroll filing acknowledgement detail chip so rejected review rows keep a compact detail marker without losing operator context.
