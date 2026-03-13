@@ -423,6 +423,16 @@ export default function PayrollYearEndFilingConsole() {
     setLastFailure(null);
   }
 
+  function formatReviewAckDetail(value: string) {
+    const normalized = value.replace(/\s+/g, " ").trim();
+    if (!normalized) {
+      return "";
+    }
+
+    const compact = normalized.length > 24 ? `${normalized.slice(0, 24).trimEnd()}…` : normalized;
+    return `${copy.reviewAckDetailPrefix} ${compact}`;
+  }
+
   function formatSubmissionReviewMeta(submission: PayrollYearEndFilingSubmission) {
     const transportLabel =
       submission.transport === "manual_portal"
@@ -443,7 +453,7 @@ export default function PayrollYearEndFilingConsole() {
     if (submission.ack) {
       chips.push(
         `${copy.reviewAckPrefix} ${copy.ackStatusOptionLabels[submission.ack.ackStatus] ?? submission.ack.ackStatus}${
-          submission.ack.rejectionReasonDetail ? ` · ${submission.ack.rejectionReasonDetail}` : ""
+          submission.ack.rejectionReasonDetail ? ` · ${formatReviewAckDetail(submission.ack.rejectionReasonDetail)}` : ""
         }`
       );
     }

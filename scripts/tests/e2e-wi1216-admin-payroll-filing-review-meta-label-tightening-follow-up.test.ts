@@ -23,11 +23,17 @@ function run() {
 
   assert.match(copySource, /reviewResubmissionReasonPrefix: "Retry"/);
   assert.match(copySource, /reviewAckPrefix: "Reply"/);
+  assert.match(copySource, /reviewAckDetailPrefix: "Dtl"/);
   assert.match(copySource, /reviewResubmissionReasonPrefix: "재제출"/);
   assert.match(copySource, /reviewAckPrefix: "응답"/);
+  assert.match(copySource, /reviewAckDetailPrefix: "상세"/);
   assert.match(filingConsole, /copy\.reviewResubmissionReasonPrefix/);
   assert.match(filingConsole, /copy\.reviewAckPrefix/);
-  assert.match(filingConsole, /submission\.ack\.rejectionReasonDetail \? ` · \$\{submission\.ack\.rejectionReasonDetail\}` : ""/);
+  assert.match(filingConsole, /copy\.reviewAckDetailPrefix/);
+  assert.match(
+    filingConsole,
+    /submission\.ack\.rejectionReasonDetail \? ` · \$\{formatReviewAckDetail\(submission\.ack\.rejectionReasonDetail\)\}` : ""/
+  );
   assert.match(filingConsole, /return chips\.join\(" · "\);/);
   assert.match(
     bundles,
