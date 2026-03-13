@@ -172,5 +172,6 @@ export const testBundles = {
     "scripts/tests/e2e-wi1212-admin-payroll-filing-summary-pill-copy-tightening-follow-up.test.ts",
     "scripts/tests/e2e-wi1213-admin-payroll-filing-summary-value-copy-tightening-follow-up.test.ts",
     "scripts/tests/e2e-wi1214-admin-payroll-filing-filter-summary-copy-tightening-follow-up.test.ts",
+    "scripts/tests/e2e-wi1215-admin-payroll-filing-review-empty-state-copy-tightening-follow-up.test.ts",
   ],
 };

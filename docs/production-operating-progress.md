@@ -466,3 +466,4 @@ Latest planning reset:
 - Started `WI-1212` to tighten the admin payroll filing summary pill labels so the review panel metrics scan faster.
 - Started `WI-1213` to tighten the admin payroll filing summary value lines so the review metrics scan faster with compact counts.
 - Started `WI-1214` to tighten the admin payroll filing active filter summary so the review panel only surfaces active constraints and keeps the default sort implicit.
+- Started `WI-1215` to tighten the admin payroll filing review empty-state wording so the compact panel keeps the same operator tone when no summary or submissions are present.
